@@ -1,0 +1,19 @@
+test:
+  service: Disk
+  root: <%= Rails.root.join("tmp/storage") %>
+
+local:
+  service: Disk
+  root: <%= Rails.root.join("storage") %>
+
+# Cloudflare R2 is S3-compatible (ADR 0006). It needs an explicit endpoint and
+# `force_path_style` off; region is fixed to "auto" for R2. Credentials come
+# from ENV so nothing sensitive lives in the repo. Swappable for any other
+# S3-compatible service by changing these values alone.
+cloudflare:
+  service: S3
+  access_key_id: <%= ENV["R2_ACCESS_KEY_ID"] %>
+  secret_access_key: <%= ENV["R2_SECRET_ACCESS_KEY"] %>
+  endpoint: <%= ENV["R2_ENDPOINT"] %>
+  bucket: <%= ENV["R2_BUCKET"] %>
+  region: auto

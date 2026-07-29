@@ -1,0 +1,49 @@
+source "https://rubygems.org"
+
+ruby "3.4.5"
+
+gem "rails", "~> 8.1.0"
+
+# Database
+gem "pg", "~> 1.1"
+
+# App server
+gem "puma", ">= 5.0"
+
+# Auth
+gem "bcrypt", "~> 3.1.7"
+
+# Authorization
+gem "pundit", "~> 2.3"
+
+# Background jobs + Redis (Sidekiq for async work, Redis for Action Cable/cache)
+gem "sidekiq", "~> 7.2"
+gem "redis", ">= 4.0.1"
+
+# Image storage on Cloudflare R2 (S3-compatible Active Storage), see ADR 0006
+gem "aws-sdk-s3", "~> 1.143", require: false
+gem "image_processing", "~> 1.2"
+
+# Cross-origin requests from the two web clients
+gem "rack-cors"
+
+# Rate limiting for auth/verification/upload endpoints
+gem "rack-attack", "~> 6.7"
+
+# Windows does not include zoneinfo files, so bundle the tzinfo-data gem
+gem "tzinfo-data", platforms: %i[ windows jruby ]
+
+# Reduces boot times through caching; required in config/boot.rb
+gem "bootsnap", require: false
+
+group :development, :test do
+  gem "debug", platforms: %i[ mri windows ]
+  gem "rspec-rails", "~> 6.1"
+  gem "factory_bot_rails", "~> 6.4"
+  gem "faker", "~> 3.2"
+end
+
+group :test do
+  gem "shoulda-matchers", "~> 6.0"
+  gem "simplecov", require: false
+end

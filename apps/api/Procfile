@@ -1,0 +1,4 @@
+# Railway process types. The web dyno runs Puma; the worker dyno runs Sidekiq.
+web: bundle exec puma -C config/puma.rb
+worker: bundle exec sidekiq -c config/sidekiq.yml
+release: bin/rails db:migrate

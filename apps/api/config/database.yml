@@ -1,0 +1,26 @@
+# Connection defaults match docker-compose.yml at the repo root so `docker
+# compose up` gives a working local database with no extra config. Every value
+# is overridable by ENV, and DATABASE_URL (used by Railway) wins over all of it.
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  host: <%= ENV.fetch("DATABASE_HOST", "127.0.0.1") %>
+  port: <%= ENV.fetch("DATABASE_PORT", 5432) %>
+  username: <%= ENV.fetch("DATABASE_USER", "marketplace") %>
+  password: <%= ENV.fetch("DATABASE_PASSWORD", "marketplace") %>
+
+development:
+  <<: *default
+  database: <%= ENV.fetch("DATABASE_NAME", "marketplace_development") %>
+
+test:
+  <<: *default
+  database: <%= ENV.fetch("DATABASE_NAME_TEST", "marketplace_test") %>
+
+# Production reads DATABASE_URL (Railway provides it); the block below is a
+# fallback for a manually-configured host.
+production:
+  <<: *default
+  database: <%= ENV.fetch("DATABASE_NAME", "marketplace_production") %>
+  url: <%= ENV["DATABASE_URL"] %>
