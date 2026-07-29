@@ -25,6 +25,19 @@ Rails.application.routes.draw do
         post "verifications/#{channel}/confirm",  to: "verifications#confirm", defaults: { channel: channel }
       end
 
+      # Customer discovery (M2). Authenticated; lists only open shops in the
+      # daily-rotating order (ADR 0007), never alphabetical.
+      get "shops",              to: "shops#index"
+      get "shops/:slug",        to: "shops#show"
+      get "shops/:slug/items",  to: "shops#items"
+      get "tags",               to: "tags#index"
+
+      # Current user's saved addresses (descriptive, not geo).
+      get    "addresses",      to: "addresses#index"
+      post   "addresses",      to: "addresses#create"
+      patch  "addresses/:id",  to: "addresses#update"
+      delete "addresses/:id",  to: "addresses#destroy"
+
       # Vendor shop + catalog management (M1). All require a vendor profile.
       namespace :vendor do
         get    "shops",                       to: "shops#index"

@@ -17,6 +17,7 @@ module Api
         current_user.save!
 
         update_profile_names
+        update_default_address
         render json: { user: UserSerializer.call(current_user.reload) }
       end
 
@@ -37,6 +38,19 @@ module Api
 
         current_user.customer_profile&.update!(display_name: display_name)
         current_user.vendor_profile&.update!(display_name: display_name)
+      end
+
+      # Sets the customer's default delivery address. Scoped to the user's own
+      # addresses so it can't point at someone else's; passing null clears it.
+      def update_default_address
+        return unless params[:user].key?(:default_address_id)
+
+        profile = current_user.customer_profile
+        return if profile.nil?
+
+        address_id = params.dig(:user, :default_address_id)
+        address = address_id.present? ? current_user.addresses.find(address_id) : nil
+        profile.update!(default_address: address)
       end
     end
   end

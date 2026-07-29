@@ -25,7 +25,7 @@ ratings have something to attach to.
 | Docs/ADRs | README, ERD, ADRs, milestone plan | ✅ done, pushed |
 | M0 | Rails API foundation: auth, authz, storage, Redis/Sidekiq, CI | ✅ done |
 | M1 | Vendor publishes a shop with items | ✅ done |
-| M2 | Customer discovery (cart-free), daily-rotating shop list | ⬜ |
+| M2 | Customer discovery (cart-free), daily-rotating shop list | ✅ done |
 | M3 | Direct single-item order placement + lifecycle | ⬜ |
 | M4 | Per-order chat with images + ratings | ⬜ |
 
