@@ -1,5 +1,6 @@
 class VendorProfile < ApplicationRecord
   belongs_to :user
+  has_many :shops, dependent: :destroy
 
   VERIFICATION_STATUSES = %w[unverified pending verified rejected].freeze
 

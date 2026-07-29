@@ -1,0 +1,74 @@
+module Api
+  module V1
+    module Vendor
+      class ShopsController < BaseController
+        before_action :set_shop, only: %i[show update open close destroy_photo]
+
+        # GET /api/v1/vendor/shops
+        def index
+          shops = current_vendor_profile.shops.order(created_at: :desc)
+          render json: { shops: shops.map { |shop| ShopSerializer.call(shop) } }
+        end
+
+        # GET /api/v1/vendor/shops/:id
+        def show
+          render json: { shop: ShopSerializer.call(@shop) }
+        end
+
+        # POST /api/v1/vendor/shops
+        def create
+          shop = current_vendor_profile.shops.new(shop_params)
+          authorize shop
+          attach_photos(shop)
+          shop.save!
+          render json: { shop: ShopSerializer.call(shop) }, status: :created
+        end
+
+        # PATCH /api/v1/vendor/shops/:id
+        def update
+          @shop.assign_attributes(shop_params)
+          attach_photos(@shop)
+          @shop.save!
+          render json: { shop: ShopSerializer.call(@shop) }
+        end
+
+        # POST /api/v1/vendor/shops/:id/open
+        def open
+          @shop.open!
+          render json: { shop: ShopSerializer.call(@shop) }
+        end
+
+        # POST /api/v1/vendor/shops/:id/close
+        def close
+          @shop.close!
+          render json: { shop: ShopSerializer.call(@shop) }
+        end
+
+        # DELETE /api/v1/vendor/shops/:id/photos/:photo_id
+        def destroy_photo
+          @shop.photos_attachments.find(params[:photo_id]).purge
+          head :no_content
+        end
+
+        private
+
+        # Scoping the lookup to the current vendor's shops means another vendor's
+        # id simply 404s (it never reveals that the shop exists). authorize adds
+        # a second, explicit ownership check.
+        def set_shop
+          @shop = current_vendor_profile.shops.find(params[:id])
+          authorize @shop
+        end
+
+        def shop_params
+          params.require(:shop).permit(:name, :description, :contact_number, :address, fulfillment_methods: [])
+        end
+
+        def attach_photos(shop)
+          photos = params.dig(:shop, :photos)
+          shop.photos.attach(photos) if photos.present?
+        end
+      end
+    end
+  end
+end

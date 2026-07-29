@@ -24,6 +24,24 @@ Rails.application.routes.draw do
         post "verifications/#{channel}",         to: "verifications#create",  defaults: { channel: channel }
         post "verifications/#{channel}/confirm",  to: "verifications#confirm", defaults: { channel: channel }
       end
+
+      # Vendor shop + catalog management (M1). All require a vendor profile.
+      namespace :vendor do
+        get    "shops",                       to: "shops#index"
+        post   "shops",                       to: "shops#create"
+        get    "shops/:id",                   to: "shops#show"
+        patch  "shops/:id",                   to: "shops#update"
+        post   "shops/:id/open",              to: "shops#open"
+        post   "shops/:id/close",             to: "shops#close"
+        delete "shops/:id/photos/:photo_id",  to: "shops#destroy_photo"
+
+        get    "shops/:shop_id/items",        to: "items#index"
+        post   "shops/:shop_id/items",        to: "items#create"
+        patch  "items/:id",                   to: "items#update"
+        post   "items/:id/enable",            to: "items#enable"
+        post   "items/:id/disable",           to: "items#disable"
+        delete "items/:id/photos/:photo_id",  to: "items#destroy_photo"
+      end
     end
   end
 

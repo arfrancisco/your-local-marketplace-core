@@ -34,6 +34,24 @@ both = find_or_create_user!(
 both.create_customer_profile!(display_name: "Both (customer)") unless both.customer_profile
 both.create_vendor_profile!(display_name: "Both (vendor)") unless both.vendor_profile
 
+# A sample open shop with one item, owned by the vendor, so the vendor-web
+# client has something to display on first run.
+shop = vendor.vendor_profile.shops.find_or_create_by!(slug: "sample-corner-kitchen") do |s|
+  s.name = "Sample Corner Kitchen"
+  s.description = "Home-cooked meals from unit 12F."
+  s.address = "Tower A, Unit 12F"
+  s.contact_number = "+639170000002"
+  s.fulfillment_methods = %w[pickup delivery]
+end
+shop.open! unless shop.open?
+
+unless shop.items.exists?(name: "Adobo Rice Bowl")
+  item = shop.items.create!(name: "Adobo Rice Bowl", description: "Pork adobo over garlic rice.",
+                            price_cents: 18_000, currency: "PHP")
+  item.tags = Tag.for_names(["Rice Meal", "Savory"])
+end
+
+puts "Seeded #{Shop.count} shop(s) and #{Item.count} item(s)."
 puts "Seeded #{User.count} users:"
 puts "  customer@example.com / password123 (customer)"
 puts "  vendor@example.com   / password123 (vendor)"
