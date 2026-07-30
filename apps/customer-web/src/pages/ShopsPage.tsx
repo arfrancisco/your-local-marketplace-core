@@ -35,12 +35,14 @@ export function ShopsPage() {
 
   return (
     <div>
-      <h1>Your neighbors' shops</h1>
-      <p className="muted">Open now, shown in a fair daily rotation.</p>
+      <div className="hero">
+        <h1>Your neighbors' shops</h1>
+        <p className="muted">Open now, shown in a fair daily rotation.</p>
+      </div>
 
       <input
         type="search"
-        placeholder="Search shops, dishes, or tags…"
+        placeholder="What are you craving?"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         aria-label="Search shops"
