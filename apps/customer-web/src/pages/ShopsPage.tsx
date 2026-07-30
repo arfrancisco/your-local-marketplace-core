@@ -36,8 +36,8 @@ export function ShopsPage() {
   return (
     <div>
       <div className="hero">
-        <h1>Your neighbors' shops</h1>
-        <p className="muted">Open now, shown in a fair daily rotation.</p>
+        <h1>What's cooking today</h1>
+        <p className="muted">Fresh from the people next door.</p>
       </div>
 
       <input

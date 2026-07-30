@@ -12,7 +12,10 @@ function Header() {
   return (
     <>
       <header className="topbar">
-        <Link to="/shops" className="brand">Prisma Kapitbahay Market</Link>
+        <div className="brand-block">
+          <Link to="/shops" className="brand">Prisma KapitMarket</Link>
+          <p className="brand-tagline">By the community, for the community</p>
+        </div>
         {user ? (
           <div className="row gap">
             <span className="muted">{user.customer_profile?.display_name ?? user.email}</span>

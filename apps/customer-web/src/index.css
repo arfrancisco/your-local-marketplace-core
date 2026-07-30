@@ -48,7 +48,7 @@ body::before {
   background: #fffdf9;
   border-bottom: 1px solid #ecdfcd;
 }
-.topbar > .brand { grid-column: 2; justify-self: center; }
+.topbar > .brand-block { grid-column: 2; justify-self: center; text-align: center; }
 .topbar > *:last-child { grid-column: 3; justify-self: end; }
 .brand {
   font-weight: 700;
@@ -56,6 +56,11 @@ body::before {
   letter-spacing: 0.01em;
   text-decoration: none;
   color: #2b2420;
+}
+.brand-tagline {
+  margin: 0.1rem 0 0;
+  font-size: 0.75rem;
+  color: #8a7862;
 }
 
 .container { max-width: 860px; margin: 1.5rem auto; padding: 0 1rem; }
