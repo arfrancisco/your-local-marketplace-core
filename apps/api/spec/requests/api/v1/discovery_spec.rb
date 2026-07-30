@@ -16,8 +16,13 @@ RSpec.describe "Api::V1 Discovery", type: :request do
       expect(slugs).to eq([open_shop.slug])
     end
 
-    it "orders by the daily rotation, not alphabetically" do
-      # Create enough shops that alphabetical and rotation order diverge.
+    it "orders by the daily rotation service, not alphabetically" do
+      # The non-alphabetical claim itself is proven deterministically (with
+      # controlled ids) in spec/services/shop_rotation_spec.rb. This only
+      # proves the controller is actually wired to that service — asserting
+      # "not alphabetical" here too would depend on these shops' real
+      # auto-increment ids, which shift with how many shops other tests in
+      # the same run created, since Postgres sequences aren't transactional.
       %w[Alpha Bravo Charlie Delta].each { |n| create(:shop, :open, name: n) }
 
       travel_to(Date.new(2026, 1, 1)) do
@@ -27,7 +32,6 @@ RSpec.describe "Api::V1 Discovery", type: :request do
       returned = json["shops"].map { |s| s["name"] }
       expected = ShopRotation.order(Shop.listed, on: Date.new(2026, 1, 1)).map(&:name)
       expect(returned).to eq(expected)
-      expect(returned).not_to eq(returned.sort) # not alphabetical
     end
 
     describe "search (?q=)" do
@@ -62,6 +66,25 @@ RSpec.describe "Api::V1 Discovery", type: :request do
         shop = create(:shop, :open, name: "Corner Bakeshop")
         get "/api/v1/shops", params: { q: "BAKE" }
         expect(json["shops"].map { |s| s["slug"] }).to eq([shop.slug])
+      end
+
+      it "matches a natural multi-word query across different items/tags, not as one literal phrase" do
+        shop = create(:shop, :open, name: "Brew & Co.")
+        latte = create(:item, shop: shop, name: "Iced Spanish Latte")
+        latte.tags = Tag.for_names(["Drinks"])
+        barako = create(:item, shop: shop, name: "Kapeng Barako")
+        barako.tags = Tag.for_names(["Coffee"])
+        create(:shop, :open, name: "Sizzle House")
+
+        # Neither item name literally contains the phrase "iced coffee".
+        get "/api/v1/shops", params: { q: "iced coffee" }
+        expect(json["shops"].map { |s| s["slug"] }).to eq([shop.slug])
+      end
+
+      it "requires every word to match, so an unrelated extra word excludes the shop" do
+        create(:shop, :open, name: "Brew & Co.", description: "Small-batch coffee")
+        get "/api/v1/shops", params: { q: "coffee sushi" }
+        expect(json["shops"]).to eq([])
       end
 
       it "returns everything when the query is blank" do

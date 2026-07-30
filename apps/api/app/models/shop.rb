@@ -22,10 +22,18 @@ class Shop < ApplicationRecord
   # Keyword search across the shop itself and its catalog (item names, tags) —
   # not geo/distance (ADR 0002), just text matching so "bread" or "vegan"
   # surfaces the right shop even when the shop's own name doesn't say it.
+  #
+  # Tokenized per word (AND across words, OR within each word's own match), not
+  # matched as one literal phrase — a natural query like "iced coffee" should
+  # find a shop whose "Iced Spanish Latte" and "Coffee" tag are two different
+  # items, not require that exact phrase to appear verbatim anywhere.
   scope :search, lambda { |term|
-    next all if term.blank?
+    words = term.to_s.strip.split(/\s+/).reject(&:blank?)
+    words.reduce(all) { |scope, word| scope.matching_word(word) }
+  }
 
-    like = "%#{sanitize_sql_like(term)}%"
+  scope :matching_word, lambda { |word|
+    like = "%#{sanitize_sql_like(word)}%"
     where(
       "shops.name ILIKE :like OR shops.description ILIKE :like OR EXISTS (
          SELECT 1 FROM items
