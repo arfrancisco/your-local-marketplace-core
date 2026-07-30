@@ -7,9 +7,10 @@ module Api
     class ShopsController < BaseController
       skip_before_action :authenticate!
 
-      # GET /api/v1/shops
+      # GET /api/v1/shops?q=bread
       def index
-        shops = ShopRotation.order(Shop.listed.includes(:vendor_profile))
+        scope = Shop.listed.search(params[:q]).includes(:vendor_profile).distinct
+        shops = ShopRotation.order(scope)
         render json: { shops: shops.map { |shop| ShopSerializer.call(shop) } }
       end
 

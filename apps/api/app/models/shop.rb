@@ -19,6 +19,26 @@ class Shop < ApplicationRecord
   # Shops a customer may discover: active and currently accepting orders.
   scope :listed, -> { where(status: "active", accepting_orders: true) }
 
+  # Keyword search across the shop itself and its catalog (item names, tags) —
+  # not geo/distance (ADR 0002), just text matching so "bread" or "vegan"
+  # surfaces the right shop even when the shop's own name doesn't say it.
+  scope :search, lambda { |term|
+    next all if term.blank?
+
+    like = "%#{sanitize_sql_like(term)}%"
+    where(
+      "shops.name ILIKE :like OR shops.description ILIKE :like OR EXISTS (
+         SELECT 1 FROM items
+         LEFT JOIN item_tags ON item_tags.item_id = items.id
+         LEFT JOIN tags ON tags.id = item_tags.tag_id
+         WHERE items.shop_id = shops.id
+           AND items.enabled = TRUE
+           AND (items.name ILIKE :like OR tags.name ILIKE :like)
+       )",
+      like: like
+    )
+  }
+
   # The manual open switch. Opening also activates a draft shop so a vendor can
   # go from "created" to "discoverable" in one action (M1 acceptance).
   def open!

@@ -56,7 +56,8 @@ export const api = {
     request<{ token: string; user: User }>('/auth/login', 'POST', { email, password }),
   me: () => request<{ user: User }>('/me'),
 
-  listShops: () => request<{ shops: Shop[] }>('/shops'),
+  listShops: (query?: string) =>
+    request<{ shops: Shop[] }>(`/shops${query ? `?q=${encodeURIComponent(query)}` : ''}`),
   getShop: (slug: string) => request<{ shop: Shop }>(`/shops/${slug}`),
   listItems: (slug: string) => request<{ items: Item[] }>(`/shops/${slug}/items`),
   listTags: () => request<{ tags: Tag[] }>('/tags'),

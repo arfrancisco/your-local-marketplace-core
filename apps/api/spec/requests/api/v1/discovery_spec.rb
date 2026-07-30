@@ -30,6 +30,61 @@ RSpec.describe "Api::V1 Discovery", type: :request do
       expect(returned).not_to eq(returned.sort) # not alphabetical
     end
 
+    describe "search (?q=)" do
+      it "matches the shop's own name or description" do
+        bakery = create(:shop, :open, name: "Corner Bakeshop", description: "Fresh bread daily")
+        create(:shop, :open, name: "Sizzle House", description: "Grilled favorites")
+
+        get "/api/v1/shops", params: { q: "bread" }
+        expect(json["shops"].map { |s| s["slug"] }).to eq([bakery.slug])
+      end
+
+      it "matches an item name inside the shop's catalog" do
+        shop = create(:shop, :open, name: "Green Bowl")
+        create(:item, shop: shop, name: "Vegan Buddha Bowl")
+        create(:shop, :open, name: "Sizzle House")
+
+        get "/api/v1/shops", params: { q: "buddha" }
+        expect(json["shops"].map { |s| s["slug"] }).to eq([shop.slug])
+      end
+
+      it "matches an item tag" do
+        shop = create(:shop, :open, name: "Green Bowl")
+        item = create(:item, shop: shop, name: "House Salad")
+        item.tags = Tag.for_names(["Vegan"])
+        create(:shop, :open, name: "Sizzle House")
+
+        get "/api/v1/shops", params: { q: "vegan" }
+        expect(json["shops"].map { |s| s["slug"] }).to eq([shop.slug])
+      end
+
+      it "is case-insensitive and matches partial words" do
+        shop = create(:shop, :open, name: "Corner Bakeshop")
+        get "/api/v1/shops", params: { q: "BAKE" }
+        expect(json["shops"].map { |s| s["slug"] }).to eq([shop.slug])
+      end
+
+      it "returns everything when the query is blank" do
+        create(:shop, :open)
+        create(:shop, :open)
+        get "/api/v1/shops", params: { q: "" }
+        expect(json["shops"].size).to eq(2)
+      end
+
+      it "returns an empty list for no matches" do
+        create(:shop, :open, name: "Corner Bakeshop")
+        get "/api/v1/shops", params: { q: "sushi" }
+        expect(json["shops"]).to eq([])
+      end
+
+      it "does not surface a shop through a disabled item" do
+        shop = create(:shop, :open)
+        create(:item, shop: shop, name: "Secret Ramen", enabled: false)
+        get "/api/v1/shops", params: { q: "ramen" }
+        expect(json["shops"]).to eq([])
+      end
+    end
+
     it "is browsable without authentication (public discovery)" do
       create(:shop, :open)
       get "/api/v1/shops"

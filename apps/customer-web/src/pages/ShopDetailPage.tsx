@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, ApiError } from '../api/client'
-import type { Cart, Item, Shop } from '../api/types'
+import { api } from '../api/client'
+import type { Item, Shop } from '../api/types'
 import { colorFor, emojiFor } from '../visuals'
-import { useAuth } from '../auth'
-import { AuthModal } from '../components/AuthModal'
+import { EarlyAccessModal } from '../components/EarlyAccessModal'
+import { ItemDetailModal } from '../components/ItemDetailModal'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
 
@@ -12,20 +12,27 @@ function formatPrice(cents: number, currency: string) {
   return `${currency} ${(cents / 100).toFixed(2)}`
 }
 
+// Cart-building is still "deciding," not "ordering" — so, like browsing, it
+// stays free of any account. The cart lives in this browser (localStorage per
+// shop) rather than the authenticated backend cart; only "Checkout" prompts
+// for anything, and that's still just the lightweight early-access signup,
+// not a real account. The persisted backend cart (Cart/CartItem) is real and
+// tested, ready for when M3 ties checkout to real accounts and orders — this
+// page just doesn't call it yet.
+function cartStorageKey(shopId: number) {
+  return `cart:${shopId}`
+}
+
 export function ShopDetailPage() {
   const { slug } = useParams()
-  const { user } = useAuth()
 
   const [shop, setShop] = useState<Shop | null>(null)
   const [items, setItems] = useState<Item[]>([])
-  const [cart, setCart] = useState<Cart | null>(null)
+  const [quantities, setQuantities] = useState<Record<number, number>>({})
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const [authOpen, setAuthOpen] = useState(false)
-  const [pendingItemId, setPendingItemId] = useState<number | null>(null)
-  const [checkoutDone, setCheckoutDone] = useState(false)
+  const [checkoutOpen, setCheckoutOpen] = useState(false)
+  const [viewingItem, setViewingItem] = useState<Item | null>(null)
 
   useEffect(() => {
     if (!slug) return
@@ -33,64 +40,36 @@ export function ShopDetailPage() {
       .then(([shopRes, itemsRes]) => {
         setShop(shopRes.shop)
         setItems(itemsRes.items)
+        const saved = localStorage.getItem(cartStorageKey(shopRes.shop.id))
+        if (saved) setQuantities(JSON.parse(saved))
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
   }, [slug])
 
   useEffect(() => {
-    if (!shop || !user) {
-      setCart(null)
-      return
-    }
-    // Hydrates the cart on load/login. Uses a functional update so this can
-    // never clobber a cart already set by an optimistic add-to-cart response
-    // that resolved first (the two requests race, and the add is the one that
-    // should win — it reflects the item the person just asked to add).
-    api.getCart(shop.id).then((res) => setCart((prev) => prev ?? res.cart))
-  }, [shop, user])
-
-  // Does the actual network call, with no auth check — callers must already
-  // know the user is signed in. Kept separate from `addToCart` so the
-  // post-login retry never re-reads a stale `user` closure and loops back
-  // into the auth prompt instead of completing the add.
-  async function performAddToCart(itemId: number) {
     if (!shop) return
-    setError(null)
-    try {
-      const res = await api.addCartItem(shop.id, itemId, 1)
-      setCart(res.cart)
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not add to cart')
-    }
+    localStorage.setItem(cartStorageKey(shop.id), JSON.stringify(quantities))
+  }, [shop, quantities])
+
+  function addToCart(itemId: number) {
+    setQuantities((prev) => ({ ...prev, [itemId]: (prev[itemId] ?? 0) + 1 }))
   }
 
-  async function addToCart(itemId: number) {
-    if (!user) {
-      setPendingItemId(itemId)
-      setAuthOpen(true)
-      return
-    }
-    await performAddToCart(itemId)
+  function changeQuantity(itemId: number, quantity: number) {
+    setQuantities((prev) => {
+      const next = { ...prev }
+      if (quantity < 1) delete next[itemId]
+      else next[itemId] = quantity
+      return next
+    })
   }
 
-  async function onAuthSuccess() {
-    setAuthOpen(false)
-    if (pendingItemId !== null) {
-      await performAddToCart(pendingItemId)
-      setPendingItemId(null)
-    }
-  }
-
-  async function changeQuantity(cartItemId: number, quantity: number) {
-    if (quantity < 1) {
-      const res = await api.removeCartItem(cartItemId)
-      setCart(res.cart)
-      return
-    }
-    const res = await api.updateCartItem(cartItemId, quantity)
-    setCart(res.cart)
-  }
+  const cartLines = items
+    .filter((item) => quantities[item.id] > 0)
+    .map((item) => ({ item, quantity: quantities[item.id] }))
+  const cartCount = cartLines.reduce((sum, line) => sum + line.quantity, 0)
+  const subtotalCents = cartLines.reduce((sum, line) => sum + line.quantity * line.item.price_cents, 0)
 
   if (loading) return <p>Loading…</p>
   if (notFound || !shop) return <p>This shop is not available.</p>
@@ -110,7 +89,7 @@ export function ShopDetailPage() {
       <ul className="list">
         {items.map((item) => (
           <li key={item.id} className="card row spread">
-            <div className="item-main">
+            <button className="item-main clickable" onClick={() => setViewingItem(item)} aria-label={`View ${item.name}`}>
               {item.photos[0] ? (
                 <img className="thumb" src={`${API_ORIGIN}${item.photos[0].url}`} alt={item.name} />
               ) : (
@@ -123,7 +102,7 @@ export function ShopDetailPage() {
                 {item.description && <p className="muted">{item.description}</p>}
                 {item.tags.length > 0 && <p className="muted small">{item.tags.map((t) => t.name).join(', ')}</p>}
               </div>
-            </div>
+            </button>
             <div className="price-col">
               <strong>{formatPrice(item.price_cents, item.currency)}</strong>
               <button onClick={() => addToCart(item.id)}>Add to cart</button>
@@ -132,47 +111,41 @@ export function ShopDetailPage() {
         ))}
       </ul>
 
-      {error && <p role="alert" className="error">{error}</p>}
-
-      {cart && cart.items.length > 0 && (
+      {cartLines.length > 0 && (
         <div className="card cart-summary">
           <h2 className="section">Your cart</h2>
           <ul className="list">
-            {cart.items.map((line) => (
-              <li key={line.id} className="row spread cart-line">
-                <span>{line.name}</span>
+            {cartLines.map(({ item, quantity }) => (
+              <li key={item.id} className="row spread cart-line">
+                <span>{item.name}</span>
                 <div className="row gap">
-                  <button className="qty-btn" onClick={() => changeQuantity(line.id, line.quantity - 1)} aria-label="Decrease quantity">−</button>
-                  <span>{line.quantity}</span>
-                  <button className="qty-btn" onClick={() => changeQuantity(line.id, line.quantity + 1)} aria-label="Increase quantity">+</button>
-                  <strong className="line-total">{formatPrice(line.line_total_cents, line.currency)}</strong>
+                  <button className="qty-btn" onClick={() => changeQuantity(item.id, quantity - 1)} aria-label="Decrease quantity">−</button>
+                  <span>{quantity}</span>
+                  <button className="qty-btn" onClick={() => changeQuantity(item.id, quantity + 1)} aria-label="Increase quantity">+</button>
+                  <strong className="line-total">{formatPrice(quantity * item.price_cents, item.currency)}</strong>
                 </div>
               </li>
             ))}
           </ul>
           <div className="row spread cart-total">
             <strong>Subtotal</strong>
-            <strong>{formatPrice(cart.subtotal_cents, cart.items[0]?.currency ?? 'PHP')}</strong>
+            <strong>{formatPrice(subtotalCents, cartLines[0].item.currency)}</strong>
           </div>
-          <button onClick={() => setCheckoutDone(true)}>Checkout</button>
+          <button onClick={() => setCheckoutOpen(true)}>Checkout</button>
         </div>
       )}
 
-      <AuthModal open={authOpen} onClose={() => { setAuthOpen(false); setPendingItemId(null) }} onSuccess={onAuthSuccess} />
+      <EarlyAccessModal
+        open={checkoutOpen}
+        onClose={() => setCheckoutOpen(false)}
+        context={`${shop.name} — checkout (${cartCount} item${cartCount === 1 ? '' : 's'}, ${formatPrice(subtotalCents, cartLines[0]?.item.currency ?? 'PHP')})`}
+      />
 
-      {checkoutDone && (
-        <div className="modal-backdrop" onClick={() => setCheckoutDone(false)}>
-          <div className="modal modal-done" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" aria-label="Close" onClick={() => setCheckoutDone(false)}>×</button>
-            <h2>Your cart is saved 🎉</h2>
-            <p className="muted">
-              Ordering isn't live yet — we'll email you at <strong>{user?.email}</strong> the moment your
-              community opens for real orders. Your cart will be waiting.
-            </p>
-            <button onClick={() => setCheckoutDone(false)}>Done</button>
-          </div>
-        </div>
-      )}
+      <ItemDetailModal
+        item={viewingItem}
+        onClose={() => setViewingItem(null)}
+        onAddToCart={(item) => addToCart(item.id)}
+      />
     </div>
   )
 }

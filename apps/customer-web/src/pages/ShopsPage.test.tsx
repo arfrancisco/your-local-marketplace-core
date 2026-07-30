@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { ShopsPage } from './ShopsPage'
 import { api } from '../api/client'
@@ -29,5 +30,23 @@ describe('ShopsPage', () => {
 
     const headings = await screen.findAllByRole('heading', { level: 2 })
     expect(headings.map((h) => h.textContent)).toEqual(['Charlie', 'Alpha'])
+  })
+
+  it('debounces search input and passes the query to the API', async () => {
+    listShops.mockResolvedValue({ shops: [] })
+    render(
+      <MemoryRouter>
+        <ShopsPage />
+      </MemoryRouter>,
+    )
+    await screen.findByText(/no shops are open/i)
+    listShops.mockClear()
+
+    await userEvent.type(screen.getByLabelText('Search shops'), 'bread')
+
+    // Debounced: not called on every keystroke.
+    expect(listShops).not.toHaveBeenCalledWith('bread')
+    await screen.findByText(/no shops match "bread"/i)
+    expect(listShops).toHaveBeenCalledWith('bread')
   })
 })

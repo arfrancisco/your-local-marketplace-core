@@ -16,9 +16,11 @@ export function emojiFor(text: string): string {
   return '🍽️'
 }
 
-// A stable pastel background derived from the name.
+// A stable pastel background derived from the name. Restricted to a warm hue
+// band (reds through amber/gold) so tiles read as an inviting food market
+// rather than rolling into a cool blue or green for an arbitrary name.
 export function colorFor(text: string): string {
   let hash = 0
-  for (let i = 0; i < text.length; i++) hash = (hash * 31 + text.charCodeAt(i)) % 360
-  return `hsl(${hash} 55% 88%)`
+  for (let i = 0; i < text.length; i++) hash = (hash * 31 + text.charCodeAt(i)) % 48
+  return `hsl(${hash} 62% 87%)`
 }

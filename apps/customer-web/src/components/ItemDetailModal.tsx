@@ -7,14 +7,14 @@ const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/
 interface Props {
   item: Item | null
   onClose: () => void
-  onOrder: (item: Item) => void
+  onAddToCart: (item: Item) => void
 }
 
 function formatPrice(cents: number, currency: string) {
   return `${currency} ${(cents / 100).toFixed(2)}`
 }
 
-export function ItemDetailModal({ item, onClose, onOrder }: Props) {
+export function ItemDetailModal({ item, onClose, onAddToCart }: Props) {
   const [active, setActive] = useState(0)
   if (!item) return null
 
@@ -57,7 +57,7 @@ export function ItemDetailModal({ item, onClose, onOrder }: Props) {
         {item.description && <p className="muted">{item.description}</p>}
         {item.tags.length > 0 && <p className="muted small">{item.tags.map((t) => t.name).join(', ')}</p>}
 
-        <button style={{ marginTop: '0.5rem' }} onClick={() => onOrder(item)}>Order now</button>
+        <button style={{ marginTop: '0.5rem' }} onClick={() => { onAddToCart(item); onClose() }}>Add to cart</button>
       </div>
     </div>
   )
