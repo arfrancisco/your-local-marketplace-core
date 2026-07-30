@@ -30,9 +30,11 @@ RSpec.describe "Api::V1 Discovery", type: :request do
       expect(returned).not_to eq(returned.sort) # not alphabetical
     end
 
-    it "requires authentication" do
+    it "is browsable without authentication (public discovery)" do
+      create(:shop, :open)
       get "/api/v1/shops"
-      expect(response).to have_http_status(:unauthorized)
+      expect(response).to have_http_status(:ok)
+      expect(json).to have_key("shops")
     end
   end
 

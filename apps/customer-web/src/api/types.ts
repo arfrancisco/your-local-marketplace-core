@@ -43,3 +43,21 @@ export interface User {
   email: string
   customer_profile: { id: number; display_name: string; default_address_id: number | null } | null
 }
+
+export interface CartLine {
+  id: number
+  item_id: number
+  name: string
+  price_cents: number
+  currency: string
+  quantity: number
+  line_total_cents: number
+}
+
+export interface Cart {
+  id: number
+  shop_id: number
+  status: string
+  items: CartLine[]
+  subtotal_cents: number
+}

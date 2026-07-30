@@ -1,41 +1,46 @@
-import { Navigate, Route, Routes, Link, useNavigate } from 'react-router-dom'
-import type { ReactNode } from 'react'
+import { useState } from 'react'
+import { Navigate, Route, Routes, Link } from 'react-router-dom'
 import { useAuth } from './auth'
-import { LoginPage } from './pages/LoginPage'
 import { ShopsPage } from './pages/ShopsPage'
 import { ShopDetailPage } from './pages/ShopDetailPage'
-
-function RequireAuth({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth()
-  if (loading) return <p className="container">Loading…</p>
-  if (!user) return <Navigate to="/login" replace />
-  return <>{children}</>
-}
+import { EarlyAccessModal } from './components/EarlyAccessModal'
 
 function Header() {
   const { user, logout } = useAuth()
-  const navigate = useNavigate()
-  if (!user) return null
+  const [joinOpen, setJoinOpen] = useState(false)
+
   return (
-    <header className="topbar">
-      <Link to="/shops" className="brand">Neighborhood Market</Link>
-      <div className="row gap">
-        <span className="muted">{user.customer_profile?.display_name ?? user.email}</span>
-        <button onClick={() => { logout(); navigate('/login') }}>Sign out</button>
-      </div>
-    </header>
+    <>
+      <header className="topbar">
+        <Link to="/shops" className="brand">Neighborhood Market</Link>
+        {user ? (
+          <div className="row gap">
+            <span className="muted">{user.customer_profile?.display_name ?? user.email}</span>
+            <button onClick={logout}>Sign out</button>
+          </div>
+        ) : (
+          <button onClick={() => setJoinOpen(true)}>Join early access</button>
+        )}
+      </header>
+      <EarlyAccessModal open={joinOpen} onClose={() => setJoinOpen(false)} context="header" />
+    </>
   )
 }
 
 export default function App() {
   return (
     <>
+      {/* Honest framing: this is a preview, not a live store. */}
+      <div className="preview-banner">
+        Preview — coming soon to your community. These are sample shops.
+      </div>
+
       <Header />
+
       <main className="container">
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/shops" element={<RequireAuth><ShopsPage /></RequireAuth>} />
-          <Route path="/shops/:slug" element={<RequireAuth><ShopDetailPage /></RequireAuth>} />
+          <Route path="/shops" element={<ShopsPage />} />
+          <Route path="/shops/:slug" element={<ShopDetailPage />} />
           <Route path="*" element={<Navigate to="/shops" replace />} />
         </Routes>
       </main>

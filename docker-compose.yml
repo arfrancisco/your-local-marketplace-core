@@ -9,7 +9,9 @@ services:
       POSTGRES_PASSWORD: marketplace
       POSTGRES_DB: marketplace_development
     ports:
-      - "5432:5432"
+      # Host port overridable (DB_PORT) to avoid clashes with other local
+      # stacks; defaults to the standard 5432.
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,7 +23,7 @@ services:
   redis:
     image: redis:7
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Shop } from '../api/types'
+import { colorFor, emojiFor } from '../visuals'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
 
@@ -32,8 +33,12 @@ export function ShopsPage() {
         {shops.map((shop) => (
           <li key={shop.id} className="card">
             <Link to={`/shops/${shop.slug}`} className="plain">
-              {shop.photos[0] && (
+              {shop.photos[0] ? (
                 <img className="cover" src={`${API_ORIGIN}${shop.photos[0].url}`} alt={shop.name} />
+              ) : (
+                <div className="cover tile" style={{ background: colorFor(shop.name) }} aria-hidden>
+                  {emojiFor(`${shop.name} ${shop.description ?? ''}`)}
+                </div>
               )}
               <h2>{shop.name}</h2>
               {shop.description && <p className="muted">{shop.description}</p>}

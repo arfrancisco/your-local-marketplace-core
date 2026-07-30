@@ -32,6 +32,16 @@ Rails.application.routes.draw do
       get "shops/:slug/items",  to: "shops#items"
       get "tags",               to: "tags#index"
 
+      # Early-access lead capture (demo demand test). Public, rate-limited.
+      post "early_access",      to: "early_access#create"
+
+      # Customer cart, scoped to one shop at a time (ADR 0008). Requires a
+      # customer profile; cart-to-order checkout is not built yet (rest of M3).
+      get    "cart",             to: "cart#show"
+      post   "cart/items",       to: "cart#add_item"
+      patch  "cart/items/:id",   to: "cart#update_item"
+      delete "cart/items/:id",   to: "cart#remove_item"
+
       # Current user's saved addresses (descriptive, not geo).
       get    "addresses",      to: "addresses#index"
       post   "addresses",      to: "addresses#create"

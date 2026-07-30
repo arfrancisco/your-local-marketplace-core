@@ -1,4 +1,4 @@
-import type { Item, Shop, Tag, User } from './types'
+import type { Cart, Item, Shop, Tag, User } from './types'
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1'
 const TOKEN_KEY = 'customer_token'
@@ -60,4 +60,21 @@ export const api = {
   getShop: (slug: string) => request<{ shop: Shop }>(`/shops/${slug}`),
   listItems: (slug: string) => request<{ items: Item[] }>(`/shops/${slug}/items`),
   listTags: () => request<{ tags: Tag[] }>('/tags'),
+
+  earlyAccess: (payload: {
+    email?: string
+    mobile_number?: string
+    name?: string
+    interest?: string
+    context?: string
+  }) => request<{ status: string }>('/early_access', 'POST', { early_access_signup: payload }),
+
+  // Cart is scoped to one shop at a time (ADR 0008). Checkout/order placement
+  // is not built yet — the cart itself is real, persisted backend state.
+  getCart: (shopId: number) => request<{ cart: Cart | null }>(`/cart?shop_id=${shopId}`),
+  addCartItem: (shopId: number, itemId: number, quantity = 1) =>
+    request<{ cart: Cart }>('/cart/items', 'POST', { shop_id: shopId, item_id: itemId, quantity }),
+  updateCartItem: (cartItemId: number, quantity: number) =>
+    request<{ cart: Cart }>(`/cart/items/${cartItemId}`, 'PATCH', { quantity }),
+  removeCartItem: (cartItemId: number) => request<{ cart: Cart }>(`/cart/items/${cartItemId}`, 'DELETE'),
 }

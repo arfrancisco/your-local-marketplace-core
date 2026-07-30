@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_29_100004) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_30_100002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -67,6 +67,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_29_100004) do
     t.index ["user_id"], name: "index_api_tokens_on_user_id"
   end
 
+  create_table "cart_items", force: :cascade do |t|
+    t.bigint "cart_id", null: false
+    t.datetime "created_at", null: false
+    t.text "customer_note"
+    t.bigint "item_id", null: false
+    t.integer "quantity", default: 1, null: false
+    t.datetime "updated_at", null: false
+    t.index ["cart_id", "item_id"], name: "index_cart_items_on_cart_id_and_item_id", unique: true
+    t.index ["cart_id"], name: "index_cart_items_on_cart_id"
+    t.index ["item_id"], name: "index_cart_items_on_item_id"
+  end
+
+  create_table "carts", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "customer_profile_id", null: false
+    t.bigint "shop_id", null: false
+    t.string "status", default: "active", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_profile_id", "shop_id"], name: "index_carts_on_customer_and_shop_when_active", unique: true, where: "((status)::text = 'active'::text)"
+    t.index ["customer_profile_id"], name: "index_carts_on_customer_profile_id"
+    t.index ["shop_id"], name: "index_carts_on_shop_id"
+  end
+
   create_table "customer_profiles", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "default_address_id"
@@ -75,6 +98,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_29_100004) do
     t.bigint "user_id", null: false
     t.index ["default_address_id"], name: "index_customer_profiles_on_default_address_id"
     t.index ["user_id"], name: "index_customer_profiles_on_user_id", unique: true
+  end
+
+  create_table "early_access_signups", force: :cascade do |t|
+    t.string "context"
+    t.datetime "created_at", null: false
+    t.string "email"
+    t.string "interest", default: "buyer", null: false
+    t.string "mobile_number"
+    t.string "name"
+    t.datetime "updated_at", null: false
+    t.index "lower((email)::text)", name: "index_early_access_signups_on_lower_email", unique: true, where: "(email IS NOT NULL)"
+    t.index ["mobile_number"], name: "index_early_access_signups_on_mobile_number", unique: true, where: "(mobile_number IS NOT NULL)"
   end
 
   create_table "item_tags", force: :cascade do |t|
@@ -168,6 +203,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_29_100004) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "addresses", "users"
   add_foreign_key "api_tokens", "users"
+  add_foreign_key "cart_items", "carts"
+  add_foreign_key "cart_items", "items"
+  add_foreign_key "carts", "customer_profiles"
+  add_foreign_key "carts", "shops"
   add_foreign_key "customer_profiles", "addresses", column: "default_address_id"
   add_foreign_key "customer_profiles", "users"
   add_foreign_key "item_tags", "items"

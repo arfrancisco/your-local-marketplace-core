@@ -1,9 +1,12 @@
 module Api
   module V1
     # Customer-facing discovery. Only open shops (active + accepting orders) are
-    # visible, and only enabled items within them. Requires authentication: this
-    # is a closed neighbor community, not a public search index (ADR 0002).
+    # visible, and only enabled items within them. Public (no login) so people
+    # can browse the community as a hook before signing up. It is still not a
+    # public search index — there is no geo/distance discovery (ADR 0002).
     class ShopsController < BaseController
+      skip_before_action :authenticate!
+
       # GET /api/v1/shops
       def index
         shops = ShopRotation.order(Shop.listed.includes(:vendor_profile))

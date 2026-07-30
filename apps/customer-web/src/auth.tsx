@@ -2,6 +2,10 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { api, getToken, setToken } from './api/client'
 import type { User } from './api/types'
 
+// Minimal customer auth. Browsing stays public (no gate) — this only backs the
+// moment someone wants to build a real cart, which needs a real account.
+// TODO: backend registration currently requires email; the "email OR phone"
+// flexible-identifier login decided earlier this project is not yet built.
 interface AuthState {
   user: User | null
   loading: boolean

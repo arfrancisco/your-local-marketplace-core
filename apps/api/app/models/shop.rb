@@ -3,6 +3,7 @@ class Shop < ApplicationRecord
 
   belongs_to :vendor_profile
   has_many :items, dependent: :destroy
+  has_many :carts, dependent: :destroy
   has_images :photos, max_count: 3
 
   FULFILLMENT_METHODS = %w[pickup delivery].freeze
