@@ -17,3 +17,8 @@ cloudflare:
   endpoint: <%= ENV["R2_ENDPOINT"] %>
   bucket: <%= ENV["R2_BUCKET"] %>
   region: auto
+  # Recent aws-sdk-s3 defaults to sending an extra trailing checksum header
+  # that R2's S3-compatible API rejects ("You can only specify one non-default
+  # checksum at a time"). Forcing the legacy behavior fixes uploads against R2.
+  request_checksum_calculation: when_required
+  response_checksum_validation: when_required
