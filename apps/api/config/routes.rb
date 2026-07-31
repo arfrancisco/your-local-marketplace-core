@@ -117,7 +117,13 @@ Rails.application.routes.draw do
   # above — one deployed service serves both frontends + the API). Must stay
   # the LAST route drawn: it's a catch-all, everything above takes priority.
   # Real static files (JS/CSS under /assets/*, favicon.svg, etc.) never reach
-  # this — Rack::Static serves them directly first.
+  # this — Rack::Static serves them directly first. Engine-mounted routes
+  # (ActiveStorage's /rails/active_storage/*, ActionCable's /cable, the
+  # health check, Sidekiq) are appended by Rails *after* this file's own
+  # routes, so without these exclusions this catch-all would shadow all of
+  # them — exactly what broke image loading in production the first time.
+  RESERVED_PATH_PREFIXES = %w[/api /rails /cable /up /sidekiq].freeze
   root to: "static#customer_app"
-  get "*path", to: "static#customer_app", constraints: ->(req) { !req.path.start_with?("/api") }
+  get "*path", to: "static#customer_app",
+      constraints: ->(req) { RESERVED_PATH_PREFIXES.none? { |prefix| req.path.start_with?(prefix) } }
 end
