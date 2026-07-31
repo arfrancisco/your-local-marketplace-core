@@ -5,6 +5,8 @@ import { LoginPage } from './pages/LoginPage'
 import { ShopsPage } from './pages/ShopsPage'
 import { ShopFormPage } from './pages/ShopFormPage'
 import { ItemsPage } from './pages/ItemsPage'
+import { OrdersPage } from './pages/OrdersPage'
+import { OrderDetailPage } from './pages/OrderDetailPage'
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth()
@@ -39,6 +41,8 @@ export default function App() {
           <Route path="/shops/new" element={<RequireAuth><ShopFormPage /></RequireAuth>} />
           <Route path="/shops/:id/edit" element={<RequireAuth><ShopFormPage /></RequireAuth>} />
           <Route path="/shops/:id/items" element={<RequireAuth><ItemsPage /></RequireAuth>} />
+          <Route path="/orders" element={<RequireAuth><OrdersPage /></RequireAuth>} />
+          <Route path="/orders/:id" element={<RequireAuth><OrderDetailPage /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/shops" replace />} />
         </Routes>
       </main>

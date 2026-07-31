@@ -5,9 +5,11 @@ import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './auth'
 
+// import.meta.env.BASE_URL mirrors vite.config.ts's `base` — "/vendor/" in a
+// production build (served under /vendor/* by the Rails API), "/" in dev.
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <AuthProvider>
         <App />
       </AuthProvider>

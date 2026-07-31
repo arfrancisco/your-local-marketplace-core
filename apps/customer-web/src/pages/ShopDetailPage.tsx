@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { api } from '../api/client'
-import type { Item, Shop } from '../api/types'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { api, ApiError } from '../api/client'
+import { useAuth } from '../auth'
+import type { FulfillmentMethod, Item, Shop } from '../api/types'
 import { colorFor, emojiFor } from '../visuals'
-import { EarlyAccessModal } from '../components/EarlyAccessModal'
 import { ItemDetailModal } from '../components/ItemDetailModal'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
@@ -12,62 +12,89 @@ function formatPrice(cents: number, currency: string) {
   return `${currency} ${(cents / 100).toFixed(2)}`
 }
 
-// Cart-building is still "deciding," not "ordering" — so, like browsing, it
-// stays free of any account. The cart lives in this browser (localStorage per
-// shop) rather than the authenticated backend cart; only "Checkout" prompts
-// for anything, and that's still just the lightweight early-access signup,
-// not a real account. The persisted backend cart (Cart/CartItem) is real and
-// tested, ready for when M3 ties checkout to real accounts and orders — this
-// page just doesn't call it yet.
-function cartStorageKey(shopId: number) {
-  return `cart:${shopId}`
-}
-
+// The real, persisted backend cart (Cart/CartItem, ADR 0008) — adding to it
+// requires a real account, which is the moment browsing turns into ordering.
+// Checkout converts it into a real order (M3/ADR 0009).
 export function ShopDetailPage() {
   const { slug } = useParams()
+  const navigate = useNavigate()
+  const { user } = useAuth()
 
   const [shop, setShop] = useState<Shop | null>(null)
   const [items, setItems] = useState<Item[]>([])
-  const [quantities, setQuantities] = useState<Record<number, number>>({})
+  const [cartLines, setCartLines] = useState<
+    { cartItemId: number; item: Item; quantity: number }[]
+  >([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
-  const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [viewingItem, setViewingItem] = useState<Item | null>(null)
+  const [fulfillmentMethod, setFulfillmentMethod] = useState<FulfillmentMethod | null>(null)
+  const [placingOrder, setPlacingOrder] = useState(false)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!slug) return
+    setLoading(true)
     Promise.all([api.getShop(slug), api.listItems(slug)])
       .then(([shopRes, itemsRes]) => {
         setShop(shopRes.shop)
         setItems(itemsRes.items)
-        const saved = localStorage.getItem(cartStorageKey(shopRes.shop.id))
-        if (saved) setQuantities(JSON.parse(saved))
+        const methods = shopRes.shop.fulfillment_methods
+        setFulfillmentMethod((methods.includes('delivery') ? 'delivery' : methods[0]) ?? null)
+        if (!user) return
+        return api.getCart(shopRes.shop.id).then((cartRes) => {
+          if (!cartRes.cart) return
+          const byItemId = new Map(itemsRes.items.map((i) => [i.id, i]))
+          setCartLines(
+            cartRes.cart.items
+              .map((line) => ({ cartItemId: line.id, item: byItemId.get(line.item_id)!, quantity: line.quantity }))
+              .filter((l) => l.item)
+          )
+        })
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
-  }, [slug])
+  }, [slug, user])
 
-  useEffect(() => {
-    if (!shop) return
-    localStorage.setItem(cartStorageKey(shop.id), JSON.stringify(quantities))
-  }, [shop, quantities])
-
-  function addToCart(itemId: number) {
-    setQuantities((prev) => ({ ...prev, [itemId]: (prev[itemId] ?? 0) + 1 }))
+  function requireLogin() {
+    navigate(`/login?return_to=${encodeURIComponent(`/shops/${slug}`)}`)
   }
 
-  function changeQuantity(itemId: number, quantity: number) {
-    setQuantities((prev) => {
-      const next = { ...prev }
-      if (quantity < 1) delete next[itemId]
-      else next[itemId] = quantity
-      return next
+  async function addToCart(item: Item) {
+    if (!user || !shop) return requireLogin()
+    const res = await api.addCartItem(shop.id, item.id)
+    const line = res.cart.items.find((l) => l.item_id === item.id)!
+    setCartLines((prev) => {
+      const existing = prev.find((l) => l.item.id === item.id)
+      if (existing) return prev.map((l) => (l.item.id === item.id ? { ...l, quantity: line.quantity, cartItemId: line.id } : l))
+      return [...prev, { cartItemId: line.id, item, quantity: line.quantity }]
     })
   }
 
-  const cartLines = items
-    .filter((item) => quantities[item.id] > 0)
-    .map((item) => ({ item, quantity: quantities[item.id] }))
+  async function changeQuantity(cartItemId: number, itemId: number, quantity: number) {
+    if (quantity < 1) {
+      await api.removeCartItem(cartItemId)
+      setCartLines((prev) => prev.filter((l) => l.item.id !== itemId))
+      return
+    }
+    await api.updateCartItem(cartItemId, quantity)
+    setCartLines((prev) => prev.map((l) => (l.item.id === itemId ? { ...l, quantity } : l)))
+  }
+
+  async function placeOrder() {
+    if (!shop || !fulfillmentMethod) return
+    setCheckoutError(null)
+    setPlacingOrder(true)
+    try {
+      const res = await api.checkout(shop.id, fulfillmentMethod)
+      navigate(`/orders/${res.order.id}`)
+    } catch (err) {
+      setCheckoutError(err instanceof ApiError ? err.message : 'Could not place order')
+    } finally {
+      setPlacingOrder(false)
+    }
+  }
+
   const cartCount = cartLines.reduce((sum, line) => sum + line.quantity, 0)
   const subtotalCents = cartLines.reduce((sum, line) => sum + line.quantity * line.item.price_cents, 0)
 
@@ -105,7 +132,7 @@ export function ShopDetailPage() {
             </button>
             <div className="price-col">
               <strong>{formatPrice(item.price_cents, item.currency)}</strong>
-              <button onClick={() => addToCart(item.id)}>Add to cart</button>
+              <button onClick={() => addToCart(item)}>Add to cart</button>
             </div>
           </li>
         ))}
@@ -115,13 +142,13 @@ export function ShopDetailPage() {
         <div className="card cart-summary">
           <h2 className="section">Your cart</h2>
           <ul className="list">
-            {cartLines.map(({ item, quantity }) => (
+            {cartLines.map(({ cartItemId, item, quantity }) => (
               <li key={item.id} className="row spread cart-line">
                 <span>{item.name}</span>
                 <div className="row gap">
-                  <button className="qty-btn" onClick={() => changeQuantity(item.id, quantity - 1)} aria-label="Decrease quantity">−</button>
+                  <button className="qty-btn" onClick={() => changeQuantity(cartItemId, item.id, quantity - 1)} aria-label="Decrease quantity">−</button>
                   <span>{quantity}</span>
-                  <button className="qty-btn" onClick={() => changeQuantity(item.id, quantity + 1)} aria-label="Increase quantity">+</button>
+                  <button className="qty-btn" onClick={() => changeQuantity(cartItemId, item.id, quantity + 1)} aria-label="Increase quantity">+</button>
                   <strong className="line-total">{formatPrice(quantity * item.price_cents, item.currency)}</strong>
                 </div>
               </li>
@@ -131,21 +158,32 @@ export function ShopDetailPage() {
             <strong>Subtotal</strong>
             <strong>{formatPrice(subtotalCents, cartLines[0].item.currency)}</strong>
           </div>
-          <button onClick={() => setCheckoutOpen(true)}>Checkout</button>
+
+          {shop.fulfillment_methods.length > 1 && (
+            <fieldset>
+              <legend>Fulfillment</legend>
+              {shop.fulfillment_methods.map((m) => (
+                <label key={m} className="inline">
+                  <input
+                    type="radio"
+                    name="fulfillment_method"
+                    checked={fulfillmentMethod === m}
+                    onChange={() => setFulfillmentMethod(m)}
+                  />
+                  {m}
+                </label>
+              ))}
+            </fieldset>
+          )}
+
+          {checkoutError && <p role="alert" className="error">{checkoutError}</p>}
+          <button onClick={placeOrder} disabled={placingOrder}>
+            {placingOrder ? 'Placing order…' : `Place order (${cartCount} item${cartCount === 1 ? '' : 's'})`}
+          </button>
         </div>
       )}
 
-      <EarlyAccessModal
-        open={checkoutOpen}
-        onClose={() => setCheckoutOpen(false)}
-        context={`${shop.name} — checkout (${cartCount} item${cartCount === 1 ? '' : 's'}, ${formatPrice(subtotalCents, cartLines[0]?.item.currency ?? 'PHP')})`}
-      />
-
-      <ItemDetailModal
-        item={viewingItem}
-        onClose={() => setViewingItem(null)}
-        onAddToCart={(item) => addToCart(item.id)}
-      />
+      <ItemDetailModal item={viewingItem} onClose={() => setViewingItem(null)} onAddToCart={addToCart} />
     </div>
   )
 }

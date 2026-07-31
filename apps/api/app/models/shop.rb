@@ -4,7 +4,9 @@ class Shop < ApplicationRecord
   belongs_to :vendor_profile
   has_many :items, dependent: :destroy
   has_many :carts, dependent: :destroy
+  has_many :orders, dependent: :destroy
   has_images :photos, max_count: 3
+  has_images :opening_message_photos, max_count: 5
 
   FULFILLMENT_METHODS = %w[pickup delivery].freeze
   STATUSES = %w[draft active suspended].freeze

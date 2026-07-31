@@ -6,6 +6,11 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; }
+/* input[type='file'] below forces display:inline-block, which would
+   otherwise win over the browser's default [hidden] styling — without
+   this, a `hidden` file input (e.g. the chat composer's click-to-browse
+   fallback) stays visible. */
+[hidden] { display: none !important; }
 
 .topbar {
   display: flex;
@@ -71,3 +76,89 @@ button:disabled { opacity: 0.6; cursor: default; }
 
 .thumbs { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.5rem 0; }
 .thumbs img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; }
+.thumb-btn {
+  padding: 0; border: none; background: none; border-radius: 6px; cursor: pointer;
+  display: block; line-height: 0;
+}
+.thumb-btn img { transition: opacity 0.1s; }
+.thumb-btn:hover img { opacity: 0.85; }
+
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5);
+  display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 50;
+}
+.modal {
+  position: relative; background: #fff; border-radius: 12px; padding: 1.5rem;
+  width: 100%; max-width: 480px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  text-align: center;
+}
+.modal-close {
+  position: absolute; top: 0.5rem; right: 0.5rem; background: none; border: none;
+  color: #6b7280; font-size: 1.5rem; line-height: 1; padding: 0.25rem 0.5rem; cursor: pointer;
+}
+.modal-image { max-width: 100%; max-height: 60vh; border-radius: 8px; margin-bottom: 1rem; }
+
+/* Per-order chat (M4, ADR 0009) */
+.order-chat { border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; padding: 0.75rem; }
+.message-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 360px; overflow-y: auto; margin-bottom: 0.75rem; }
+.message { align-self: flex-start; max-width: 80%; padding: 0.5rem 0.75rem; border-radius: 10px; background: #f3f4f6; }
+.message p { margin: 0; white-space: pre-wrap; }
+.message img { max-width: 100%; border-radius: 6px; margin-top: 0.35rem; }
+.message.own { align-self: flex-end; background: #dbeafe; }
+
+/* One rounded pill holding attach + textarea + send, not three separate
+   boxes — the "modern chat app" composer the user asked for. */
+.chat-composer {
+  border: 1px solid #d1d5db;
+  border-radius: 22px;
+  padding: 0.35rem 0.4rem 0.35rem 1rem;
+  background: #fff;
+  transition: background 0.15s, border-color 0.15s;
+}
+.chat-composer.drag-over { background: #fef3c7; border-color: #fde68a; }
+.chat-input-row { display: flex; align-items: flex-end; gap: 0.25rem; }
+.chat-input-row textarea {
+  flex: 1;
+  display: block;
+  width: auto;
+  border: none;
+  background: none;
+  resize: none;
+  outline: none;
+  padding: 0.45rem 0;
+  margin: 0;
+  font: inherit;
+  line-height: 1.4;
+  max-height: 150px;
+  overflow-y: auto;
+}
+.attach-btn, .send-btn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.attach-btn:hover:not(:disabled) { background: #f3f4f6; }
+.send-btn { background: #111827; color: #fff; }
+.send-btn:disabled { opacity: 0.5; cursor: default; }
+
+.chat-image-preview { position: relative; display: inline-block; margin: 0.25rem 0 0.5rem; }
+.chat-image-preview img { max-height: 90px; border-radius: 6px; display: block; }
+.chat-image-preview button {
+  position: absolute; top: -8px; right: -8px; width: 22px; height: 22px;
+  padding: 0; border-radius: 50%; line-height: 1; font-size: 0.9rem;
+}
+
+/* Opening message — pinned panel above chat, shown live from the shop's
+   current settings (ADR 0009, revised), not a scrolling chat message. */
+.opening-message { background: #fef3c7; border: 1px solid #fde68a; }
+.opening-message-text { white-space: pre-wrap; margin: 0 0 0.5rem; }

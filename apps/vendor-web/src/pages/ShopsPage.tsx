@@ -50,6 +50,7 @@ export function ShopsPage() {
                 </button>
                 <Link className="button" to={`/shops/${shop.id}/edit`}>Edit</Link>
                 <Link className="button" to={`/shops/${shop.id}/items`}>Items</Link>
+                <Link className="button" to={`/orders?shop_id=${shop.id}`}>Orders</Link>
               </div>
             </div>
           </li>

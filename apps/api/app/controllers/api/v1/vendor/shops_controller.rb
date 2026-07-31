@@ -2,17 +2,17 @@ module Api
   module V1
     module Vendor
       class ShopsController < BaseController
-        before_action :set_shop, only: %i[show update open close destroy_photo]
+        before_action :set_shop, only: %i[show update open close destroy_photo destroy_opening_message_photo]
 
         # GET /api/v1/vendor/shops
         def index
           shops = current_vendor_profile.shops.order(created_at: :desc)
-          render json: { shops: shops.map { |shop| ShopSerializer.call(shop) } }
+          render json: { shops: shops.map { |shop| ShopSerializer.call(shop, include_payment_info: true) } }
         end
 
         # GET /api/v1/vendor/shops/:id
         def show
-          render json: { shop: ShopSerializer.call(@shop) }
+          render json: { shop: ShopSerializer.call(@shop, include_payment_info: true) }
         end
 
         # POST /api/v1/vendor/shops
@@ -21,7 +21,7 @@ module Api
           authorize shop
           attach_photos(shop)
           shop.save!
-          render json: { shop: ShopSerializer.call(shop) }, status: :created
+          render json: { shop: ShopSerializer.call(shop, include_payment_info: true) }, status: :created
         end
 
         # PATCH /api/v1/vendor/shops/:id
@@ -29,24 +29,30 @@ module Api
           @shop.assign_attributes(shop_params)
           attach_photos(@shop)
           @shop.save!
-          render json: { shop: ShopSerializer.call(@shop) }
+          render json: { shop: ShopSerializer.call(@shop, include_payment_info: true) }
         end
 
         # POST /api/v1/vendor/shops/:id/open
         def open
           @shop.open!
-          render json: { shop: ShopSerializer.call(@shop) }
+          render json: { shop: ShopSerializer.call(@shop, include_payment_info: true) }
         end
 
         # POST /api/v1/vendor/shops/:id/close
         def close
           @shop.close!
-          render json: { shop: ShopSerializer.call(@shop) }
+          render json: { shop: ShopSerializer.call(@shop, include_payment_info: true) }
         end
 
         # DELETE /api/v1/vendor/shops/:id/photos/:photo_id
         def destroy_photo
           @shop.photos_attachments.find(params[:photo_id]).purge
+          head :no_content
+        end
+
+        # DELETE /api/v1/vendor/shops/:id/opening_message_photos/:photo_id
+        def destroy_opening_message_photo
+          @shop.opening_message_photos_attachments.find(params[:photo_id]).purge
           head :no_content
         end
 
@@ -61,12 +67,16 @@ module Api
         end
 
         def shop_params
-          params.require(:shop).permit(:name, :description, :contact_number, :address, fulfillment_methods: [])
+          params.require(:shop).permit(:name, :description, :contact_number, :address, :opening_message,
+                                        fulfillment_methods: [])
         end
 
         def attach_photos(shop)
           photos = params.dig(:shop, :photos)
           shop.photos.attach(photos) if photos.present?
+
+          opening_message_photos = params.dig(:shop, :opening_message_photos)
+          shop.opening_message_photos.attach(opening_message_photos) if opening_message_photos.present?
         end
       end
     end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_30_100002) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_31_120001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -90,6 +90,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_100002) do
     t.index ["shop_id"], name: "index_carts_on_shop_id"
   end
 
+  create_table "conversation_reads", force: :cascade do |t|
+    t.bigint "conversation_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "last_read_at"
+    t.bigint "last_read_message_id"
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["conversation_id", "user_id"], name: "index_conversation_reads_on_conversation_and_user", unique: true
+    t.index ["conversation_id"], name: "index_conversation_reads_on_conversation_id"
+    t.index ["last_read_message_id"], name: "index_conversation_reads_on_last_read_message_id"
+    t.index ["user_id"], name: "index_conversation_reads_on_user_id"
+  end
+
+  create_table "conversations", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "order_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["order_id"], name: "index_conversations_on_order_id", unique: true
+  end
+
   create_table "customer_profiles", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "default_address_id"
@@ -136,6 +156,71 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_100002) do
     t.index ["shop_id"], name: "index_items_on_shop_id"
   end
 
+  create_table "messages", force: :cascade do |t|
+    t.text "body"
+    t.bigint "conversation_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "edited_at"
+    t.string "message_type", default: "text", null: false
+    t.bigint "sender_user_id"
+    t.index ["conversation_id", "created_at"], name: "index_messages_on_conversation_id_and_created_at"
+    t.index ["conversation_id"], name: "index_messages_on_conversation_id"
+    t.index ["sender_user_id"], name: "index_messages_on_sender_user_id"
+  end
+
+  create_table "order_items", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "customer_note"
+    t.text "item_description"
+    t.bigint "item_id"
+    t.string "item_name", null: false
+    t.integer "line_total_cents", null: false
+    t.bigint "order_id", null: false
+    t.integer "quantity", null: false
+    t.integer "unit_price_cents", null: false
+    t.datetime "updated_at", null: false
+    t.index ["item_id"], name: "index_order_items_on_item_id"
+    t.index ["order_id"], name: "index_order_items_on_order_id"
+  end
+
+  create_table "order_status_events", force: :cascade do |t|
+    t.bigint "actor_user_id", null: false
+    t.datetime "created_at", null: false
+    t.string "from_status"
+    t.bigint "order_id", null: false
+    t.text "reason"
+    t.string "to_status", null: false
+    t.index ["actor_user_id"], name: "index_order_status_events_on_actor_user_id"
+    t.index ["order_id"], name: "index_order_status_events_on_order_id"
+  end
+
+  create_table "orders", force: :cascade do |t|
+    t.datetime "accepted_at"
+    t.datetime "cancelled_at"
+    t.bigint "cart_id"
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.string "currency", default: "PHP", null: false
+    t.text "customer_note"
+    t.bigint "customer_profile_id", null: false
+    t.string "fulfillment_method", null: false
+    t.string "payment_status", default: "unpaid", null: false
+    t.datetime "placed_at", null: false
+    t.string "public_reference", null: false
+    t.bigint "shop_id", null: false
+    t.string "status", default: "placed", null: false
+    t.integer "subtotal_cents", null: false
+    t.integer "total_cents", null: false
+    t.datetime "updated_at", null: false
+    t.text "vendor_note"
+    t.index ["cart_id"], name: "index_orders_on_cart_id"
+    t.index ["customer_profile_id", "status"], name: "index_orders_on_customer_profile_id_and_status"
+    t.index ["customer_profile_id"], name: "index_orders_on_customer_profile_id"
+    t.index ["public_reference"], name: "index_orders_on_public_reference", unique: true
+    t.index ["shop_id", "status"], name: "index_orders_on_shop_id_and_status"
+    t.index ["shop_id"], name: "index_orders_on_shop_id"
+  end
+
   create_table "shops", force: :cascade do |t|
     t.boolean "accepting_orders", default: false, null: false
     t.string "address"
@@ -144,6 +229,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_100002) do
     t.text "description"
     t.string "fulfillment_methods", default: [], null: false, array: true
     t.string "name", null: false
+    t.text "opening_message"
     t.string "slug", null: false
     t.string "status", default: "draft", null: false
     t.datetime "updated_at", null: false
@@ -207,11 +293,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_100002) do
   add_foreign_key "cart_items", "items"
   add_foreign_key "carts", "customer_profiles"
   add_foreign_key "carts", "shops"
+  add_foreign_key "conversation_reads", "conversations"
+  add_foreign_key "conversation_reads", "messages", column: "last_read_message_id"
+  add_foreign_key "conversation_reads", "users"
+  add_foreign_key "conversations", "orders"
   add_foreign_key "customer_profiles", "addresses", column: "default_address_id"
   add_foreign_key "customer_profiles", "users"
   add_foreign_key "item_tags", "items"
   add_foreign_key "item_tags", "tags"
   add_foreign_key "items", "shops"
+  add_foreign_key "messages", "conversations"
+  add_foreign_key "messages", "users", column: "sender_user_id"
+  add_foreign_key "order_items", "items"
+  add_foreign_key "order_items", "orders"
+  add_foreign_key "order_status_events", "orders"
+  add_foreign_key "order_status_events", "users", column: "actor_user_id"
+  add_foreign_key "orders", "carts"
+  add_foreign_key "orders", "customer_profiles"
+  add_foreign_key "orders", "shops"
   add_foreign_key "shops", "vendor_profiles"
   add_foreign_key "vendor_profiles", "users"
   add_foreign_key "verification_challenges", "users"

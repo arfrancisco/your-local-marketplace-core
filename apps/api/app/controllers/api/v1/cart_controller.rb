@@ -7,6 +7,7 @@ module Api
       before_action :require_customer_profile
       before_action :set_shop, only: %i[show add_item]
       before_action :set_cart_item, only: %i[update_item remove_item]
+      before_action :set_checkout_cart, only: %i[checkout]
 
       # GET /api/v1/cart?shop_id=:shop_id
       def show
@@ -40,6 +41,16 @@ module Api
         render json: { cart: CartSerializer.call(cart.reload) }
       end
 
+      # POST /api/v1/cart/checkout (shop_id, fulfillment_method, customer_note)
+      def checkout
+        order = Carts::Checkout.new(
+          cart: @checkout_cart,
+          fulfillment_method: params.require(:fulfillment_method),
+          customer_note: params[:customer_note]
+        ).call
+        render json: { order: OrderSerializer.call(order) }, status: :created
+      end
+
       private
 
       def customer_profile
@@ -53,6 +64,11 @@ module Api
       def set_shop
         shop_id = params[:shop_id] || cart_item_params[:shop_id]
         @shop = Shop.listed.find(shop_id)
+      end
+
+      def set_checkout_cart
+        shop = Shop.listed.find(params.require(:shop_id))
+        @checkout_cart = customer_profile.carts.active.find_by!(shop: shop)
       end
 
       # Scoped through the customer's own carts, so another customer's cart_item

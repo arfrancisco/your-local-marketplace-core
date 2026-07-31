@@ -93,6 +93,22 @@ RSpec.describe "Api::V1 Cart", type: :request do
     end
   end
 
+  describe "POST /api/v1/cart/checkout" do
+    it "converts the cart into an order" do
+      post "/api/v1/cart/items", params: { shop_id: shop.id, item_id: item.id, quantity: 2 }, headers: auth_headers(customer)
+
+      post "/api/v1/cart/checkout", params: { shop_id: shop.id, fulfillment_method: "pickup" }, headers: auth_headers(customer)
+      expect(response).to have_http_status(:created)
+      expect(json.dig("order", "status")).to eq("placed")
+      expect(json.dig("order", "items").first).to include("quantity" => 2)
+    end
+
+    it "404s when there is no active cart for the shop" do
+      post "/api/v1/cart/checkout", params: { shop_id: shop.id, fulfillment_method: "pickup" }, headers: auth_headers(customer)
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
   describe "cart isolation across shops" do
     it "keeps separate carts per shop for the same customer" do
       other_shop = create(:shop, :open)

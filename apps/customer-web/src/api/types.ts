@@ -61,3 +61,58 @@ export interface Cart {
   items: CartLine[]
   subtotal_cents: number
 }
+
+export type OrderStatus =
+  | 'placed'
+  | 'accepted'
+  | 'preparing'
+  | 'ready_for_pickup'
+  | 'out_for_delivery'
+  | 'completed'
+  | 'rejected'
+  | 'cancelled'
+
+export interface OrderLineItem {
+  id: number
+  item_id: number | null
+  name: string
+  unit_price_cents: number
+  quantity: number
+  line_total_cents: number
+}
+
+export interface Order {
+  id: number
+  public_reference: string
+  shop_id: number
+  status: OrderStatus
+  can_transition_to: OrderStatus[]
+  fulfillment_method: FulfillmentMethod
+  subtotal_cents: number
+  total_cents: number
+  currency: string
+  payment_status: 'unpaid' | 'marked_paid'
+  customer_note: string | null
+  vendor_note: string | null
+  items: OrderLineItem[]
+  // Read live off the shop, not snapshotted — a pinned panel above chat,
+  // not a chat message (ADR 0009, revised).
+  opening_message: string | null
+  opening_message_photos: Photo[]
+  placed_at: string
+  accepted_at: string | null
+  completed_at: string | null
+  cancelled_at: string | null
+  conversation_id: number | null
+}
+
+export interface Message {
+  id: number
+  conversation_id: number
+  sender_user_id: number | null
+  message_type: 'text' | 'image' | 'system'
+  body: string | null
+  image: Photo | null
+  created_at: string
+  edited_at: string | null
+}

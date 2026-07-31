@@ -1,7 +1,34 @@
 # syntax = docker/dockerfile:1
+#
+# Build context for this Dockerfile is the REPO ROOT, not apps/api — it needs
+# to see apps/customer-web and apps/vendor-web too, since this one image now
+# serves all three (API, customer-web at /, vendor-web at /vendor/*). If
+# deploying with `railway up`, run it from the repo root with
+# `--path-as-root . ` and point at this file, not `apps/api` as the root.
+
+# ARGs used in a FROM must be declared before the *first* FROM in the file —
+# they don't hoist from further down, even for a later stage's own FROM line.
+ARG RUBY_VERSION=3.4.5
+
+FROM node:20-slim AS customer-web-build
+WORKDIR /build
+COPY apps/customer-web/package*.json ./
+RUN npm ci
+COPY apps/customer-web/ ./
+# Same-origin once served by this same Rails app — a relative path, not a
+# cross-origin URL. Vite bakes this in at build time.
+ENV VITE_API_BASE_URL=/api/v1
+RUN npm run build
+
+FROM node:20-slim AS vendor-web-build
+WORKDIR /build
+COPY apps/vendor-web/package*.json ./
+RUN npm ci
+COPY apps/vendor-web/ ./
+ENV VITE_API_BASE_URL=/api/v1
+RUN npm run build
 
 # Make sure RUBY_VERSION matches the Ruby version in .ruby-version and Gemfile
-ARG RUBY_VERSION=3.4.5
 FROM registry.docker.com/library/ruby:$RUBY_VERSION-slim as base
 
 # Rails app lives here
@@ -22,13 +49,13 @@ RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential git libpq-dev libvips pkg-config
 
 # Install application gems
-COPY Gemfile Gemfile.lock ./
+COPY apps/api/Gemfile apps/api/Gemfile.lock ./
 RUN bundle install && \
     rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \
     bundle exec bootsnap precompile --gemfile
 
 # Copy application code
-COPY . .
+COPY apps/api/ .
 
 # Precompile bootsnap code for faster boot times
 RUN bundle exec bootsnap precompile app/ lib/
@@ -45,6 +72,11 @@ RUN apt-get update -qq && \
 # Copy built artifacts: gems, application
 COPY --from=build /usr/local/bundle /usr/local/bundle
 COPY --from=build /rails /rails
+
+# The two SPA builds — customer-web at the public root, vendor-web under
+# /vendor/ (see config/routes.rb + app/controllers/static_controller.rb).
+COPY --from=customer-web-build /build/dist /rails/public
+COPY --from=vendor-web-build /build/dist /rails/public/vendor
 
 # Run and own only the runtime files as a non-root user for security
 RUN useradd rails --create-home --shell /bin/bash && \

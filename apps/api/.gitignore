@@ -31,3 +31,16 @@
 
 # Ignore bootsnap cache.
 /tmp/cache/bootsnap*
+
+# customer-web's and vendor-web's production builds, copied here to be
+# served by this app (customer-web at the root, vendor-web under /vendor/*)
+# — see Dockerfile. Built via `npm run build` in each app, then copied in;
+# not committed, rebuilt fresh at every deploy. /public/robots.txt is the
+# only real hand-authored file under public/, so these are named explicitly
+# rather than ignoring the whole directory.
+/public/vendor/*
+/public/assets/
+/public/index.html
+/public/favicon.svg
+/public/icons.svg
+/public/bazaar.jpg

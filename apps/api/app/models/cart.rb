@@ -3,6 +3,7 @@ class Cart < ApplicationRecord
   belongs_to :shop
   has_many :cart_items, dependent: :destroy
   has_many :items, through: :cart_items
+  has_one :order
 
   STATUSES = %w[active converted abandoned].freeze
 

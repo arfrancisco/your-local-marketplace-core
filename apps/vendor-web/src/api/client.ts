@@ -1,4 +1,4 @@
-import type { Item, Shop, User } from './types'
+import type { Item, Message, Order, Shop, User } from './types'
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1'
 const TOKEN_KEY = 'vendor_token'
@@ -70,4 +70,25 @@ export const api = {
   updateItem: (id: number, form: FormData) => request<{ item: Item }>(`/vendor/items/${id}`, 'PATCH', form),
   enableItem: (id: number) => request<{ item: Item }>(`/vendor/items/${id}/enable`, 'POST'),
   disableItem: (id: number) => request<{ item: Item }>(`/vendor/items/${id}/disable`, 'POST'),
+
+  listVendorOrders: (shopId?: number) =>
+    request<{ orders: Order[] }>(`/vendor/orders${shopId ? `?shop_id=${shopId}` : ''}`),
+  getOrder: (id: number) => request<{ order: Order }>(`/orders/${id}`),
+  transitionOrder: (id: number, to_status: string, reason?: string) =>
+    request<{ order: Order }>(`/orders/${id}/transitions`, 'POST', { to_status, reason }),
+  markOrderPaid: (id: number) => request<{ order: Order }>(`/orders/${id}/mark_paid`, 'POST'),
+
+  getConversation: (orderId: number) =>
+    request<{ conversation: { id: number; order_id: number }; messages: Message[] }>(
+      `/orders/${orderId}/conversation`
+    ),
+  postMessage: (orderId: number, body: string | null, image?: File | null) => {
+    if (image) {
+      const fd = new FormData()
+      if (body) fd.append('body', body)
+      fd.append('image', image)
+      return request<{ message: Message }>(`/orders/${orderId}/messages`, 'POST', fd)
+    }
+    return request<{ message: Message }>(`/orders/${orderId}/messages`, 'POST', { body })
+  },
 }

@@ -1,0 +1,42 @@
+require "rails_helper"
+
+RSpec.describe Carts::Checkout do
+  let(:customer) { create(:user, :customer) }
+  let(:shop) { create(:shop, :open, fulfillment_methods: %w[pickup delivery]) }
+  let(:item) { create(:item, shop: shop, price_cents: 15_000) }
+  let(:cart) do
+    Carts::AddItem.new(customer_profile: customer.customer_profile, shop: shop, item: item, quantity: 2).call
+  end
+
+  it "creates an order snapshotted from the cart, marks the cart converted, and creates a conversation" do
+    order = described_class.new(cart: cart, fulfillment_method: "pickup").call
+
+    expect(order).to be_persisted
+    expect(order.status).to eq("placed")
+    expect(order.subtotal_cents).to eq(30_000)
+    expect(order.total_cents).to eq(30_000)
+    expect(order.order_items.sole).to have_attributes(item_name: item.name, unit_price_cents: 15_000, quantity: 2)
+    expect(cart.reload.status).to eq("converted")
+    expect(order.conversation).to be_present
+    expect(order.order_status_events.sole).to have_attributes(from_status: nil, to_status: "placed")
+  end
+
+  it "rejects checkout for an empty cart" do
+    empty_cart = create(:cart, customer_profile: customer.customer_profile, shop: shop)
+    expect { described_class.new(cart: empty_cart, fulfillment_method: "pickup").call }
+      .to raise_error(ApiError::UnprocessableEntity, /empty/i)
+  end
+
+  it "rejects a fulfillment method the shop doesn't offer" do
+    shop.update!(fulfillment_methods: %w[pickup])
+    expect { described_class.new(cart: cart, fulfillment_method: "delivery").call }
+      .to raise_error(ApiError::UnprocessableEntity, /fulfillment/i)
+  end
+
+  it "rejects checkout when an item has been disabled since it was added to the cart" do
+    cart # force creation while the item is still enabled
+    item.update!(enabled: false)
+    expect { described_class.new(cart: cart, fulfillment_method: "pickup").call }
+      .to raise_error(ApiError::UnprocessableEntity, /no longer available/i)
+  end
+end

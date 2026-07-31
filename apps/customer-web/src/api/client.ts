@@ -1,4 +1,4 @@
-import type { Cart, Item, Shop, Tag, User } from './types'
+import type { Cart, FulfillmentMethod, Item, Message, Order, Shop, Tag, User } from './types'
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1'
 const TOKEN_KEY = 'customer_token'
@@ -25,13 +25,15 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, method = 'GET', body?: Record<string, unknown>): Promise<T> {
+async function request<T>(path: string, method = 'GET', body?: Record<string, unknown> | FormData): Promise<T> {
   const headers: Record<string, string> = {}
   const token = getToken()
   if (token) headers['Authorization'] = `Bearer ${token}`
 
-  let payload: string | undefined
-  if (body !== undefined) {
+  let payload: BodyInit | undefined
+  if (body instanceof FormData) {
+    payload = body // browser sets multipart boundary
+  } else if (body !== undefined) {
     headers['Content-Type'] = 'application/json'
     payload = JSON.stringify(body)
   }
@@ -78,4 +80,29 @@ export const api = {
   updateCartItem: (cartItemId: number, quantity: number) =>
     request<{ cart: Cart }>(`/cart/items/${cartItemId}`, 'PATCH', { quantity }),
   removeCartItem: (cartItemId: number) => request<{ cart: Cart }>(`/cart/items/${cartItemId}`, 'DELETE'),
+
+  // Checkout converts the cart into a real order (rest of M3, ADR 0009) —
+  // requires the lightweight real account cart already requires.
+  checkout: (shopId: number, fulfillmentMethod: FulfillmentMethod, customerNote?: string) =>
+    request<{ order: Order }>('/cart/checkout', 'POST', {
+      shop_id: shopId, fulfillment_method: fulfillmentMethod, customer_note: customerNote,
+    }),
+
+  listOrders: () => request<{ orders: Order[] }>('/orders'),
+  getOrder: (id: number) => request<{ order: Order }>(`/orders/${id}`),
+  cancelOrder: (id: number) => request<{ order: Order }>(`/orders/${id}/transitions`, 'POST', { to_status: 'cancelled' }),
+
+  getConversation: (orderId: number) =>
+    request<{ conversation: { id: number; order_id: number }; messages: Message[] }>(
+      `/orders/${orderId}/conversation`
+    ),
+  postMessage: (orderId: number, body: string | null, image?: File | null) => {
+    if (image) {
+      const fd = new FormData()
+      if (body) fd.append('body', body)
+      fd.append('image', image)
+      return request<{ message: Message }>(`/orders/${orderId}/messages`, 'POST', fd)
+    }
+    return request<{ message: Message }>(`/orders/${orderId}/messages`, 'POST', { body })
+  },
 }

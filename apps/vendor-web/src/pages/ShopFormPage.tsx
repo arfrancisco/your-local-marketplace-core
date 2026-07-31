@@ -17,6 +17,8 @@ export function ShopFormPage() {
   const [contact, setContact] = useState('')
   const [methods, setMethods] = useState<FulfillmentMethod[]>(['pickup'])
   const [files, setFiles] = useState<FileList | null>(null)
+  const [openingMessage, setOpeningMessage] = useState('')
+  const [openingMessagePhotos, setOpeningMessagePhotos] = useState<FileList | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -30,6 +32,7 @@ export function ShopFormPage() {
       setAddress(s.address ?? '')
       setContact(s.contact_number ?? '')
       setMethods(s.fulfillment_methods)
+      setOpeningMessage(s.opening_message ?? '')
     })
   }, [id, editing])
 
@@ -48,6 +51,8 @@ export function ShopFormPage() {
     fd.append('shop[contact_number]', contact)
     methods.forEach((m) => fd.append('shop[fulfillment_methods][]', m))
     if (files) Array.from(files).forEach((f) => fd.append('shop[photos][]', f))
+    fd.append('shop[opening_message]', openingMessage)
+    if (openingMessagePhotos) Array.from(openingMessagePhotos).forEach((f) => fd.append('shop[opening_message_photos][]', f))
 
     try {
       if (editing) await api.updateShop(Number(id), fd)
@@ -103,6 +108,39 @@ export function ShopFormPage() {
             ))}
           </div>
         )}
+
+        <fieldset>
+          <legend>Opening message</legend>
+          <p className="muted">
+            Pinned at the top of every order's chat with this shop, so customers always see it —
+            how to pay you (GCash, bank transfer, etc.), hours, or anything else worth repeating.
+            The app never processes payment itself. Add one QR code per payment option you accept.
+          </p>
+          <label>
+            Message
+            <textarea
+              value={openingMessage}
+              onChange={(e) => setOpeningMessage(e.target.value)}
+              placeholder="e.g. GCash to 0917-xxx-xxxx. Please send proof of payment here."
+            />
+          </label>
+          <label>
+            QR codes (JPEG/PNG/WebP, up to 5)
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              onChange={(e) => setOpeningMessagePhotos(e.target.files)}
+            />
+          </label>
+          {shop && shop.opening_message_photos && shop.opening_message_photos.length > 0 && (
+            <div className="thumbs">
+              {shop.opening_message_photos.map((p) => (
+                <img key={p.id} src={`http://localhost:3000${p.url}`} alt={p.filename} />
+              ))}
+            </div>
+          )}
+        </fieldset>
 
         {error && <p role="alert" className="error">{error}</p>}
         <button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save shop'}</button>
