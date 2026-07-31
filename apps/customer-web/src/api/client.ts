@@ -1,7 +1,12 @@
 import type { Cart, FulfillmentMethod, Item, Message, Order, Shop, Tag, User } from './types'
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1'
-const TOKEN_KEY = 'customer_token'
+// Shared with vendor-web's key — both apps are same-origin now (customer at
+// /, vendor at /vendor), and a User can hold both a customer_profile and a
+// vendor_profile at once (capability-based, not a role column). Signing in
+// on either app signs you in on both, rather than needing two logins for
+// one identity.
+const TOKEN_KEY = 'kapitmarket_token'
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)

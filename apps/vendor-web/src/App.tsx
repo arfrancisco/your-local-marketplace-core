@@ -12,6 +12,22 @@ function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth()
   if (loading) return <p className="container">Loading…</p>
   if (!user) return <Navigate to="/login" replace />
+  // Signed in (possibly via customer-web — the two apps share one token,
+  // since a User can hold both profiles at once) but this account has no
+  // vendor_profile. A clear message here, not a silent redirect back to
+  // login (that would be confusing — they *are* signed in) and not the
+  // vendor pages themselves, which would just 403 against the API.
+  if (!user.vendor_profile) {
+    return (
+      <div className="card narrow">
+        <h1>No vendor account here</h1>
+        <p className="muted">
+          {user.email} is signed in, but doesn't have a vendor profile yet.
+          Contact support to set one up.
+        </p>
+      </div>
+    )
+  }
   return <>{children}</>
 }
 
