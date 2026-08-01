@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { api, getToken, setToken } from './api/client'
+import { api, getToken, setToken, type RegisterPayload } from './api/client'
 import type { User } from './api/types'
 
 // Minimal customer auth. Browsing stays public (no gate) — this only backs the
@@ -10,7 +10,7 @@ interface AuthState {
   user: User | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
-  register: (email: string, password: string, displayName: string) => Promise<void>
+  register: (payload: RegisterPayload) => Promise<void>
   logout: () => void
 }
 
@@ -38,8 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(res.user)
   }
 
-  async function register(email: string, password: string, displayName: string) {
-    const res = await api.register(email, password, displayName)
+  async function register(payload: RegisterPayload) {
+    const res = await api.register(payload)
     setToken(res.token)
     setUser(res.user)
   }

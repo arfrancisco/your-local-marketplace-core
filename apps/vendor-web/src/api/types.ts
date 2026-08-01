@@ -98,6 +98,13 @@ export interface Item {
   price_cents: number
   currency: string
   enabled: boolean
+  // null = not tracked (default/existing behavior for every item). A number
+  // is the vendor-entered stock on hand; sold_out is computed server-side
+  // from it (present and <= 0). Independent of `enabled`: enabled is the
+  // vendor's manual publish/unpublish switch, sold_out is a separate
+  // "still listed but grayed-out to customers" signal.
+  stock_count: number | null
+  sold_out: boolean
   position: number
   tags: Tag[]
   photos: Photo[]

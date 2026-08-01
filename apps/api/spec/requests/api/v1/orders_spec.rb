@@ -4,7 +4,7 @@ RSpec.describe "Api::V1 Orders", type: :request do
   let(:customer) { create(:user, :customer) }
   let(:vendor_user) { create(:user, :vendor) }
   let(:shop) { create(:shop, :open, vendor_profile: vendor_user.vendor_profile) }
-  let(:order) { create(:order, :with_item, customer_profile: customer.customer_profile, shop: shop) }
+  let(:order) { create(:order, :with_item, :with_conversation, customer_profile: customer.customer_profile, shop: shop) }
 
   describe "GET /api/v1/orders" do
     it "returns the current customer's own orders" do

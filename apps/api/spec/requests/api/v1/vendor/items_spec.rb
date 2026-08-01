@@ -47,6 +47,16 @@ RSpec.describe "Api::V1::Vendor Items", type: :request do
       patch "/api/v1/vendor/items/#{others_item.id}", params: { item: { price_cents: 1 } }, headers: auth_headers(vendor_user)
       expect(response).to have_http_status(:not_found)
     end
+
+    it "sets a stock count and reflects sold_out once it hits zero" do
+      patch "/api/v1/vendor/items/#{item.id}", params: { item: { stock_count: 5 } }, headers: auth_headers(vendor_user)
+      expect(json.dig("item", "stock_count")).to eq(5)
+      expect(json.dig("item", "sold_out")).to be(false)
+
+      patch "/api/v1/vendor/items/#{item.id}", params: { item: { stock_count: 0 } }, headers: auth_headers(vendor_user)
+      expect(json.dig("item", "sold_out")).to be(true)
+      expect(json.dig("item", "enabled")).to be(true)
+    end
   end
 
   describe "enable/disable" do

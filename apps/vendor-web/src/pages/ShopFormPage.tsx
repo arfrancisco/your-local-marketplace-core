@@ -2,13 +2,30 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { FulfillmentMethod, Shop } from '../api/types'
+import { TourCallout } from '../components/TourCallout'
 
 const METHODS: FulfillmentMethod[] = ['pickup', 'delivery']
 
-export function ShopFormPage() {
+interface ShopFormPageProps {
+  /** Onboarding step 2 (OnboardingPage) renders this same component with
+   * onboardingMode on, which layers sequential callouts over the opening
+   * message/QR fields and the fulfillment checkboxes — the two things a
+   * brand-new vendor won't intuit on their own. The form itself is
+   * unchanged and fully usable with the tour skipped or absent. */
+  onboardingMode?: boolean
+  /** When set (onboarding), called instead of navigating to /shops on a
+   * successful save, so the caller can advance to the next onboarding step. */
+  onSaved?: () => void
+}
+
+export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPageProps = {}) {
   const { id } = useParams()
   const editing = Boolean(id)
   const navigate = useNavigate()
+  // 0 = opening message/QR callout, 1 = fulfillment callout, 2 = tour done
+  // (finished or skipped) — either way callouts stop rendering.
+  const [tourStep, setTourStep] = useState(0)
+  const showTour = onboardingMode && tourStep < 2
 
   const [shop, setShop] = useState<Shop | null>(null)
   const [name, setName] = useState('')
@@ -57,7 +74,8 @@ export function ShopFormPage() {
     try {
       if (editing) await api.updateShop(Number(id), fd)
       else await api.createShop(fd)
-      navigate('/shops')
+      if (onSaved) onSaved()
+      else navigate('/shops')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save shop')
     } finally {
@@ -67,7 +85,14 @@ export function ShopFormPage() {
 
   return (
     <div className="card narrow">
-      <h1>{editing ? 'Edit shop' : 'New shop'}</h1>
+      <div className="row spread">
+        <h1>{editing ? 'Edit shop' : 'New shop'}</h1>
+        {showTour && (
+          <button type="button" className="tour-skip" onClick={() => setTourStep(2)}>
+            Skip tour
+          </button>
+        )}
+      </div>
       <form onSubmit={onSubmit}>
         <label>
           Name
@@ -86,15 +111,25 @@ export function ShopFormPage() {
           <input value={contact} onChange={(e) => setContact(e.target.value)} />
         </label>
 
-        <fieldset>
-          <legend>Fulfillment</legend>
-          {METHODS.map((m) => (
-            <label key={m} className="inline">
-              <input type="checkbox" checked={methods.includes(m)} onChange={() => toggleMethod(m)} />
-              {m}
-            </label>
-          ))}
-        </fieldset>
+        <div className="tour-anchor">
+          <fieldset>
+            <legend>Fulfillment</legend>
+            {METHODS.map((m) => (
+              <label key={m} className="inline">
+                <input type="checkbox" checked={methods.includes(m)} onChange={() => toggleMethod(m)} />
+                {m}
+              </label>
+            ))}
+          </fieldset>
+          {showTour && tourStep === 1 && (
+            <TourCallout
+              message="Pickup or delivery changes how the order flows after it's placed — pick what you actually offer."
+              nextLabel="Got it"
+              onNext={() => setTourStep(2)}
+              onSkip={() => setTourStep(2)}
+            />
+          )}
+        </div>
 
         <label>
           Photos (JPEG/PNG/WebP, up to 3)
@@ -109,38 +144,50 @@ export function ShopFormPage() {
           </div>
         )}
 
-        <fieldset>
-          <legend>Opening message</legend>
-          <p className="muted">
-            Pinned at the top of every order's chat with this shop, so customers always see it —
-            how to pay you (GCash, bank transfer, etc.), hours, or anything else worth repeating.
-            The app never processes payment itself. Add one QR code per payment option you accept.
-          </p>
-          <label>
-            Message
-            <textarea
-              value={openingMessage}
-              onChange={(e) => setOpeningMessage(e.target.value)}
-              placeholder="e.g. GCash to 0917-xxx-xxxx. Please send proof of payment here."
+        <div className="tour-anchor">
+          <fieldset>
+            <legend>Opening message</legend>
+            <p className="muted">
+              Pinned at the top of every order's chat with this shop, so customers always see it —
+              how to pay you (GCash, bank transfer, etc.), hours, or anything else worth repeating.
+              The app never processes payment itself. Add one QR code per payment option you accept.
+            </p>
+            <label>
+              Message
+              <textarea
+                value={openingMessage}
+                onChange={(e) => setOpeningMessage(e.target.value)}
+                placeholder="e.g. GCash to 0917-xxx-xxxx. Please send proof of payment here."
+              />
+            </label>
+            <label>
+              QR codes (JPEG/PNG/WebP, up to 5)
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                onChange={(e) => setOpeningMessagePhotos(e.target.files)}
+              />
+            </label>
+            {shop && shop.opening_message_photos && shop.opening_message_photos.length > 0 && (
+              <div className="thumbs">
+                {shop.opening_message_photos.map((p) => (
+                  <img key={p.id} src={`http://localhost:3000${p.url}`} alt={p.filename} />
+                ))}
+              </div>
+            )}
+          </fieldset>
+          {showTour && tourStep === 0 && (
+            <TourCallout
+              message="This is how you get paid. There's no payment processing in this app — write how customers should pay you (GCash number, bank details, etc.) and add a QR code if you have one. It's pinned above every order's chat."
+              nextLabel="Got it"
+              strong
+              placement="top"
+              onNext={() => setTourStep(1)}
+              onSkip={() => setTourStep(2)}
             />
-          </label>
-          <label>
-            QR codes (JPEG/PNG/WebP, up to 5)
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-              onChange={(e) => setOpeningMessagePhotos(e.target.files)}
-            />
-          </label>
-          {shop && shop.opening_message_photos && shop.opening_message_photos.length > 0 && (
-            <div className="thumbs">
-              {shop.opening_message_photos.map((p) => (
-                <img key={p.id} src={`http://localhost:3000${p.url}`} alt={p.filename} />
-              ))}
-            </div>
           )}
-        </fieldset>
+        </div>
 
         {error && <p role="alert" className="error">{error}</p>}
         <button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save shop'}</button>

@@ -24,6 +24,12 @@ class Rack::Attack
     req.ip if req.path.include?("/verifications") && req.post?
   end
 
+  # Password reset request/confirm: 5 per minute per IP (same abuse shape as
+  # verification codes — spamming an inbox, or brute-forcing a guessed code).
+  throttle("password_resets/ip", limit: 5, period: 60) do |req|
+    req.ip if req.path.include?("/password_resets") && req.post?
+  end
+
   # Early-access signups: 5 per minute per IP (public endpoint, abuse target).
   throttle("early_access/ip", limit: 5, period: 60) do |req|
     req.ip if req.path.end_with?("/early_access") && req.post?

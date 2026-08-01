@@ -1,8 +1,9 @@
 module Carts
   # Converts an active cart into a real order (rest of M3, per ADR 0008).
-  # Re-validates every item is still enabled before snapshotting into
-  # order_items — a cart can sit for a while before checkout, so what was
-  # valid when added may not be by the time the customer checks out.
+  # Re-validates every item is still enabled and in stock before
+  # snapshotting into order_items — a cart can sit for a while before
+  # checkout, so what was valid when added may not be by the time the
+  # customer checks out.
   #
   # Also stands up the order's (empty) conversation. The shop's opening
   # message/QR gallery is read live off the shop whenever the order is
@@ -23,7 +24,10 @@ module Carts
         raise ApiError::UnprocessableEntity, "Invalid fulfillment method for this shop"
       end
 
-      unavailable = @cart.cart_items.includes(:item).reject { |ci| ci.item.enabled? }
+      # Stock can drop to zero between adding to cart and checking out, same
+      # as an item being disabled — re-check both right before placing the
+      # order, not just at add-to-cart time.
+      unavailable = @cart.cart_items.includes(:item).reject { |ci| ci.item.enabled? && !ci.item.sold_out? }
       if unavailable.any?
         raise ApiError::UnprocessableEntity.new(
           "Some items are no longer available",

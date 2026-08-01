@@ -21,7 +21,39 @@ module Api
         render json: { user: UserSerializer.call(current_user.reload) }
       end
 
+      # POST /api/v1/me/vendor_profile
+      # "Become a vendor" upgrade for an already-registered customer. See
+      # Vendors::Upgrade / Vendors::EligibilityCheck.
+      def create_vendor_profile
+        Vendors::Upgrade.new(user: current_user).call
+        render json: { user: UserSerializer.call(current_user.reload) }, status: :created
+      end
+
+      # POST /api/v1/me/complete_profile
+      # Screen 3 of registration: first/last name + first delivery address,
+      # set as default. See Customers::CompleteProfile.
+      def complete_profile
+        result = Customers::CompleteProfile.new(
+          user: current_user,
+          first_name: complete_profile_params[:first_name],
+          last_name: complete_profile_params[:last_name],
+          address_params: complete_profile_params[:address] || {}
+        ).call
+
+        render json: {
+          user: UserSerializer.call(result.user.reload),
+          address: AddressSerializer.call(result.address)
+        }, status: :created
+      end
+
       private
+
+      def complete_profile_params
+        params.permit(
+          :first_name, :last_name,
+          address: %i[recipient_name mobile_number building unit street_address city notes delivery_instructions]
+        )
+      end
 
       def user_params
         params.require(:user).permit(:email, :mobile_number)

@@ -1,10 +1,13 @@
 import { Navigate, Route, Routes, Link, useNavigate } from 'react-router-dom'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useAuth } from './auth'
+import { FeedbackModal } from './components/FeedbackModal'
 import { LoginPage } from './pages/LoginPage'
 import { ShopsPage } from './pages/ShopsPage'
 import { ShopFormPage } from './pages/ShopFormPage'
+import { OnboardingPage } from './pages/OnboardingPage'
 import { ItemsPage } from './pages/ItemsPage'
+import { ItemEditPage } from './pages/ItemEditPage'
 import { OrdersPage } from './pages/OrdersPage'
 import { OrderDetailPage } from './pages/OrderDetailPage'
 
@@ -34,29 +37,44 @@ function RequireAuth({ children }: { children: ReactNode }) {
 function Header() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
   if (!user) return null
   return (
     <header className="topbar">
       <Link to="/shops" className="brand">Vendor console</Link>
       <div className="row gap">
+        <Link to="/shops">Home</Link>
+        <button onClick={() => setFeedbackOpen(true)}>Send feedback</button>
         <span className="muted">{user.email}</span>
         <button onClick={() => { logout(); navigate('/login') }}>Sign out</button>
       </div>
+      {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
     </header>
+  )
+}
+
+function BetaBanner() {
+  return (
+    <div className="beta-banner">
+      Beta test — please bear with us while we smooth out the experience.
+    </div>
   )
 }
 
 export default function App() {
   return (
     <>
+      <BetaBanner />
       <Header />
       <main className="container">
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/onboarding" element={<RequireAuth><OnboardingPage /></RequireAuth>} />
           <Route path="/shops" element={<RequireAuth><ShopsPage /></RequireAuth>} />
           <Route path="/shops/new" element={<RequireAuth><ShopFormPage /></RequireAuth>} />
           <Route path="/shops/:id/edit" element={<RequireAuth><ShopFormPage /></RequireAuth>} />
           <Route path="/shops/:id/items" element={<RequireAuth><ItemsPage /></RequireAuth>} />
+          <Route path="/shops/:id/items/:itemId/edit" element={<RequireAuth><ItemEditPage /></RequireAuth>} />
           <Route path="/orders" element={<RequireAuth><OrdersPage /></RequireAuth>} />
           <Route path="/orders/:id" element={<RequireAuth><OrderDetailPage /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/shops" replace />} />

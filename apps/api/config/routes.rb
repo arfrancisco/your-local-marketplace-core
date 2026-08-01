@@ -19,15 +19,27 @@ Rails.application.routes.draw do
       post "auth/login",    to: "sessions#create"
       post "auth/logout",   to: "sessions#destroy"
 
+      # Forgot-password flow (public, no session required).
+      post "password_resets",         to: "password_resets#create"
+      post "password_resets/confirm", to: "password_resets#confirm"
+
       # Current user
       get   "me", to: "me#show"
       patch "me", to: "me#update"
+      post  "me/complete_profile", to: "me#complete_profile"
+      post  "me/vendor_profile", to: "me#create_vendor_profile"
 
       # Verification: one controller, one route per channel. `channel` is baked
       # into each route as a default so the controller stays channel-agnostic.
       %w[email mobile].each do |channel|
         post "verifications/#{channel}",         to: "verifications#create",  defaults: { channel: channel }
         post "verifications/#{channel}/confirm",  to: "verifications#confirm", defaults: { channel: channel }
+      end
+
+      # e2e test-helper: never drawn in production, regardless of ENV vars —
+      # see config/initializers/test_helpers.rb for the full guard story.
+      if Rails.env.test? || Rails.env.development?
+        get "test_helpers/verification_code", to: "test_helpers#verification_code"
       end
 
       # Customer discovery (M2). Authenticated; lists only open shops in the
@@ -39,6 +51,9 @@ Rails.application.routes.draw do
 
       # Early-access lead capture (demo demand test). Public, rate-limited.
       post "early_access",      to: "early_access#create"
+
+      # Beta feedback/complaints intake. Public — works signed-in or not.
+      post "feedback",          to: "feedback#create"
 
       # Customer cart, scoped to one shop at a time (ADR 0008). Requires a
       # customer profile; cart-to-order checkout is not built yet (rest of M3).

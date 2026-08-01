@@ -21,6 +21,28 @@ RSpec.describe Item, type: :model do
     end
   end
 
+  describe "stock_count / sold_out?" do
+    it "treats a nil stock_count as not tracked (never sold out)" do
+      item = build(:item, stock_count: nil)
+      expect(item).to be_valid
+      expect(item).not_to be_sold_out
+    end
+
+    it "is sold out once stock_count reaches zero, but stays enabled" do
+      item = create(:item, stock_count: 0)
+      expect(item).to be_sold_out
+      expect(item.enabled).to be(true)
+    end
+
+    it "is not sold out while stock remains" do
+      expect(build(:item, stock_count: 3)).not_to be_sold_out
+    end
+
+    it "rejects a negative stock_count" do
+      expect(build(:item, stock_count: -1)).not_to be_valid
+    end
+  end
+
   describe "tags" do
     it "attaches resolved tags without duplicating existing ones" do
       create(:tag, name: "Vegan")

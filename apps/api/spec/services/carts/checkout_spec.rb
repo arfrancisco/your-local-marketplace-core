@@ -39,4 +39,11 @@ RSpec.describe Carts::Checkout do
     expect { described_class.new(cart: cart, fulfillment_method: "pickup").call }
       .to raise_error(ApiError::UnprocessableEntity, /no longer available/i)
   end
+
+  it "rejects checkout when an item's stock has run out since it was added to the cart" do
+    cart # force creation while the item still has stock
+    item.update!(stock_count: 0)
+    expect { described_class.new(cart: cart, fulfillment_method: "pickup").call }
+      .to raise_error(ApiError::UnprocessableEntity, /no longer available/i)
+  end
 end

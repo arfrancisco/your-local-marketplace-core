@@ -21,6 +21,25 @@ RSpec.describe "Api::V1 Addresses", type: :request do
       post "/api/v1/addresses", params: { address: { label: "Home" } }, headers: auth_headers(user)
       expect(response).to have_http_status(:unprocessable_entity)
     end
+
+    it "accepts optional street address and city" do
+      params = valid_params.deep_merge(address: { street_address: "123 Rizal St.", city: "Pasig City" })
+      post "/api/v1/addresses", params: params, headers: auth_headers(user)
+      expect(response).to have_http_status(:created)
+      expect(json.dig("address", "street_address")).to eq("123 Rizal St.")
+      expect(json.dig("address", "city")).to eq("Pasig City")
+    end
+  end
+
+  describe "PATCH /api/v1/addresses/:id — editing the default delivery note" do
+    it "updates delivery_instructions on an existing address" do
+      address = create(:address, user: user, delivery_instructions: "Old note")
+      patch "/api/v1/addresses/#{address.id}",
+            params: { address: { delivery_instructions: "Leave at the guardhouse" } },
+            headers: auth_headers(user)
+      expect(response).to have_http_status(:ok)
+      expect(address.reload.delivery_instructions).to eq("Leave at the guardhouse")
+    end
   end
 
   describe "ownership" do

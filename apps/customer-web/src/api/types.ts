@@ -34,6 +34,12 @@ export interface Item {
   price_cents: number
   currency: string
   enabled: boolean
+  // null = stock not tracked for this item. sold_out is a computed
+  // convenience (stock_count !== null && stock_count <= 0) — unlike
+  // `enabled: false` (vendor-hidden, never returned here), a sold-out item
+  // is still returned to customers and should render grayed-out, not hidden.
+  stock_count: number | null
+  sold_out: boolean
   tags: Tag[]
   photos: Photo[]
 }
@@ -41,7 +47,37 @@ export interface Item {
 export interface User {
   id: number
   email: string
-  customer_profile: { id: number; display_name: string; default_address_id: number | null } | null
+  mobile_number: string | null
+  first_name: string | null
+  last_name: string | null
+  status: string
+  email_verified: boolean
+  mobile_verified: boolean
+  email_marketing_opt_in: boolean
+  sms_marketing_opt_in: boolean
+  last_signed_in_at: string | null
+  created_at: string
+  customer_profile: {
+    id: number
+    display_name: string
+    default_address_id: number | null
+    is_resident: boolean
+    willing_to_verify_residency: boolean | null
+  } | null
+  vendor_profile: { id: number; display_name: string; verification_status: string } | null
+  vendor_eligibility: { eligible: boolean; reasons: string[] }
+}
+
+export interface Address {
+  id: number
+  recipient_name: string | null
+  mobile_number: string | null
+  building: string
+  unit: string | null
+  street_address: string | null
+  city: string | null
+  notes: string | null
+  delivery_instructions: string | null
 }
 
 export interface CartLine {

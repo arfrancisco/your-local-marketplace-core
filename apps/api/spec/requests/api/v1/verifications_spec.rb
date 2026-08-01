@@ -45,4 +45,29 @@ RSpec.describe "Api::V1 Verifications", type: :request do
     post "/api/v1/verifications/email"
     expect(response).to have_http_status(:unauthorized)
   end
+
+  describe "per-user rate limiting" do
+    it "rejects a second send within the cooldown window" do
+      post "/api/v1/verifications/email", headers: auth_headers(user)
+      post "/api/v1/verifications/email", headers: auth_headers(user)
+      expect(response).to have_http_status(:too_many_requests)
+      expect(json.dig("error", "code")).to eq("rate_limited")
+    end
+
+    it "allows a resend once the cooldown has passed" do
+      post "/api/v1/verifications/email", headers: auth_headers(user)
+      travel(Verifications::IssueChallenge::COOLDOWN + 1.second)
+      post "/api/v1/verifications/email", headers: auth_headers(user)
+      expect(response).to have_http_status(:accepted)
+    end
+
+    it "caps sends at MAX_PER_HOUR even outside the cooldown window" do
+      Verifications::IssueChallenge::MAX_PER_HOUR.times do
+        post "/api/v1/verifications/email", headers: auth_headers(user)
+        travel(Verifications::IssueChallenge::COOLDOWN + 1.second)
+      end
+      post "/api/v1/verifications/email", headers: auth_headers(user)
+      expect(response).to have_http_status(:too_many_requests)
+    end
+  end
 end

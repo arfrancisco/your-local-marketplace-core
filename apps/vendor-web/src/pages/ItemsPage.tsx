@@ -17,6 +17,7 @@ export function ItemsPage() {
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
   const [tags, setTags] = useState('')
+  const [stockCount, setStockCount] = useState('')
   const [files, setFiles] = useState<FileList | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -43,6 +44,10 @@ export function ItemsPage() {
       .map((t) => t.trim())
       .filter(Boolean)
       .forEach((t) => fd.append('item[tags][]', t))
+    // Left out entirely when blank, rather than sending '' or 0, so the
+    // server keeps stock_count as null (untracked) instead of treating the
+    // item as sold out.
+    if (stockCount.trim() !== '') fd.append('item[stock_count]', stockCount.trim())
     if (files) Array.from(files).forEach((f) => fd.append('item[photos][]', f))
 
     try {
@@ -52,6 +57,7 @@ export function ItemsPage() {
       setDescription('')
       setPrice('')
       setTags('')
+      setStockCount('')
       setFiles(null)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not add item')
@@ -65,7 +71,7 @@ export function ItemsPage() {
   return (
     <div>
       <div className="row spread">
-        <h1>Items</h1>
+        <h1>Inventory</h1>
         <Link to="/shops">Back to shops</Link>
       </div>
 
@@ -79,10 +85,18 @@ export function ItemsPage() {
                 {item.tags.length > 0 && (
                   <p className="muted">{item.tags.map((t) => t.name).join(', ')}</p>
                 )}
+                {item.stock_count !== null && (
+                  <p className="muted">
+                    {item.sold_out ? 'Sold out' : `${item.stock_count} in stock`}
+                  </p>
+                )}
               </div>
-              <button onClick={() => toggleEnabled(item)}>
-                {item.enabled ? 'Disable' : 'Enable'}
-              </button>
+              <div className="row gap">
+                <Link className="button" to={`/shops/${shopId}/items/${item.id}/edit`}>Edit</Link>
+                <button onClick={() => toggleEnabled(item)}>
+                  {item.enabled ? 'Disable' : 'Enable'}
+                </button>
+              </div>
             </div>
           </li>
         ))}
@@ -105,6 +119,16 @@ export function ItemsPage() {
         <label>
           Tags (comma separated)
           <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="rice meal, savory" />
+        </label>
+        <label>
+          Stock count (optional — leave blank if you don't track stock)
+          <input
+            type="number"
+            step="1"
+            min="0"
+            value={stockCount}
+            onChange={(e) => setStockCount(e.target.value)}
+          />
         </label>
         <label>
           Photos (up to 6)

@@ -1,4 +1,4 @@
-import type { Cart, FulfillmentMethod, Item, Message, Order, Shop, Tag, User } from './types'
+import type { Address, Cart, FulfillmentMethod, Item, Message, Order, Shop, Tag, User } from './types'
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1'
 // Shared with vendor-web's key — both apps are same-origin now (customer at
@@ -20,9 +20,11 @@ export function setToken(token: string | null): void {
 export class ApiError extends Error {
   status: number
   code: string
-  details?: Record<string, string[]>
+  // Shape varies by error code: validation_failed -> Record<string, string[]>,
+  // rate_limited -> { retry_after: number }, vendor_profile 403 -> { reasons: string[] }.
+  details?: Record<string, unknown>
 
-  constructor(status: number, code: string, message: string, details?: Record<string, string[]>) {
+  constructor(status: number, code: string, message: string, details?: Record<string, unknown>) {
     super(message)
     this.status = status
     this.code = code
@@ -54,28 +56,82 @@ async function request<T>(path: string, method = 'GET', body?: Record<string, un
   return data as T
 }
 
+export interface RegisterPayload {
+  email: string
+  mobile_number: string
+  password: string
+  is_resident: boolean
+  // Only meaningful (and only sent) when is_resident is true.
+  willing_to_verify_residency?: boolean
+  terms_accepted: boolean
+  email_marketing_opt_in?: boolean
+  sms_marketing_opt_in?: boolean
+}
+
+export interface CompleteProfilePayload {
+  first_name: string
+  last_name: string
+  address: {
+    recipient_name?: string
+    mobile_number?: string
+    building: string
+    unit?: string
+    street_address?: string
+    city?: string
+    notes?: string
+    delivery_instructions?: string
+  }
+}
+
+export interface UpdateAddressPayload {
+  recipient_name?: string
+  mobile_number?: string
+  building?: string
+  unit?: string
+  street_address?: string
+  city?: string
+  notes?: string
+  delivery_instructions?: string
+}
+
 export const api = {
-  register: (email: string, password: string, displayName: string) =>
-    request<{ token: string; user: User }>('/auth/register', 'POST', {
-      user: { email, password, display_name: displayName, roles: ['customer'] },
-    }),
+  register: (payload: RegisterPayload) =>
+    request<{ token: string; user: User }>('/auth/register', 'POST', { user: payload }),
   login: (email: string, password: string) =>
     request<{ token: string; user: User }>('/auth/login', 'POST', { email, password }),
   me: () => request<{ user: User }>('/me'),
+
+  requestMobileVerification: () => request<{ message?: string }>('/verifications/mobile', 'POST'),
+  confirmMobileVerification: (code: string) =>
+    request<{ user: User }>('/verifications/mobile/confirm', 'POST', { code }),
+  requestEmailVerification: () => request<{ message?: string }>('/verifications/email', 'POST'),
+  confirmEmailVerification: (code: string) =>
+    request<{ user: User }>('/verifications/email/confirm', 'POST', { code }),
+
+  completeProfile: (payload: CompleteProfilePayload) =>
+    request<{ user: User; address: Address }>('/me/complete_profile', 'POST', { ...payload }),
+
+  requestPasswordReset: (email: string) =>
+    request<{ message?: string }>('/password_resets', 'POST', { email }),
+  confirmPasswordReset: (email: string, code: string, newPassword: string) =>
+    request<{ message?: string }>('/password_resets/confirm', 'POST', {
+      email, code, new_password: newPassword,
+    }),
+
+  becomeVendor: () => request<{ user: User }>('/me/vendor_profile', 'POST'),
+
+  sendFeedback: (payload: { message: string; email?: string; page_url?: string }) =>
+    request<{ status: string }>('/feedback', 'POST', payload),
+
+  listAddresses: () => request<{ addresses: Address[] }>('/addresses'),
+  updateAddress: (id: number, payload: UpdateAddressPayload) =>
+    request<{ address: Address }>(`/addresses/${id}`, 'PATCH', { ...payload }),
 
   listShops: (query?: string) =>
     request<{ shops: Shop[] }>(`/shops${query ? `?q=${encodeURIComponent(query)}` : ''}`),
   getShop: (slug: string) => request<{ shop: Shop }>(`/shops/${slug}`),
   listItems: (slug: string) => request<{ items: Item[] }>(`/shops/${slug}/items`),
   listTags: () => request<{ tags: Tag[] }>('/tags'),
-
-  earlyAccess: (payload: {
-    email?: string
-    mobile_number?: string
-    name?: string
-    interest?: string
-    context?: string
-  }) => request<{ status: string }>('/early_access', 'POST', { early_access_signup: payload }),
 
   // Cart is scoped to one shop at a time (ADR 0008). Checkout/order placement
   // is not built yet — the cart itself is real, persisted backend state.

@@ -38,7 +38,8 @@ module Api
 
       def address_params
         params.require(:address).permit(
-          :label, :recipient_name, :mobile_number, :unit, :building, :notes, :delivery_instructions
+          :label, :recipient_name, :mobile_number, :unit, :building,
+          :street_address, :city, :notes, :delivery_instructions
         )
       end
     end

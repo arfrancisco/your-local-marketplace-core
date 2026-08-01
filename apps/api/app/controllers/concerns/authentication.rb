@@ -21,6 +21,18 @@ module Authentication
     @current_user = token.user
   end
 
+  # For endpoints that work for both signed-in and anonymous callers (e.g.
+  # feedback submission) and want to attribute the request to a user when
+  # possible, without requiring it.
+  def authenticate_optionally!
+    token = ApiToken.authenticate(bearer_token)
+    return if token.nil?
+
+    token.touch_usage!
+    @current_api_token = token
+    @current_user = token.user
+  end
+
   def current_api_token
     @current_api_token
   end

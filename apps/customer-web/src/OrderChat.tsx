@@ -46,6 +46,7 @@ export function OrderChat({ orderId, currentUserId }: { orderId: number; current
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const messageListRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!image) { setImagePreviewUrl(null); return }
@@ -60,6 +61,15 @@ export function OrderChat({ orderId, currentUserId }: { orderId: number; current
     el.style.height = 'auto'
     el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`
   }, [body])
+
+  // Always follow the conversation — a new message (ours, the vendor's, or
+  // an auto-posted system message) should never leave the reader scrolled
+  // up past it.
+  useEffect(() => {
+    const el = messageListRef.current
+    if (!el) return
+    el.scrollTop = el.scrollHeight
+  }, [messages.length])
 
   async function send() {
     if (!body.trim() && !image) return
@@ -113,7 +123,7 @@ export function OrderChat({ orderId, currentUserId }: { orderId: number; current
 
   return (
     <div className="order-chat">
-      <div className="message-list">
+      <div className="message-list" ref={messageListRef}>
         {messages.map((m) => (
           <MessageBubble key={m.id} message={m} isOwn={m.sender_user_id === currentUserId} />
         ))}

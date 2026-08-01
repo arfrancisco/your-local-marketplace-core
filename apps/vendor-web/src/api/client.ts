@@ -62,6 +62,9 @@ export const api = {
     request<{ token: string; user: User }>('/auth/login', 'POST', { email, password }),
   me: () => request<{ user: User }>('/me'),
 
+  sendFeedback: (payload: { message: string; email?: string; page_url?: string }) =>
+    request<{ status: string }>('/feedback', 'POST', payload),
+
   listShops: () => request<{ shops: Shop[] }>('/vendor/shops'),
   getShop: (id: number) => request<{ shop: Shop }>(`/vendor/shops/${id}`),
   createShop: (form: FormData) => request<{ shop: Shop }>('/vendor/shops', 'POST', form),

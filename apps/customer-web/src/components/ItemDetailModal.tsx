@@ -7,6 +7,8 @@ const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/
 interface Props {
   item: Item | null
   onClose: () => void
+  // Adding to cart works whether signed in or not (a local, shop-scoped cart
+  // for anonymous visitors) — only checkout itself requires an account.
   onAddToCart: (item: Item) => void
 }
 
@@ -56,8 +58,15 @@ export function ItemDetailModal({ item, onClose, onAddToCart }: Props) {
         </div>
         {item.description && <p className="muted">{item.description}</p>}
         {item.tags.length > 0 && <p className="muted small">{item.tags.map((t) => t.name).join(', ')}</p>}
+        {item.sold_out && <p className="sold-out-label">Sold out</p>}
 
-        <button style={{ marginTop: '0.5rem' }} onClick={() => { onAddToCart(item); onClose() }}>Add to cart</button>
+        {item.sold_out ? (
+          <button style={{ marginTop: '0.5rem' }} disabled>Sold out</button>
+        ) : (
+          <button style={{ marginTop: '0.5rem' }} onClick={() => { onAddToCart(item); onClose() }}>
+            Add to cart
+          </button>
+        )}
       </div>
     </div>
   )

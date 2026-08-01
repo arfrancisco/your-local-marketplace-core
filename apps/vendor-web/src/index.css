@@ -12,6 +12,15 @@ body { margin: 0; }
    fallback) stays visible. */
 [hidden] { display: none !important; }
 
+.beta-banner {
+  background: #fef3c7;
+  color: #7c5700;
+  text-align: center;
+  font-size: 0.85rem;
+  padding: 0.4rem 1rem;
+  border-bottom: 1px solid #fbe4a1;
+}
+
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -105,6 +114,19 @@ button:disabled { opacity: 0.6; cursor: default; }
 .message p { margin: 0; white-space: pre-wrap; }
 .message img { max-width: 100%; border-radius: 6px; margin-top: 0.35rem; }
 .message.own { align-self: flex-end; background: #dbeafe; }
+/* Auto-posted status-change log lines (e.g. "Order accepted by the
+   vendor.") — belong to neither side of the conversation, so no bubble
+   background, no avatar, no left/right alignment, just a centered muted
+   line. */
+.message.system {
+  align-self: center;
+  background: none;
+  color: #6b7280;
+  font-size: 0.85rem;
+  text-align: center;
+  max-width: 100%;
+  padding: 0.15rem 0.5rem;
+}
 
 /* One rounded pill holding attach + textarea + send, not three separate
    boxes — the "modern chat app" composer the user asked for. */
@@ -162,3 +184,74 @@ button:disabled { opacity: 0.6; cursor: default; }
    current settings (ADR 0009, revised), not a scrolling chat message. */
 .opening-message { background: #fef3c7; border: 1px solid #fde68a; }
 .opening-message-text { white-space: pre-wrap; margin: 0 0 0.5rem; }
+
+/* Vendor onboarding tour — welcome screen + sequential field callouts over
+   the real ShopFormPage/ShopsPage (ShopFormPage/ShopsPage `onboardingMode`
+   prop, TourCallout component). */
+.onboarding-welcome { max-width: 480px; margin: 1.5rem auto; }
+.onboarding-welcome ul { padding-left: 1.2rem; margin: 0.75rem 0 1.25rem; }
+.onboarding-welcome li { margin-bottom: 0.65rem; line-height: 1.4; }
+
+.tour-skip {
+  background: none;
+  border: none;
+  color: #6b7280;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0;
+}
+
+/* Wraps whatever field/element a callout points at; the callout itself is
+   absolutely positioned against it. */
+.tour-anchor { position: relative; }
+
+.tour-callout {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  width: 250px;
+  max-width: 80vw;
+  background: #111827;
+  color: #fff;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+}
+.tour-callout.strong { background: #b45309; }
+.tour-callout p { margin: 0 0 0.6rem; }
+.tour-callout.bottom { top: calc(100% + 0.6rem); }
+.tour-callout.top { bottom: calc(100% + 0.6rem); }
+.tour-callout::before {
+  content: '';
+  position: absolute;
+  left: 1.1rem;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  transform: rotate(45deg);
+}
+.tour-callout.bottom::before { top: -5px; }
+.tour-callout.top::before { bottom: -5px; }
+.tour-callout-close {
+  position: absolute;
+  top: 0.2rem;
+  right: 0.3rem;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.15rem 0.35rem;
+  cursor: pointer;
+}
+.tour-callout-next {
+  background: #fff;
+  color: #111827;
+  border: none;
+  border-radius: 6px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}

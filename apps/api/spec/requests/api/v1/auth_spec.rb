@@ -3,7 +3,12 @@ require "rails_helper"
 RSpec.describe "Api::V1 Auth", type: :request do
   describe "POST /api/v1/auth/register" do
     let(:params) do
-      { user: { email: "new@example.com", password: "sup3rsecret", display_name: "New Neighbor" } }
+      {
+        user: {
+          email: "new@example.com", password: "sup3rsecret", mobile_number: "+639171234567",
+          is_resident: false, terms_accepted: true
+        }
+      }
     end
 
     it "creates a user with a customer profile and returns a token" do
@@ -15,6 +20,12 @@ RSpec.describe "Api::V1 Auth", type: :request do
       expect(json["token"]).to be_present
       expect(json.dig("user", "email")).to eq("new@example.com")
       expect(ApiToken.authenticate(json["token"])).to be_present
+
+      user = User.find_by(email: "new@example.com")
+      expect(user.terms_accepted_at).to be_present
+      expect(user.terms_version).to eq(Auth::RegisterUser::CURRENT_TERMS_VERSION)
+      expect(user.email_marketing_opt_in).to eq(false)
+      expect(user.sms_marketing_opt_in).to eq(false)
     end
 
     it "can register a vendor as well when roles ask for it" do
@@ -31,6 +42,60 @@ RSpec.describe "Api::V1 Auth", type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
       expect(json.dig("error", "code")).to eq("validation_failed")
       expect(json.dig("error", "details")).to have_key("email")
+    end
+
+    it "returns a distinct email_taken error on a duplicate email" do
+      post "/api/v1/auth/register", params: params
+      post "/api/v1/auth/register", params: params
+      expect(response).to have_http_status(:conflict)
+      expect(json.dig("error", "code")).to eq("email_taken")
+    end
+
+    it "requires a mobile number" do
+      params[:user].delete(:mobile_number)
+      post "/api/v1/auth/register", params: params
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(json.dig("error", "details")).to have_key("mobile_number")
+    end
+
+    it "requires terms acceptance" do
+      params[:user][:terms_accepted] = false
+      post "/api/v1/auth/register", params: params
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(json.dig("error", "details")).to have_key("terms_accepted")
+    end
+
+    it "requires an is_resident answer" do
+      params[:user].delete(:is_resident)
+      post "/api/v1/auth/register", params: params
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(json.dig("error", "details")).to have_key("is_resident")
+    end
+
+    it "requires willing_to_verify_residency to be true when is_resident is true" do
+      params[:user][:is_resident] = true
+      post "/api/v1/auth/register", params: params
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(json.dig("error", "details")).to have_key("willing_to_verify_residency")
+    end
+
+    it "ignores willing_to_verify_residency when is_resident is false" do
+      params[:user][:is_resident] = false
+      post "/api/v1/auth/register", params: params
+      expect(response).to have_http_status(:created)
+      user = User.find_by(email: "new@example.com")
+      expect(user.customer_profile.is_resident).to eq(false)
+      expect(user.customer_profile.willing_to_verify_residency).to be_nil
+    end
+
+    it "accepts a resident who agrees to verification willingness" do
+      params[:user][:is_resident] = true
+      params[:user][:willing_to_verify_residency] = true
+      post "/api/v1/auth/register", params: params
+      expect(response).to have_http_status(:created)
+      user = User.find_by(email: "new@example.com")
+      expect(user.customer_profile.is_resident).to eq(true)
+      expect(user.customer_profile.willing_to_verify_residency).to eq(true)
     end
   end
 

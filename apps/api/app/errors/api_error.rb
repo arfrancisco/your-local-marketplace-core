@@ -35,4 +35,10 @@ class ApiError < StandardError
       super(message, code: "unprocessable_entity", status: :unprocessable_entity, details: details)
     end
   end
+
+  class Conflict < ApiError
+    def initialize(message = "Already exists", code: "conflict", details: nil)
+      super(message, code: code, status: :conflict, details: details)
+    end
+  end
 end

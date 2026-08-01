@@ -35,13 +35,13 @@ body::before {
   filter: saturate(0.55) brightness(1.05) blur(4px);
 }
 
-.preview-banner {
+.beta-banner {
   background: #fef3c7;
-  color: #92400e;
+  color: #7c5700;
   text-align: center;
-  padding: 0.5rem 1rem;
   font-size: 0.85rem;
-  border-bottom: 1px solid #fde68a;
+  padding: 0.4rem 1rem;
+  border-bottom: 1px solid #fbe4a1;
 }
 
 .topbar {
@@ -146,7 +146,7 @@ h3 { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.25rem; }
 .price-col { text-align: right; display: flex; flex-direction: column; gap: 0.4rem; align-items: flex-end; }
 
 label { display: block; margin: 0.6rem 0; font-size: 0.9rem; }
-input {
+input, textarea {
   display: block;
   width: 100%;
   margin-top: 0.25rem;
@@ -154,6 +154,7 @@ input {
   border: 1px solid #ddccb5;
   border-radius: 6px;
   font: inherit;
+  resize: vertical;
 }
 .inline { display: inline-flex; align-items: center; gap: 0.35rem; margin-right: 1rem; }
 .inline input { width: auto; display: inline-block; margin: 0; }
@@ -188,6 +189,11 @@ button.link {
   cursor: pointer;
 }
 
+/* Dimmed/disabled-looking state — shared visual language with vendor-web's
+   ItemsPage (card.dimmed for enabled: false there; sold_out here). */
+.dimmed { opacity: 0.55; }
+.sold-out-label { color: #b91c1c; font-size: 0.8rem; font-weight: 600; margin: 0.15rem 0 0; }
+
 /* Cart summary */
 .cart-summary { border: 1px solid #4f7a5c33; }
 .cart-line { padding: 0.4rem 0; }
@@ -200,6 +206,32 @@ button.link {
 }
 .line-total { min-width: 80px; text-align: right; }
 .cart-total { margin: 0.5rem 0; padding-top: 0.5rem; border-top: 1px solid #ecdfcd; }
+
+/* Floating cart button (ShopDetailPage) — top-right, only while the cart has
+   items. Toggles the existing .cart-summary panel open/closed rather than
+   requiring a scroll down the page to find it. */
+.cart-fab {
+  position: fixed;
+  top: 5.5rem;
+  right: 1rem;
+  z-index: 40;
+  border-radius: 999px;
+  padding: 0.6rem 1.1rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+}
+
+/* Floating "go to my active order" button (App.tsx, global) — bottom-right,
+   distinct corner from the cart button above (the two pages never overlap
+   anyway, but keeping the corners distinct avoids any ambiguity). */
+.active-order-fab {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1rem;
+  z-index: 40;
+  border-radius: 999px;
+  padding: 0.7rem 1.25rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+}
 
 /* Modal */
 .modal-backdrop {
@@ -263,6 +295,17 @@ button.link {
 .message p { margin: 0; white-space: pre-wrap; }
 .message img { max-width: 100%; border-radius: 6px; margin-top: 0.35rem; }
 .message.own { align-self: flex-end; background: #ded0f5; }
+/* System messages (auto-posted on order status changes) — a plain centered
+   log line, no bubble background/avatar, distinct from both own and the
+   other party's regular messages. */
+.message.system {
+  align-self: center;
+  max-width: 90%;
+  background: none;
+  padding: 0.25rem 0.5rem;
+  text-align: center;
+}
+.message.system p { color: #8a7862; font-size: 0.8rem; font-style: italic; }
 
 /* One rounded pill holding attach + textarea + send, not three separate
    boxes — the "modern chat app" composer the user asked for. */
@@ -329,3 +372,39 @@ button.link {
 .thumb-btn:hover img { opacity: 0.85; }
 
 .plain-link { background: none; border: none; color: #4f7a5c; text-decoration: underline; padding: 0; margin-top: 0.5rem; cursor: pointer; }
+
+/* Registration flow: 3-screen progress bar (SignupProgress) */
+.signup-progress { margin-bottom: 0.5rem; }
+.progress-bar { display: flex; gap: 0.35rem; margin: 0.35rem 0 1rem; }
+.progress-segment { flex: 1; height: 6px; border-radius: 3px; background: #ecdfcd; }
+.progress-segment.filled { background: #4f7a5c; }
+
+/* Visually separates the optional marketing opt-ins from the required Terms
+   checkbox above them — same checkbox control, but a distinct choice. */
+.marketing-opt-ins { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #ecdfcd; }
+
+/* Email/mobile verification badges (account page, registration screen 2) */
+.badge-verified { color: #4f7a5c; font-size: 0.8rem; font-weight: 600; }
+.badge-unverified { color: #8a7862; font-size: 0.8rem; }
+
+/* Legal pages (Terms/Privacy) rendered from the real markdown via LegalDoc */
+.legal-doc ul { padding-left: 1.25rem; margin: 0.5rem 0; }
+.legal-doc li { margin-bottom: 0.35rem; }
+.legal-doc p { margin: 0.5rem 0; }
+/* An inline text link rendered as a <button> (LegalDoc's cross-links inside
+   LegalModal) — anchor-styled but with none of .link's/.plain-link's block
+   padding/margin, since this sits mid-sentence. */
+.inline-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: #4f7a5c;
+  text-decoration: underline;
+  font: inherit;
+  cursor: pointer;
+}
+/* LegalModal — a wider modal so the legal text has room to breathe, and its
+   own scroll region so the modal itself doesn't grow past the viewport. */
+.legal-modal-body { max-height: 65vh; overflow-y: auto; }
+.legal-modal-body .legal-doc { border: none; padding: 0; margin: 0; }

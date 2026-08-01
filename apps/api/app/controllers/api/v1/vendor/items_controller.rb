@@ -62,7 +62,7 @@ module Api
         end
 
         def item_params
-          params.require(:item).permit(:name, :description, :price_cents, :currency, :position, :enabled)
+          params.require(:item).permit(:name, :description, :price_cents, :currency, :position, :enabled, :stock_count)
         end
 
         # Tags are free-text names resolved (created if new) to Tag records. An

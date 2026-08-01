@@ -59,6 +59,9 @@ test('vendor opening message, checkout, real-time chat, and status transition', 
     await customer.click(`text=${SHOP_NAME}`)
     await customer.waitForURL('**/shops/pizza-my-heart')
     await customer.click('button:has-text("Add to cart")')
+    // Cart summary is now behind a floating toggle button (item count +
+    // subtotal), not shown inline automatically — open it before checkout.
+    await customer.click('.cart-fab')
     await expect(customer.getByText('Your cart')).toBeVisible()
 
     await customer.click('button:has-text("Place order")')

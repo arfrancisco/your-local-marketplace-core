@@ -11,6 +11,21 @@ module Orders
       "cancelled" => :cancelled_at
     }.freeze
 
+    # Short, neutral log lines posted to the order's chat as a `system`
+    # message whenever status changes — so the chat reads as a full log of
+    # the order, not just a side conversation (status itself still only
+    # ever changes via these explicit transitions, never inferred from chat
+    # — this just mirrors the change into the thread after the fact).
+    SYSTEM_MESSAGE_TEXT = {
+      "accepted" => "Order accepted by the vendor.",
+      "preparing" => "Vendor is preparing the order.",
+      "ready_for_pickup" => "Order is ready for pickup.",
+      "out_for_delivery" => "Order is out for delivery.",
+      "completed" => "Order completed.",
+      "rejected" => "Order rejected by the vendor.",
+      "cancelled" => "Order cancelled."
+    }.freeze
+
     def initialize(order:, to_status:, actor_user:, reason: nil)
       @order = order
       @to_status = to_status
@@ -37,7 +52,20 @@ module Orders
           reason: @reason
         )
       end
+
+      post_system_message
       @order
+    end
+
+    private
+
+    def post_system_message
+      Messaging::PostMessage.new(
+        conversation: @order.conversation,
+        sender_user: @actor_user,
+        message_type: "system",
+        body: SYSTEM_MESSAGE_TEXT.fetch(@to_status, "Order status changed to #{@to_status}.")
+      ).call
     end
   end
 end

@@ -9,6 +9,14 @@ FactoryBot.define do
     currency { "PHP" }
     placed_at { Time.current }
 
+    # Every real order gets a conversation at checkout (Carts::Checkout).
+    # Opt-in trait, not default — the :conversation factory itself builds
+    # its own order via this factory, so making this automatic here would
+    # double-create a conversation for that path.
+    trait :with_conversation do
+      after(:create) { |order| create(:conversation, order: order) unless order.conversation }
+    end
+
     trait :with_item do
       after(:create) do |order|
         create(:order_item, order: order, unit_price_cents: 10_000, quantity: 1, line_total_cents: 10_000)

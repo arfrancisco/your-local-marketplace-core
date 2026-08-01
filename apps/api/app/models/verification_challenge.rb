@@ -2,7 +2,7 @@ class VerificationChallenge < ApplicationRecord
   belongs_to :user
 
   CHANNELS = %w[email sms].freeze
-  PURPOSES = %w[email_verification mobile_verification].freeze
+  PURPOSES = %w[email_verification mobile_verification password_reset].freeze
 
   CODE_TTL = 10.minutes
   MAX_ATTEMPTS = 5
@@ -12,6 +12,13 @@ class VerificationChallenge < ApplicationRecord
   validates :code_digest, :sent_to, :expires_at, presence: true
 
   scope :live, -> { where(consumed_at: nil).where("expires_at > ?", Time.current) }
+
+  # Purpose alone determines the channel in this app (email_verification and
+  # password_reset are always email; mobile_verification is always sms), so
+  # the e2e test-helper cache doesn't need a separate channel key.
+  def self.test_cache_key(user_id:, purpose:)
+    "test_verification_code:#{user_id}:#{purpose}"
+  end
 
   # Issues a fresh challenge and returns [challenge, plaintext_code]. The
   # plaintext is returned only here (to hand to the delivery job) and is never

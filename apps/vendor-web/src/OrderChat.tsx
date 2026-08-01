@@ -8,6 +8,16 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024 // mirrors ImageAttachable's server-side
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
 
 function MessageBubble({ message, isOwn }: { message: Message; isOwn: boolean }) {
+  // System messages (auto-posted on order status changes, e.g. "Order
+  // accepted by the vendor.") are a plain centered log line — no bubble, no
+  // "own"/other-party styling, since they belong to neither side.
+  if (message.message_type === 'system') {
+    return (
+      <div className="message system">
+        <p>{message.body}</p>
+      </div>
+    )
+  }
   const classes = ['message', message.message_type, isOwn ? 'own' : ''].filter(Boolean).join(' ')
   return (
     <div className={classes}>
@@ -16,6 +26,9 @@ function MessageBubble({ message, isOwn }: { message: Message; isOwn: boolean })
     </div>
   )
 }
+
+const TITLE_FLASH_TEXT = '(1) New message'
+const TITLE_FLASH_INTERVAL_MS = 1000
 
 function firstImageFile(files: FileList | DataTransferItemList | null | undefined): File | null {
   if (!files) return null
@@ -46,6 +59,14 @@ export function OrderChat({ orderId, currentUserId }: { orderId: number; current
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const messageListRef = useRef<HTMLDivElement>(null)
+  // Tracks whether we've established a "baseline" message count for this
+  // order yet — the initial history load should never trigger a
+  // notification/title-flash, only messages that arrive after that.
+  const initializedRef = useRef(false)
+  const prevCountRef = useRef(0)
+  const flashTimerRef = useRef<number | null>(null)
+  const originalTitleRef = useRef<string>(document.title)
 
   useEffect(() => {
     if (!image) { setImagePreviewUrl(null); return }
@@ -53,6 +74,88 @@ export function OrderChat({ orderId, currentUserId }: { orderId: number; current
     setImagePreviewUrl(url)
     return () => URL.revokeObjectURL(url)
   }, [image])
+
+  // Ask for notification permission once, up front, so a message that
+  // arrives while the tab is backgrounded can raise a native notification.
+  useEffect(() => {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
+
+  // Switching to a different order's chat should treat its full history as
+  // "already seen," not as a burst of new messages.
+  useEffect(() => {
+    initializedRef.current = false
+    prevCountRef.current = 0
+  }, [orderId])
+
+  // Always keep the most recent message in view.
+  useEffect(() => {
+    const el = messageListRef.current
+    if (!el) return
+    el.scrollTop = el.scrollHeight
+  }, [messages.length])
+
+  function stopTitleFlash() {
+    if (flashTimerRef.current !== null) {
+      window.clearInterval(flashTimerRef.current)
+      flashTimerRef.current = null
+    }
+    document.title = originalTitleRef.current
+  }
+
+  function startTitleFlash() {
+    if (flashTimerRef.current !== null) return
+    originalTitleRef.current = document.title
+    let showingFlash = false
+    flashTimerRef.current = window.setInterval(() => {
+      showingFlash = !showingFlash
+      document.title = showingFlash ? TITLE_FLASH_TEXT : originalTitleRef.current
+    }, TITLE_FLASH_INTERVAL_MS)
+  }
+
+  // Stop flashing and restore the real title once the tab regains focus.
+  useEffect(() => {
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') stopTitleFlash()
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      stopTitleFlash()
+    }
+  }, [])
+
+  // Notify (native Notification + flashing tab title) for messages that
+  // arrive while the tab isn't visible — never for the initial history
+  // load, and never for the current user's own messages (those arrive back
+  // over the same channel, see useOrderChat).
+  useEffect(() => {
+    if (loading) return
+    if (!initializedRef.current) {
+      initializedRef.current = true
+      prevCountRef.current = messages.length
+      return
+    }
+    if (messages.length <= prevCountRef.current) return
+    prevCountRef.current = messages.length
+    if (document.visibilityState === 'visible') return
+
+    const latest = messages[messages.length - 1]
+    if (latest.sender_user_id === currentUserId) return
+
+    startTitleFlash()
+
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      const preview = latest.body ?? (latest.image ? 'Sent an image' : 'New message')
+      const notification = new Notification('New message', { body: preview })
+      notification.onclick = () => {
+        window.focus()
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, loading, currentUserId])
 
   useEffect(() => {
     const el = textareaRef.current
@@ -113,7 +216,7 @@ export function OrderChat({ orderId, currentUserId }: { orderId: number; current
 
   return (
     <div className="order-chat">
-      <div className="message-list">
+      <div className="message-list" ref={messageListRef}>
         {messages.map((m) => (
           <MessageBubble key={m.id} message={m} isOwn={m.sender_user_id === currentUserId} />
         ))}

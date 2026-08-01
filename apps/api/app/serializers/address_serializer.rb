@@ -9,6 +9,8 @@ module AddressSerializer
       mobile_number: address.mobile_number,
       unit: address.unit,
       building: address.building,
+      street_address: address.street_address,
+      city: address.city,
       notes: address.notes,
       delivery_instructions: address.delivery_instructions,
       created_at: address.created_at

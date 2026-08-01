@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_31_120001) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_01_200003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -44,12 +44,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_120001) do
 
   create_table "addresses", force: :cascade do |t|
     t.string "building"
+    t.string "city"
     t.datetime "created_at", null: false
     t.text "delivery_instructions"
     t.string "label"
     t.string "mobile_number"
     t.text "notes"
     t.string "recipient_name"
+    t.string "street_address"
     t.string "unit"
     t.datetime "updated_at", null: false
     t.bigint "user_id"
@@ -114,8 +116,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_120001) do
     t.datetime "created_at", null: false
     t.bigint "default_address_id"
     t.string "display_name", null: false
+    t.boolean "is_resident", default: false, null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
+    t.boolean "willing_to_verify_residency"
     t.index ["default_address_id"], name: "index_customer_profiles_on_default_address_id"
     t.index ["user_id"], name: "index_customer_profiles_on_user_id", unique: true
   end
@@ -130,6 +134,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_120001) do
     t.datetime "updated_at", null: false
     t.index "lower((email)::text)", name: "index_early_access_signups_on_lower_email", unique: true, where: "(email IS NOT NULL)"
     t.index ["mobile_number"], name: "index_early_access_signups_on_mobile_number", unique: true, where: "(mobile_number IS NOT NULL)"
+  end
+
+  create_table "feedback_submissions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "email"
+    t.text "message", null: false
+    t.string "page_url"
+    t.datetime "updated_at", null: false
+    t.bigint "user_id"
+    t.index ["user_id"], name: "index_feedback_submissions_on_user_id"
   end
 
   create_table "item_tags", force: :cascade do |t|
@@ -151,6 +165,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_120001) do
     t.integer "position", default: 0, null: false
     t.integer "price_cents", null: false
     t.bigint "shop_id", null: false
+    t.integer "stock_count"
     t.datetime "updated_at", null: false
     t.index ["shop_id", "position"], name: "index_items_on_shop_id_and_position"
     t.index ["shop_id"], name: "index_items_on_shop_id"
@@ -250,12 +265,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_120001) do
   create_table "users", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email", null: false
+    t.boolean "email_marketing_opt_in", default: false, null: false
     t.datetime "email_verified_at"
+    t.string "first_name"
+    t.string "last_name"
     t.datetime "last_signed_in_at"
     t.string "mobile_number"
     t.datetime "mobile_verified_at"
     t.string "password_digest", null: false
+    t.boolean "sms_marketing_opt_in", default: false, null: false
     t.string "status", default: "active", null: false
+    t.datetime "terms_accepted_at"
+    t.string "terms_version"
     t.datetime "updated_at", null: false
     t.index "lower((email)::text)", name: "index_users_on_lower_email", unique: true
     t.index ["mobile_number"], name: "index_users_on_mobile_number", unique: true, where: "(mobile_number IS NOT NULL)"
@@ -299,6 +320,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_120001) do
   add_foreign_key "conversations", "orders"
   add_foreign_key "customer_profiles", "addresses", column: "default_address_id"
   add_foreign_key "customer_profiles", "users"
+  add_foreign_key "feedback_submissions", "users"
   add_foreign_key "item_tags", "items"
   add_foreign_key "item_tags", "tags"
   add_foreign_key "items", "shops"
