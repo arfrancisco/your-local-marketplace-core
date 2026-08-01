@@ -42,6 +42,8 @@ Recommended review stops after M0 and after M3.
   original spec, the ADRs win.
 - **Original product spec (historical)**: `docs/product-handover.md`
 - **Open questions**: `docs/open-decisions.md`
+- **Legal drafts (needs lawyer review before go-live)**: `docs/legal/` —
+  Terms and Conditions, Privacy Policy
 
 ## Key decisions already made (see ADRs for the why)
 
