@@ -19,19 +19,37 @@ jurisdiction signal anywhere in the repo. Both drafts are written against
 the **Data Privacy Act of 2012 (RA 10173)**. If the pilot isn't the
 Philippines, say so and I'll redo the compliance framing.
 
-## Placeholders you must fill in before publishing
+## Placeholders — filled in
 
-Both files use `[BRACKETS]` for facts only you know. Search for `[` to find
-them all. At minimum:
+- **Entity**: Alain Roy Francisco, doing business as KapitMarket PH (an
+  individual/sole proprietor for now, not yet a registered business name —
+  see "Before you charge fees" below)
+- **Address**: 3017 Astra Tower, Prisma Residences, Pasig Blvd., Brgy.
+  Bagong Ilog, Pasig City 1600, Philippines
+- **Contact**: armfrancisco@gmail.com (used for both support and privacy
+  requests for now — split these into separate inboxes once there's
+  volume)
+- **Governing city**: Pasig City
+- **Effective date**: left as "upon beta launch (date to be confirmed)" in
+  both documents — update it to the real date once you publish these for
+  real users, and update "Last updated" on any future edit.
 
-- `[LEGAL ENTITY NAME]` — the registered business name, or your own legal
-  name if this is unincorporated / sole proprietor at this stage
-- `[BUSINESS ADDRESS]` — registered/mailing address (required for a DPA
-  privacy notice)
-- `[SUPPORT EMAIL]` / `[PRIVACY EMAIL]` — even if it's the same inbox for now
-- `[GOVERNING CITY]` — city where disputes would be filed (usually where the
-  business is registered)
-- `[EFFECTIVE DATE]` — set when you actually publish these
+## Before you charge fees
+
+You're running the beta free of charge, which the Terms now say
+explicitly (Section 1, "Beta / pilot notice") — so there's no rush on
+formal business registration to start the pilot under your own name.
+Before you start charging vendors anything, though, get:
+
+- **DTI Business Name registration** for "KapitMarket PH" (cheap, fast,
+  needed to legally invoice/collect under that name instead of your own)
+- **BIR registration** (needed to issue receipts/invoices and pay tax on
+  fee income)
+- Reconsider **NPC registration** as a Personal Information Controller if
+  user volume grows — required past certain thresholds under RA 10173's
+  implementing rules; a lawyer can tell you if/when you cross it
+
+None of this blocks the beta. It blocks turning on Section 6's fees.
 
 ## What's deliberately left open
 

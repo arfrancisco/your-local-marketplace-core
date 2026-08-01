@@ -1,11 +1,15 @@
 # Privacy Policy
 
-**Effective date:** [EFFECTIVE DATE]
-**Last updated:** [EFFECTIVE DATE]
+**Effective date:** Upon beta launch (date to be confirmed)
+**Last updated:** 2026-08-01
 
-[LEGAL ENTITY NAME] ("we," "us," "our") operates [PRODUCT NAME] (the
+Alain Roy Francisco, doing business as KapitMarket PH ("we," "us,"
+"our"), of 3017 Astra Tower, Prisma Residences, Pasig Blvd., Brgy. Bagong
+Ilog, Pasig City 1600, Philippines, operates KapitMarket PH (the
 "Service"), a hyperlocal marketplace connecting vendors and customers
-within a small cluster of nearby buildings. This policy explains what
+within a small cluster of nearby buildings. KapitMarket PH is currently
+in a closed or limited beta / pilot phase — see the Terms and
+Conditions, Section 1, for what that means. This policy explains what
 personal data we collect, why, who sees it, and the rights you have over
 it, in line with the Philippines' Data Privacy Act of 2012 (RA 10173) and
 its implementing rules.
@@ -59,7 +63,7 @@ add. Concretely, today, that's:
   fulfillment method, any note you add, and the order's status history
   (who changed what, and when)
 - Payment status as asserted by the vendor — this is not a fact we
-  independently verify (see the Terms and Conditions, Section 5)
+  independently verify (see the Terms and Conditions, Section 6)
 
 **Chat**
 - Messages (text and, optionally, one image per message) within a
@@ -181,7 +185,7 @@ Under the Data Privacy Act, you have the right to:
 - File a complaint with the **National Privacy Commission** (NPC) if you
   believe we've mishandled your data
 
-To exercise any of these, contact us at [PRIVACY EMAIL]. We'll respond
+To exercise any of these, contact us at armfrancisco@gmail.com. We'll respond
 within a reasonable time and consistent with what the law requires.
 
 ## 7. Security
@@ -203,7 +207,7 @@ but we design for it deliberately rather than as an afterthought.
 
 The Service is not intended for anyone under 18. We don't knowingly
 collect data from minors. If you believe a minor has an account, contact
-us at [PRIVACY EMAIL] and we'll investigate and remove it if confirmed.
+us at armfrancisco@gmail.com and we'll investigate and remove it if confirmed.
 
 ## 9. Changes to this policy
 
@@ -215,7 +219,8 @@ than relying on this policy alone.
 ## 10. Contact us
 
 Questions, requests, or complaints about your personal data:
-[PRIVACY EMAIL], [BUSINESS ADDRESS].
+armfrancisco@gmail.com, 3017 Astra Tower, Prisma Residences, Pasig Blvd.,
+Brgy. Bagong Ilog, Pasig City 1600, Philippines.
 
 If you're not satisfied with our response, you may lodge a complaint
 with the National Privacy Commission of the Philippines
