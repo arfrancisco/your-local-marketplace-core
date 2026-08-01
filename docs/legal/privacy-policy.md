@@ -44,6 +44,14 @@ add. Concretely, today, that's:
   not collect GPS coordinates or run any location/mapping feature (see
   ADR 0002 in the project's technical decisions — there's deliberately no
   geo-discovery in this product).
+- Residency status: whether you've told us you're a resident/tenant of
+  the community, and, if so, whether you're willing to be verified as
+  one. Both are self-reported answers you give at signup; we do not
+  verify residency ourselves at this stage, and answering "no" to either
+  does not restrict your use of the Service. This is collected for
+  filtering/segmentation and to prioritize a future identity-verification
+  feature, which does not exist yet — we'll update this policy to
+  describe that process once it's built.
 
 **Vendor profile and shop**
 - Display name, verification status

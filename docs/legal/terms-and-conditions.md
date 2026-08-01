@@ -41,6 +41,13 @@ Service are expected to be genuinely local to each other. We do not
 verify physical proximity and are not responsible for a user
 misrepresenting their location.
 
+At signup, you may tell us whether you're a resident or tenant of the
+community, and, if so, whether you're willing to be verified as one.
+This is a self-reported answer. Unless and until a future verification
+feature confirms it, we do not independently verify residency, and a
+"resident" answer is not a guarantee or representation by us that the
+person is in fact a resident.
+
 The Service is a venue that connects vendors and customers. **We are not
 a party to any sale.** The contract for the sale of goods is between the
 vendor and the customer directly. We do not own, hold, inspect, or take
