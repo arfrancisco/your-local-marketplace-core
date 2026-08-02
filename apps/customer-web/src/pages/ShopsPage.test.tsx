@@ -50,7 +50,7 @@ describe('ShopsPage', () => {
     expect(listShops).toHaveBeenCalledWith('bread')
   })
 
-  it('does not search until the query reaches 3 letters', async () => {
+  it('does not search on a single letter, but does at 2', async () => {
     listShops.mockResolvedValue({ shops: [] })
     render(
       <MemoryRouter>
@@ -60,12 +60,13 @@ describe('ShopsPage', () => {
     await screen.findByText(/no shops are open/i)
     listShops.mockClear()
 
-    await userEvent.type(screen.getByLabelText('Search shops'), 'br')
-    await screen.findByText(/keep typing/i)
+    await userEvent.type(screen.getByLabelText('Search shops'), 'b')
+    // Past the debounce window with nothing to show it fired.
+    await new Promise((resolve) => setTimeout(resolve, 400))
     expect(listShops).not.toHaveBeenCalled()
 
-    await userEvent.type(screen.getByLabelText('Search shops'), 'e')
-    await screen.findByText(/no shops match "bre"/i)
-    expect(listShops).toHaveBeenCalledWith('bre')
-  })
+    await userEvent.type(screen.getByLabelText('Search shops'), 'r')
+    await screen.findByText(/no shops match "br"/i)
+    expect(listShops).toHaveBeenCalledWith('br')
+  }, 10000)
 })

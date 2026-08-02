@@ -6,11 +6,11 @@ import { colorFor, emojiFor } from '../visuals'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
 const SEARCH_DEBOUNCE_MS = 300
-// A 1-2 letter query is rarely meaningful and fires a request per keystroke
-// for no benefit — wait for a real query (or an empty box, back to browsing
-// everything) before hitting the API. Also the natural floor for a future
-// autocomplete/suggestions feature over this same box.
-const MIN_QUERY_LENGTH = 3
+// A single-letter query is rarely meaningful and fires a request per
+// keystroke for no benefit — wait for at least 2 letters (or an empty box,
+// back to browsing everything) before hitting the API. Also the natural
+// floor for a future autocomplete/suggestions feature over this same box.
+const MIN_QUERY_LENGTH = 2
 
 export function ShopsPage() {
   const [shops, setShops] = useState<Shop[]>([])
@@ -61,8 +61,6 @@ export function ShopsPage() {
         aria-label="Search shops"
         className="search-box"
       />
-
-      {queryTooShort && <p className="muted">Keep typing… (3+ letters to search)</p>}
 
       {!queryTooShort && loading && <p className="muted">Searching…</p>}
 
