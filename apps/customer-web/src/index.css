@@ -424,3 +424,120 @@ button.link {
    own scroll region so the modal itself doesn't grow past the viewport. */
 .legal-modal-body { max-height: 65vh; overflow-y: auto; }
 .legal-modal-body .legal-doc { border: none; padding: 0; margin: 0; }
+
+/* ==================================================================
+   Landing page: carousel + row cards (ShopsPage)
+   ==================================================================
+   Replaces the tall photo-grid cards this page used to render. Two
+   surfaces, both fed by the same `GET /shops` response: a swipeable
+   strip of today's first few shops, then the full directory as
+   horizontal rows (square thumbnail left, name/tagline/rating right).
+   ------------------------------------------------------------------ */
+
+.shop-section { margin-bottom: 1.25rem; }
+.shop-section-heading { font-size: 1.05rem; margin: 0 0 0.6rem; }
+
+/* --- Swipeable strip -------------------------------------------------
+   Plain CSS scroll-snap, no carousel library and no JS: fixed-width
+   flex children so several cards are visible at once at any viewport
+   width, each snapping to the left edge as you flick through. */
+.shop-carousel {
+  list-style: none;
+  margin: 0;
+  /* Bottom padding leaves room for the scrollbar on desktop so it never
+     overlaps the card names. */
+  padding: 0 0 0.35rem;
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  /* Keeps a sideways flick inside the strip instead of triggering the
+     browser's back-navigation gesture. */
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.shop-carousel-card {
+  /* Fixed basis, no shrinking — this is what makes the strip scroll
+     rather than squashing every card to fit. */
+  flex: 0 0 132px;
+  scroll-snap-align: start;
+  background: #fffdf9;
+  border: 1px solid #ecdfcd;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.shop-carousel-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  padding-bottom: 0.55rem;
+}
+.shop-carousel-thumb {
+  width: 100%;
+  height: 108px;
+  object-fit: cover;
+  border-bottom: 1px solid #ecdfcd;
+}
+/* .tile already sets display:flex + centring; it just needs a size here. */
+.shop-carousel-thumb.tile { font-size: 2.4rem; }
+.shop-carousel-name {
+  margin: 0.45rem 0.6rem 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.25;
+  /* Two lines then ellipsis, so one long shop name can't make its card
+     taller than the rest of the strip. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* --- Row directory ---------------------------------------------------
+   One opaque panel with hairline dividers rather than a stack of
+   separate cards: the page background is a photo, so fewer, larger
+   opaque surfaces read more calmly than many floating ones. */
+.shop-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: #fffdf9;
+  border: 1px solid #ecdfcd;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.shop-row + .shop-row { border-top: 1px solid #ecdfcd; }
+.shop-row-link {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.7rem 0.9rem;
+  text-decoration: none;
+  color: inherit;
+}
+.shop-row-link:hover { background: #f7f1e6; }
+.shop-row-thumb {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.shop-row-thumb.tile { font-size: 1.7rem; }
+/* min-width: 0 lets the text column actually shrink, which is what makes
+   the ellipsis on a long shop name work inside a flex row. */
+.shop-row-body { flex: 1; min-width: 0; }
+.shop-row-name {
+  font-size: 1.05rem;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shop-row-tagline { margin: 0.15rem 0 0; }
+.shop-row-body .rating-summary {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+}

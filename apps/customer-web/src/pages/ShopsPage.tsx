@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Shop } from '../api/types'
+import { RatingSummary } from '../components/Ratings'
 import { colorFor, emojiFor } from '../visuals'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
@@ -11,6 +12,27 @@ const SEARCH_DEBOUNCE_MS = 300
 // back to browsing everything) before hitting the API. Also the natural
 // floor for a future autocomplete/suggestions feature over this same box.
 const MIN_QUERY_LENGTH = 2
+// How many shops the swipeable strip shows. No second request: `GET /shops`
+// already comes back in a deterministic daily rotation (ADR 0007), so the
+// front of the same response is a fair "today's picks" without any
+// client-side shuffling of its own.
+const CAROUSEL_SIZE = 8
+
+// Square identity thumbnail, or the deterministic emoji/colour tile when the
+// vendor hasn't uploaded a profile photo. Same fallback treatment used for
+// items elsewhere in the app, just at whatever size the caller's class sets.
+function ShopThumb({ shop, className }: { shop: Shop; className: string }) {
+  if (shop.profile_photo) {
+    // alt="" on purpose: the shop name is right next to it in the same link,
+    // so a real alt would just make a screen reader say the name twice.
+    return <img className={className} src={`${API_ORIGIN}${shop.profile_photo.url}`} alt="" />
+  }
+  return (
+    <div className={`${className} tile`} style={{ background: colorFor(shop.name) }} aria-hidden>
+      {emojiFor(`${shop.name} ${shop.description ?? ''}`)}
+    </div>
+  )
+}
 
 export function ShopsPage() {
   const [shops, setShops] = useState<Shop[]>([])
@@ -46,6 +68,12 @@ export function ShopsPage() {
 
   if (error) return <p className="error">{error}</p>
 
+  // The carousel is a browsing aid, so it only makes sense while browsing —
+  // once someone searches, the results list below is the answer and a strip
+  // repeating its first few entries is pure noise.
+  const carouselShops = trimmedQuery ? [] : shops.slice(0, CAROUSEL_SIZE)
+  const listLabel = trimmedQuery ? 'Search results' : 'All shops'
+
   return (
     <div>
       <div className="hero">
@@ -72,30 +100,45 @@ export function ShopsPage() {
         </p>
       )}
 
-      <ul className="grid">
-        {shops.map((shop) => (
-          <li key={shop.id} className="card">
-            <Link to={`/shops/${shop.slug}`} className="plain">
-              {shop.profile_photo ? (
-                <img className="cover" src={`${API_ORIGIN}${shop.profile_photo.url}`} alt={shop.name} />
-              ) : (
-                <div className="cover tile" style={{ background: colorFor(shop.name) }} aria-hidden>
-                  {emojiFor(`${shop.name} ${shop.description ?? ''}`)}
-                </div>
-              )}
-              <h2>{shop.name}</h2>
-              {shop.description && <p className="muted">{shop.description}</p>}
-              <p className="tagline">
-                {shop.fulfillment_methods.join(' · ') || 'pickup'}
-              </p>
-              {/* Aggregate only on the card; nothing at all for an unrated shop. */}
-              {shop.ratings_count > 0 && shop.average_rating !== null && (
-                <p className="tagline">★ {shop.average_rating.toFixed(1)}</p>
-              )}
-            </Link>
-          </li>
-        ))}
-      </ul>
+      {carouselShops.length > 0 && (
+        <section className="shop-section">
+          <h2 className="shop-section-heading">Today's picks</h2>
+          {/* Swipe sideways. Plain CSS scroll-snap, no carousel library. */}
+          <ul className="shop-carousel" aria-label="Today's picks">
+            {carouselShops.map((shop) => (
+              <li key={shop.id} className="shop-carousel-card">
+                <Link to={`/shops/${shop.slug}`} className="shop-carousel-link">
+                  <ShopThumb shop={shop} className="shop-carousel-thumb" />
+                  <span className="shop-carousel-name">{shop.name}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {shops.length > 0 && (
+        <section className="shop-section">
+          <h2 className="shop-section-heading">{listLabel}</h2>
+          <ul className="shop-rows" aria-label={listLabel}>
+            {shops.map((shop) => (
+              <li key={shop.id} className="shop-row">
+                <Link to={`/shops/${shop.slug}`} className="shop-row-link">
+                  <ShopThumb shop={shop} className="shop-row-thumb" />
+                  <div className="shop-row-body">
+                    <h3 className="shop-row-name">{shop.name}</h3>
+                    <p className="tagline shop-row-tagline">
+                      {shop.fulfillment_methods.join(' · ') || 'pickup'}
+                    </p>
+                    {/* Renders nothing at all for an unrated shop — never "0 stars". */}
+                    <RatingSummary averageRating={shop.average_rating} ratingsCount={shop.ratings_count} />
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   )
 }
