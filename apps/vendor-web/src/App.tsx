@@ -2,8 +2,9 @@ import { Navigate, Route, Routes, Link, useNavigate } from 'react-router-dom'
 import { useState, type ReactNode } from 'react'
 import { useAuth } from './auth'
 import { FeedbackModal } from './components/FeedbackModal'
+import { HamburgerMenu } from './components/HamburgerMenu'
 import { LoginPage } from './pages/LoginPage'
-import { ShopsPage } from './pages/ShopsPage'
+import { ShopDashboardPage } from './pages/ShopDashboardPage'
 import { ShopFormPage } from './pages/ShopFormPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { ItemsPage } from './pages/ItemsPage'
@@ -38,16 +39,30 @@ function Header() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   if (!user) return null
   return (
     <header className="topbar">
       <Link to="/shops" className="brand">Vendor console</Link>
-      <div className="row gap">
-        <Link to="/shops">Home</Link>
-        <button onClick={() => setFeedbackOpen(true)}>Send feedback</button>
-        <span className="muted">{user.email}</span>
-        <button onClick={() => { logout(); navigate('/login') }}>Sign out</button>
-      </div>
+      {/* Nav lives in the drawer now, not inline — one ☰ button is all the
+          header carries, which is what keeps it readable at phone widths. */}
+      <button
+        type="button"
+        className="hamburger-btn"
+        aria-label="Menu"
+        aria-expanded={menuOpen}
+        onClick={() => setMenuOpen(true)}
+      >
+        ☰
+      </button>
+      {menuOpen && (
+        <HamburgerMenu
+          email={user.email}
+          onClose={() => setMenuOpen(false)}
+          onFeedback={() => { setMenuOpen(false); setFeedbackOpen(true) }}
+          onSignOut={() => { setMenuOpen(false); logout(); navigate('/login') }}
+        />
+      )}
       {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
     </header>
   )
@@ -70,7 +85,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/onboarding" element={<RequireAuth><OnboardingPage /></RequireAuth>} />
-          <Route path="/shops" element={<RequireAuth><ShopsPage /></RequireAuth>} />
+          <Route path="/shops" element={<RequireAuth><ShopDashboardPage /></RequireAuth>} />
           <Route path="/shops/new" element={<RequireAuth><ShopFormPage /></RequireAuth>} />
           <Route path="/shops/:id/edit" element={<RequireAuth><ShopFormPage /></RequireAuth>} />
           <Route path="/shops/:id/items" element={<RequireAuth><ItemsPage /></RequireAuth>} />

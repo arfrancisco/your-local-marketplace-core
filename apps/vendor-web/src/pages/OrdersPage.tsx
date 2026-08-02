@@ -11,7 +11,7 @@ const STATUSES: (OrderStatus | 'all')[] = [
   'all', 'placed', 'accepted', 'preparing', 'ready_for_pickup', 'out_for_delivery', 'completed', 'rejected', 'cancelled',
 ]
 
-// Reached from a specific shop's "Orders" button (ShopsPage) with ?shop_id=,
+// Reached from the shop dashboard's "Orders" button with ?shop_id=,
 // or with no shop_id to see everything across all of the vendor's shops.
 export function OrdersPage() {
   const [params] = useSearchParams()

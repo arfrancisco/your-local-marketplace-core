@@ -1,5 +1,5 @@
 // A small positioned tooltip/callout used by the vendor onboarding tour
-// (OnboardingPage + ShopFormPage/ShopsPage in onboardingMode). Deliberately
+// (OnboardingPage + ShopFormPage/ShopDashboardPage in onboardingMode). Deliberately
 // simple: the caller wraps the target field/element in a `.tour-anchor`
 // (position: relative) div and renders this inside it; this component itself
 // is `position: absolute` via CSS (see index.css). No popover/floating-UI

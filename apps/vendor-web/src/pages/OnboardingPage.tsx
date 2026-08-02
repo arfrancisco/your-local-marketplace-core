@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ShopFormPage } from './ShopFormPage'
-import { ShopsPage } from './ShopsPage'
+import { ShopDashboardPage } from './ShopDashboardPage'
 
 // Reached two ways: a full-page redirect from customer-web right after a
-// "become a vendor" upgrade, or ShopsPage's own zero-shops redirect (a
-// vendor with no shops has nothing useful to do on /shops). Either way the
+// "become a vendor" upgrade, or ShopDashboardPage's own no-shop redirect (a
+// vendor with no shop has nothing useful to do on /shops). Either way the
 // three steps below are the same, and steps 2/3 reuse the real
-// ShopFormPage/ShopsPage components in onboardingMode rather than forking
+// ShopFormPage/ShopDashboardPage components in onboardingMode rather than forking
 // them — the tour is just callouts layered on top of the real UI.
 type Step = 'welcome' | 'shop' | 'dashboard'
 
@@ -49,6 +49,6 @@ export function OnboardingPage() {
   }
 
   return (
-    <ShopsPage onboardingMode onTourDone={() => navigate('/shops', { replace: true })} />
+    <ShopDashboardPage onboardingMode onTourDone={() => navigate('/shops', { replace: true })} />
   )
 }

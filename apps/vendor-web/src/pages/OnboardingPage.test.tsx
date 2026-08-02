@@ -81,9 +81,9 @@ describe('OnboardingPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Got it' }))
     await userEvent.click(screen.getByRole('button', { name: /save shop/i }))
 
-    // Lands on the real ShopsPage (dashboard), tour already underway —
-    // first stop is the open/close toggle callout.
-    expect(await screen.findByRole('heading', { name: /your shops/i })).toBeInTheDocument()
+    // Lands on the real ShopDashboardPage, tour already underway — first
+    // stop is the open/close control's callout.
+    expect(await screen.findByRole('heading', { name: 'New Shop' })).toBeInTheDocument()
     expect(screen.getByText(/toggle your shop open or closed/i)).toBeInTheDocument()
   })
 })
