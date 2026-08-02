@@ -11,13 +11,13 @@ module Api
           scope = scope.where(user_id: params[:user_id]) if params[:user_id].present?
           scope = scope.where(purpose: params[:purpose]) if params[:purpose].present?
           render json: {
-            verification_challenges: paginate(scope).map { |c| Admin::VerificationChallengeSerializer.call(c) },
+            verification_challenges: paginate(scope).map { |c| ::Admin::VerificationChallengeSerializer.call(c) },
             meta: pagination_meta(scope)
           }
         end
 
         def show
-          render json: { verification_challenge: Admin::VerificationChallengeSerializer.call(@verification_challenge) }
+          render json: { verification_challenge: ::Admin::VerificationChallengeSerializer.call(@verification_challenge) }
         end
 
         private

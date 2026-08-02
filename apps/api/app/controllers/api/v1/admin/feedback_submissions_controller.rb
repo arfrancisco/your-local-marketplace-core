@@ -13,25 +13,25 @@ module Api
             scope = scope.where.not(resolved_at: nil)
           end
           render json: {
-            feedback_submissions: paginate(scope).map { |f| Admin::FeedbackSubmissionSerializer.call(f) },
+            feedback_submissions: paginate(scope).map { |f| ::Admin::FeedbackSubmissionSerializer.call(f) },
             meta: pagination_meta(scope)
           }
         end
 
         def show
-          render json: { feedback_submission: Admin::FeedbackSubmissionSerializer.call(@feedback_submission) }
+          render json: { feedback_submission: ::Admin::FeedbackSubmissionSerializer.call(@feedback_submission) }
         end
 
         # POST /api/v1/admin/feedback_submissions/:id/resolve
         def resolve
           @feedback_submission.resolve!
-          render json: { feedback_submission: Admin::FeedbackSubmissionSerializer.call(@feedback_submission) }
+          render json: { feedback_submission: ::Admin::FeedbackSubmissionSerializer.call(@feedback_submission) }
         end
 
         # POST /api/v1/admin/feedback_submissions/:id/reopen
         def reopen
           @feedback_submission.reopen!
-          render json: { feedback_submission: Admin::FeedbackSubmissionSerializer.call(@feedback_submission) }
+          render json: { feedback_submission: ::Admin::FeedbackSubmissionSerializer.call(@feedback_submission) }
         end
 
         private

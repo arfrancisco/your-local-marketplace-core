@@ -8,13 +8,13 @@ module Api
         def index
           scope = CustomerProfile.order(created_at: :desc)
           render json: {
-            customer_profiles: paginate(scope).map { |cp| Admin::CustomerProfileSerializer.call(cp) },
+            customer_profiles: paginate(scope).map { |cp| ::Admin::CustomerProfileSerializer.call(cp) },
             meta: pagination_meta(scope)
           }
         end
 
         def show
-          render json: { customer_profile: Admin::CustomerProfileSerializer.call(@customer_profile) }
+          render json: { customer_profile: ::Admin::CustomerProfileSerializer.call(@customer_profile) }
         end
 
         private

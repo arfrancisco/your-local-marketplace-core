@@ -11,13 +11,13 @@ module Api
           scope = OrderStatusEvent.order(created_at: :desc)
           scope = scope.where(order_id: params[:order_id]) if params[:order_id].present?
           render json: {
-            order_status_events: paginate(scope).map { |e| Admin::OrderStatusEventSerializer.call(e) },
+            order_status_events: paginate(scope).map { |e| ::Admin::OrderStatusEventSerializer.call(e) },
             meta: pagination_meta(scope)
           }
         end
 
         def show
-          render json: { order_status_event: Admin::OrderStatusEventSerializer.call(@order_status_event) }
+          render json: { order_status_event: ::Admin::OrderStatusEventSerializer.call(@order_status_event) }
         end
 
         private

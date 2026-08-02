@@ -17,13 +17,13 @@ module Api
           scope = scope.where(vendor_profile_id: params[:vendor_profile_id]) if params[:vendor_profile_id].present?
           scope = scope.where(customer_profile_id: params[:customer_profile_id]) if params[:customer_profile_id].present?
           render json: {
-            vendor_customer_notes: paginate(scope).map { |n| Admin::VendorCustomerNoteSerializer.call(n) },
+            vendor_customer_notes: paginate(scope).map { |n| ::Admin::VendorCustomerNoteSerializer.call(n) },
             meta: pagination_meta(scope)
           }
         end
 
         def show
-          render json: { vendor_customer_note: Admin::VendorCustomerNoteSerializer.call(@note) }
+          render json: { vendor_customer_note: ::Admin::VendorCustomerNoteSerializer.call(@note) }
         end
 
         private

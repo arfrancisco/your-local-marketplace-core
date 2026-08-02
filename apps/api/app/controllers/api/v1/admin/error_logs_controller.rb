@@ -19,25 +19,25 @@ module Api
           scope = scope.where(source: params[:source]) if params[:source].present?
 
           render json: {
-            error_logs: paginate(scope).map { |e| Admin::ErrorLogSerializer.call(e) },
+            error_logs: paginate(scope).map { |e| ::Admin::ErrorLogSerializer.call(e) },
             meta: pagination_meta(scope)
           }
         end
 
         def show
-          render json: { error_log: Admin::ErrorLogSerializer.call(@error_log, include_backtrace: true) }
+          render json: { error_log: ::Admin::ErrorLogSerializer.call(@error_log, include_backtrace: true) }
         end
 
         # POST /api/v1/admin/error_logs/:id/resolve
         def resolve
           @error_log.resolve!
-          render json: { error_log: Admin::ErrorLogSerializer.call(@error_log, include_backtrace: true) }
+          render json: { error_log: ::Admin::ErrorLogSerializer.call(@error_log, include_backtrace: true) }
         end
 
         # POST /api/v1/admin/error_logs/:id/reopen
         def reopen
           @error_log.reopen!
-          render json: { error_log: Admin::ErrorLogSerializer.call(@error_log, include_backtrace: true) }
+          render json: { error_log: ::Admin::ErrorLogSerializer.call(@error_log, include_backtrace: true) }
         end
 
         private

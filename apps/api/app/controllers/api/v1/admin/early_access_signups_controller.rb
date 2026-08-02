@@ -8,7 +8,7 @@ module Api
         def index
           scope = EarlyAccessSignup.order(created_at: :desc)
           render json: {
-            early_access_signups: paginate(scope).map { |s| Admin::EarlyAccessSignupSerializer.call(s) },
+            early_access_signups: paginate(scope).map { |s| ::Admin::EarlyAccessSignupSerializer.call(s) },
             meta: pagination_meta(scope)
           }
         end
