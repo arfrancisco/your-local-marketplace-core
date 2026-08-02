@@ -260,3 +260,91 @@ button:disabled { opacity: 0.6; cursor: default; }
   font-size: 0.8rem;
   cursor: pointer;
 }
+
+/* Inventory table — vendor item list on ItemsPage. A single semantic
+   <table> that reflows into stacked blocks below the mobile breakpoint
+   (no second markup, no table library). */
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  margin: 1rem 0;
+}
+.inventory-table th,
+.inventory-table td {
+  text-align: left;
+  vertical-align: middle;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.inventory-table thead th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  background: #f9fafb;
+  white-space: nowrap;
+}
+.inventory-table tbody tr:last-child td { border-bottom: none; }
+/* Same visual treatment as `.card.dimmed`, now that a hidden item is a row
+   rather than a card. */
+.inventory-table tr.dimmed { opacity: 0.55; }
+.inventory-table .item-name { font-weight: 600; }
+.inventory-table th.actions-col,
+.inventory-table td.actions { text-align: right; }
+.inventory-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  /* Rows become stacked blocks. The header row is dropped (table semantics
+     are gone once tr/td are display:block anyway) and each cell grows its
+     own label from the `data-label` attribute instead. */
+  .inventory-table,
+  .inventory-table tbody,
+  .inventory-table tr,
+  .inventory-table td {
+    display: block;
+    width: 100%;
+  }
+  .inventory-table { border: none; background: none; }
+  .inventory-table thead { display: none; }
+  .inventory-table tr {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 0.4rem 0;
+    margin-bottom: 0.75rem;
+  }
+  .inventory-table td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    text-align: right;
+    border-bottom: none;
+    padding: 0.3rem 0.9rem;
+  }
+  .inventory-table td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6b7280;
+  }
+  .inventory-table td.item-name { font-size: 1.05rem; }
+  /* The action buttons are self-explanatory, so no pseudo-label for them. */
+  .inventory-table td.actions {
+    justify-content: flex-end;
+    padding-top: 0.55rem;
+  }
+  .inventory-table td.actions::before { content: none; }
+}

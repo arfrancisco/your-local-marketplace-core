@@ -104,4 +104,56 @@ describe('ItemsPage', () => {
     expect(screen.getByText('4 in stock')).toBeInTheDocument()
     expect(screen.getByText('Sold out')).toBeInTheDocument()
   })
+
+  it('lays the items out as a table row per item, with a cell per column', async () => {
+    vi.mocked(api.listItems).mockResolvedValue({
+      items: [
+        { ...baseItem, id: 1, name: 'Lumpia', tags: [{ id: 7, name: 'savory', slug: 'savory' }] },
+        { ...baseItem, id: 2, name: 'Turon' },
+      ],
+    })
+
+    renderAt('/shops/5/items')
+
+    expect(await screen.findByRole('table')).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Item' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Price' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Stock' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Tags' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Actions' })).toBeInTheDocument()
+
+    // Header row plus one row per item.
+    expect(screen.getAllByRole('row')).toHaveLength(3)
+    expect(screen.getByRole('cell', { name: 'Lumpia' })).toBeInTheDocument()
+    expect(screen.getByRole('cell', { name: 'Turon' })).toBeInTheDocument()
+    expect(screen.getAllByRole('cell', { name: 'PHP 150.00' })).toHaveLength(2)
+    expect(screen.getByRole('cell', { name: 'savory' })).toBeInTheDocument()
+    // Untracked stock reads as a placeholder rather than an empty cell.
+    expect(screen.getAllByRole('cell', { name: 'Not tracked' })).toHaveLength(2)
+  })
+
+  it('labels the visibility toggle Hide/Show and calls the enable/disable endpoints', async () => {
+    vi.mocked(api.listItems).mockResolvedValue({
+      items: [
+        { ...baseItem, id: 1, name: 'Lumpia', enabled: true },
+        { ...baseItem, id: 2, name: 'Turon', enabled: false },
+      ],
+    })
+    vi.mocked(api.disableItem).mockResolvedValue({
+      item: { ...baseItem, id: 1, name: 'Lumpia', enabled: false },
+    })
+
+    renderAt('/shops/5/items')
+
+    const hide = await screen.findByRole('button', { name: 'Hide' })
+    expect(screen.getByRole('button', { name: 'Show' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Disable' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Enable' })).not.toBeInTheDocument()
+
+    await userEvent.click(hide)
+
+    expect(api.disableItem).toHaveBeenCalledWith(1)
+    // The row flips to "Show" once the item comes back disabled.
+    expect(await screen.findAllByRole('button', { name: 'Show' })).toHaveLength(2)
+  })
 })

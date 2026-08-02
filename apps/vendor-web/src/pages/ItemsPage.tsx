@@ -75,32 +75,47 @@ export function ItemsPage() {
         <Link to="/shops">Back to shops</Link>
       </div>
 
-      <ul className="list">
-        {items.map((item) => (
-          <li key={item.id} className={`card ${item.enabled ? '' : 'dimmed'}`}>
-            <div className="row spread">
-              <div>
-                <h2>{item.name}</h2>
-                <p className="muted">{formatPrice(item.price_cents, item.currency)}</p>
-                {item.tags.length > 0 && (
-                  <p className="muted">{item.tags.map((t) => t.name).join(', ')}</p>
-                )}
-                {item.stock_count !== null && (
-                  <p className="muted">
-                    {item.sold_out ? 'Sold out' : `${item.stock_count} in stock`}
-                  </p>
-                )}
-              </div>
-              <div className="row gap">
-                <Link className="button" to={`/shops/${shopId}/items/${item.id}/edit`}>Edit</Link>
-                <button onClick={() => toggleEnabled(item)}>
-                  {item.enabled ? 'Disable' : 'Enable'}
-                </button>
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
+      {items.length === 0 ? (
+        <p className="muted">No items yet. Add your first one below.</p>
+      ) : (
+        <table className="inventory-table">
+          <thead>
+            <tr>
+              <th scope="col">Item</th>
+              <th scope="col">Price</th>
+              <th scope="col">Stock</th>
+              <th scope="col">Tags</th>
+              <th scope="col" className="actions-col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.id} className={item.enabled ? '' : 'dimmed'}>
+                <td data-label="Item" className="item-name">{item.name}</td>
+                <td data-label="Price">{formatPrice(item.price_cents, item.currency)}</td>
+                <td data-label="Stock">
+                  {item.stock_count === null
+                    ? 'Not tracked'
+                    : item.sold_out
+                      ? 'Sold out'
+                      : `${item.stock_count} in stock`}
+                </td>
+                <td data-label="Tags">
+                  {item.tags.length > 0 ? item.tags.map((t) => t.name).join(', ') : '—'}
+                </td>
+                <td className="actions">
+                  <div className="inventory-actions">
+                    <Link className="button" to={`/shops/${shopId}/items/${item.id}/edit`}>Edit</Link>
+                    <button onClick={() => toggleEnabled(item)}>
+                      {item.enabled ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
 
       <form className="card" onSubmit={onCreate}>
         <h2>Add item</h2>
