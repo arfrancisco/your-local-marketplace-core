@@ -17,6 +17,10 @@ class Shop < ApplicationRecord
   validates :name, presence: true
   validates :slug, presence: true, uniqueness: true
   validates :status, inclusion: { in: STATUSES }
+  # One shop per vendor for now. Not a DB constraint (no concurrent-write
+  # pressure yet at this scale) — lift this if multi-shop vendors are ever
+  # supported.
+  validates :vendor_profile_id, uniqueness: true
   validate :fulfillment_methods_present_and_valid
 
   # Shops a customer may discover: active and currently accepting orders.

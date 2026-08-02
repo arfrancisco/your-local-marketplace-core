@@ -42,6 +42,18 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
   const [ratings, setRatings] = useState<Rating[]>([])
 
   useEffect(() => {
+    // One shop per vendor for now — direct navigation to /shops/new after
+    // already having one would otherwise hit a bare 422 from the API's
+    // uniqueness validation. Onboarding's own creation step never hits this,
+    // since it only renders once a vendor has zero shops.
+    if (!editing && !onboardingMode) {
+      api.listShops().then((res) => {
+        if (res.shops.length > 0) navigate('/shops', { replace: true })
+      })
+    }
+  }, [editing, onboardingMode, navigate])
+
+  useEffect(() => {
     if (!editing) return
     api.getShop(Number(id)).then((res) => {
       const s = res.shop

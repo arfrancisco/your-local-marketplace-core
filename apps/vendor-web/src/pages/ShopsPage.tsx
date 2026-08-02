@@ -83,7 +83,12 @@ export function ShopsPage({ onboardingMode = false, onTourDone }: ShopsPageProps
                 Skip tour
               </button>
             )}
-            <Link className="button" to="/shops/new">New shop</Link>
+            {/* One shop per vendor for now (see Shop#validates vendor_profile_id
+                uniqueness on the API) — once a vendor has a shop, there's
+                nothing a second one from here would do but 422. */}
+            {shops.length === 0 && (
+              <Link className="button" to="/shops/new">New shop</Link>
+            )}
           </div>
         </div>
         {showTour && tourStep === 3 && (

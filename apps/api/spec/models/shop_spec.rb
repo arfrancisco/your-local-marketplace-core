@@ -6,6 +6,16 @@ RSpec.describe Shop, type: :model do
   it { is_expected.to validate_presence_of(:name) }
   it { is_expected.to belong_to(:vendor_profile) }
 
+  describe "one shop per vendor" do
+    it "rejects a second shop for a vendor who already has one" do
+      profile = create(:shop).vendor_profile
+      second = build(:shop, vendor_profile: profile)
+
+      expect(second).not_to be_valid
+      expect(second.errors[:vendor_profile_id]).to be_present
+    end
+  end
+
   describe "slug generation" do
     it "derives a slug from the name at creation" do
       shop = create(:shop, name: "Corner Kitchen")

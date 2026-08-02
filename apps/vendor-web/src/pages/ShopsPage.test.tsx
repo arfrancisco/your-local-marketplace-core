@@ -68,4 +68,13 @@ describe('ShopsPage onboarding redirect', () => {
     expect(await screen.findByText("Lola's Kitchen")).toBeInTheDocument()
     expect(screen.queryByText('Onboarding page')).not.toBeInTheDocument()
   })
+
+  it('hides "New shop" once a vendor already has one shop', async () => {
+    vi.mocked(api.listShops).mockResolvedValue({ shops: [activeShop] })
+
+    renderAt('/shops')
+
+    await screen.findByText("Lola's Kitchen")
+    expect(screen.queryByRole('link', { name: 'New shop' })).not.toBeInTheDocument()
+  })
 })
