@@ -49,4 +49,23 @@ describe('ShopsPage', () => {
     await screen.findByText(/no shops match "bread"/i)
     expect(listShops).toHaveBeenCalledWith('bread')
   })
+
+  it('does not search until the query reaches 3 letters', async () => {
+    listShops.mockResolvedValue({ shops: [] })
+    render(
+      <MemoryRouter>
+        <ShopsPage />
+      </MemoryRouter>,
+    )
+    await screen.findByText(/no shops are open/i)
+    listShops.mockClear()
+
+    await userEvent.type(screen.getByLabelText('Search shops'), 'br')
+    await screen.findByText(/keep typing/i)
+    expect(listShops).not.toHaveBeenCalled()
+
+    await userEvent.type(screen.getByLabelText('Search shops'), 'e')
+    await screen.findByText(/no shops match "bre"/i)
+    expect(listShops).toHaveBeenCalledWith('bre')
+  })
 })
