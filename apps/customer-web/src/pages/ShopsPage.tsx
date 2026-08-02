@@ -76,8 +76,8 @@ export function ShopsPage() {
         {shops.map((shop) => (
           <li key={shop.id} className="card">
             <Link to={`/shops/${shop.slug}`} className="plain">
-              {shop.photos[0] ? (
-                <img className="cover" src={`${API_ORIGIN}${shop.photos[0].url}`} alt={shop.name} />
+              {shop.profile_photo ? (
+                <img className="cover" src={`${API_ORIGIN}${shop.profile_photo.url}`} alt={shop.name} />
               ) : (
                 <div className="cover tile" style={{ background: colorFor(shop.name) }} aria-hidden>
                   {emojiFor(`${shop.name} ${shop.description ?? ''}`)}

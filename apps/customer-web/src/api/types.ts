@@ -23,7 +23,11 @@ export interface Shop {
   address: string | null
   fulfillment_methods: FulfillmentMethod[]
   open: boolean
-  photos: Photo[]
+  // Shop identity images (Facebook-style) — profile_photo is the small
+  // square thumbnail used on shop lists/cards, cover_photo is the wide hero
+  // on the shop's own page. Either can be null if the vendor hasn't set one.
+  profile_photo: Photo | null
+  cover_photo: Photo | null
   // null when the shop has no reviews yet — render "no reviews", never "0 stars".
   average_rating: number | null
   ratings_count: number

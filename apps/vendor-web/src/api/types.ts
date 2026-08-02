@@ -25,7 +25,11 @@ export interface Shop {
   status: 'draft' | 'active' | 'suspended'
   accepting_orders: boolean
   open: boolean
-  photos: Photo[]
+  // Shop identity images (Facebook-style) — profile_photo is the small
+  // square thumbnail used on shop lists/cards, cover_photo is the wide hero
+  // on the shop's own page. Either can be null if not set yet.
+  profile_photo: Photo | null
+  cover_photo: Photo | null
   // Public standing, same values customers see. null average when unrated —
   // render "no reviews", never "0 stars".
   average_rating: number | null

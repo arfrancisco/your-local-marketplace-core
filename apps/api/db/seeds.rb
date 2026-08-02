@@ -61,10 +61,10 @@ end
 # given, so adding a shop/item without sourcing a photo never breaks seeding.
 SEED_PHOTOS_DIR = Rails.root.join("db/seed_photos")
 
-def attach_seed_photo(record, filename)
+def attach_seed_photo(record, filename, attachment: :photos)
   path = SEED_PHOTOS_DIR.join(filename)
   content_type = filename.end_with?(".png") ? "image/png" : "image/jpeg"
-  record.photos.attach(io: File.open(path), filename: filename, content_type: content_type)
+  record.public_send(attachment).attach(io: File.open(path), filename: filename, content_type: content_type)
 end
 
 def find_or_create_user!(email:, password:, mobile_number:, verified: true)
@@ -234,12 +234,16 @@ DEMO_SHOPS.each_with_index do |data, i|
   shop.save!
   shop.open! unless shop.open?
 
-  if shop.photos.blank?
+  unless shop.cover_photo.attached?
     if data[:cover_photo]
-      attach_seed_photo(shop, data[:cover_photo])
+      # No separate square logo-style assets sourced yet — the same photo
+      # stands in for both fields for now, real demo photos either way.
+      attach_seed_photo(shop, data[:cover_photo], attachment: :cover_photo)
+      attach_seed_photo(shop, data[:cover_photo], attachment: :profile_photo)
     else
       rgb = hsl_to_rgb(hue_for(shop.name, 0), 0.55, 0.72)
-      shop.photos.attach(io: StringIO.new(solid_color_png(480, 360, rgb)), filename: "#{shop.slug}-cover.png", content_type: "image/png")
+      shop.cover_photo.attach(io: StringIO.new(solid_color_png(480, 360, rgb)), filename: "#{shop.slug}-cover.png", content_type: "image/png")
+      shop.profile_photo.attach(io: StringIO.new(solid_color_png(200, 200, rgb)), filename: "#{shop.slug}-profile.png", content_type: "image/png")
     end
   end
 

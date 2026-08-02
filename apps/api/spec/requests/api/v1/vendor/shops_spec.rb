@@ -38,15 +38,17 @@ RSpec.describe "Api::V1::Vendor Shops", type: :request do
       expect(response).to have_http_status(:unauthorized)
     end
 
-    it "attaches an uploaded photo" do
-      valid_params[:shop][:photos] = [fixture_file_upload("sample.png", "image/png")]
+    it "attaches an uploaded profile picture and cover photo" do
+      valid_params[:shop][:profile_photo] = fixture_file_upload("sample.png", "image/png")
+      valid_params[:shop][:cover_photo] = fixture_file_upload("sample.png", "image/png")
       post "/api/v1/vendor/shops", params: valid_params, headers: auth_headers(vendor_user)
       expect(response).to have_http_status(:created)
-      expect(json.dig("shop", "photos").size).to eq(1)
+      expect(json.dig("shop", "profile_photo")).to be_present
+      expect(json.dig("shop", "cover_photo")).to be_present
     end
 
     it "rejects an upload of a disallowed type" do
-      valid_params[:shop][:photos] = [fixture_file_upload("note.txt", "text/plain")]
+      valid_params[:shop][:profile_photo] = fixture_file_upload("note.txt", "text/plain")
       post "/api/v1/vendor/shops", params: valid_params, headers: auth_headers(vendor_user)
       expect(response).to have_http_status(:unprocessable_entity)
     end

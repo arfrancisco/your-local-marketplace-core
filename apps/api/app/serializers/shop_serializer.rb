@@ -18,7 +18,11 @@ module ShopSerializer
       status: shop.status,
       accepting_orders: shop.accepting_orders,
       open: shop.open?,
-      photos: PhotoSerializer.list(shop.photos),
+      # has_images is always has_many_attached under the hood (max_count just
+      # validates the ceiling), so even a single-image field like these is a
+      # collection accessor — #first is "the one" photo, if any.
+      profile_photo: shop.profile_photo.attached? ? PhotoSerializer.one(shop.profile_photo.first) : nil,
+      cover_photo: shop.cover_photo.attached? ? PhotoSerializer.one(shop.cover_photo.first) : nil,
       # Always public, on both the listing and the shop page. average_rating
       # is nil (never 0) for an unrated shop so clients can say "no reviews
       # yet" instead of rendering a misleading zero-star score. to_f matters:

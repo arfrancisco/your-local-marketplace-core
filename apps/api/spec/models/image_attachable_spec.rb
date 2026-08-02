@@ -30,11 +30,11 @@ RSpec.describe ImageAttachable, type: :model do
   end
 
   describe "count" do
-    it "rejects more than 3 photos on a shop" do
+    it "rejects more than 1 cover photo on a shop" do
       shop = build(:shop)
-      4.times { shop.photos.attach(png) }
+      2.times { shop.cover_photo.attach(png) }
       expect(shop).not_to be_valid
-      expect(shop.errors[:photos].join).to match(/more than 3/)
+      expect(shop.errors[:cover_photo].join).to match(/more than 1/)
     end
 
     it "allows up to 6 photos on an item" do

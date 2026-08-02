@@ -31,7 +31,8 @@ const activeShop: Shop = {
   status: 'active',
   accepting_orders: true,
   open: true,
-  photos: [],
+  profile_photo: null,
+  cover_photo: null,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
 }

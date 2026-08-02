@@ -103,7 +103,8 @@ Rails.application.routes.draw do
         patch  "shops/:id",                   to: "shops#update"
         post   "shops/:id/open",              to: "shops#open"
         post   "shops/:id/close",             to: "shops#close"
-        delete "shops/:id/photos/:photo_id",  to: "shops#destroy_photo"
+        delete "shops/:id/profile_photo", to: "shops#destroy_profile_photo"
+        delete "shops/:id/cover_photo",   to: "shops#destroy_cover_photo"
         delete "shops/:id/opening_message_photos/:photo_id", to: "shops#destroy_opening_message_photo"
 
         get    "orders",                      to: "orders#index"

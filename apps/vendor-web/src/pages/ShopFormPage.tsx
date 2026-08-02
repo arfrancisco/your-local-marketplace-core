@@ -34,7 +34,8 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
   const [address, setAddress] = useState('')
   const [contact, setContact] = useState('')
   const [methods, setMethods] = useState<FulfillmentMethod[]>(['pickup'])
-  const [files, setFiles] = useState<FileList | null>(null)
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null)
+  const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null)
   const [openingMessage, setOpeningMessage] = useState('')
   const [openingMessagePhotos, setOpeningMessagePhotos] = useState<FileList | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -89,7 +90,8 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
     fd.append('shop[address]', address)
     fd.append('shop[contact_number]', contact)
     methods.forEach((m) => fd.append('shop[fulfillment_methods][]', m))
-    if (files) Array.from(files).forEach((f) => fd.append('shop[photos][]', f))
+    if (profilePhotoFile) fd.append('shop[profile_photo]', profilePhotoFile)
+    if (coverPhotoFile) fd.append('shop[cover_photo]', coverPhotoFile)
     fd.append('shop[opening_message]', openingMessage)
     if (openingMessagePhotos) Array.from(openingMessagePhotos).forEach((f) => fd.append('shop[opening_message_photos][]', f))
 
@@ -153,16 +155,33 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
           )}
         </div>
 
+        {/* Plain uploads for now — cropping to fixed aspect ratios is a
+            follow-up pass, not built yet. */}
         <label>
-          Photos (JPEG/PNG/WebP, up to 3)
-          <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => setFiles(e.target.files)} />
+          Profile picture (JPEG/PNG/WebP)
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={(e) => setProfilePhotoFile(e.target.files?.[0] ?? null)}
+          />
         </label>
-
-        {shop && shop.photos.length > 0 && (
+        {shop?.profile_photo && (
           <div className="thumbs">
-            {shop.photos.map((p) => (
-              <img key={p.id} src={`http://localhost:3000${p.url}`} alt={p.filename} />
-            ))}
+            <img src={`http://localhost:3000${shop.profile_photo.url}`} alt={shop.profile_photo.filename} />
+          </div>
+        )}
+
+        <label>
+          Cover photo (JPEG/PNG/WebP)
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={(e) => setCoverPhotoFile(e.target.files?.[0] ?? null)}
+          />
+        </label>
+        {shop?.cover_photo && (
+          <div className="thumbs">
+            <img src={`http://localhost:3000${shop.cover_photo.url}`} alt={shop.cover_photo.filename} />
           </div>
         )}
 

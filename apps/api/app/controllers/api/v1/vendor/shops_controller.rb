@@ -2,7 +2,8 @@ module Api
   module V1
     module Vendor
       class ShopsController < BaseController
-        before_action :set_shop, only: %i[show update open close destroy_photo destroy_opening_message_photo]
+        before_action :set_shop, only: %i[show update open close destroy_profile_photo destroy_cover_photo
+                                           destroy_opening_message_photo]
 
         # GET /api/v1/vendor/shops
         def index
@@ -44,9 +45,15 @@ module Api
           render json: { shop: ShopSerializer.call(@shop, include_payment_info: true) }
         end
 
-        # DELETE /api/v1/vendor/shops/:id/photos/:photo_id
-        def destroy_photo
-          @shop.photos_attachments.find(params[:photo_id]).purge
+        # DELETE /api/v1/vendor/shops/:id/profile_photo
+        def destroy_profile_photo
+          @shop.profile_photo.purge
+          head :no_content
+        end
+
+        # DELETE /api/v1/vendor/shops/:id/cover_photo
+        def destroy_cover_photo
+          @shop.cover_photo.purge
           head :no_content
         end
 
@@ -72,8 +79,19 @@ module Api
         end
 
         def attach_photos(shop)
-          photos = params.dig(:shop, :photos)
-          shop.photos.attach(photos) if photos.present?
+          # Single-image fields: a new upload replaces whatever was there,
+          # it doesn't add a second attachment (which max_count: 1 would
+          # then reject anyway) — purge is a no-op when nothing's attached
+          # yet, so this is safe on both create and update.
+          if (profile_photo = params.dig(:shop, :profile_photo)).present?
+            shop.profile_photo.purge
+            shop.profile_photo.attach(profile_photo)
+          end
+
+          if (cover_photo = params.dig(:shop, :cover_photo)).present?
+            shop.cover_photo.purge
+            shop.cover_photo.attach(cover_photo)
+          end
 
           opening_message_photos = params.dig(:shop, :opening_message_photos)
           shop.opening_message_photos.attach(opening_message_photos) if opening_message_photos.present?

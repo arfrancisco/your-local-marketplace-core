@@ -6,7 +6,12 @@ class Shop < ApplicationRecord
   has_many :carts, dependent: :destroy
   has_many :orders, dependent: :destroy
   has_many :ratings, as: :reviewee, dependent: :destroy
-  has_images :photos, max_count: 3
+  # Shop identity images (Facebook-style): one square profile picture, one
+  # wide cover photo. Cropped client-side before upload to fixed aspect
+  # ratios, so the server just stores whatever single file it's given per
+  # field — replaces the older generic multi-photo "photos" bucket entirely.
+  has_images :profile_photo, max_count: 1
+  has_images :cover_photo, max_count: 1
   has_images :opening_message_photos, max_count: 5
 
   FULFILLMENT_METHODS = %w[pickup delivery].freeze
