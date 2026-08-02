@@ -157,6 +157,22 @@ export function registerMutateTools(server: McpServer) {
   )
 
   registerMutateTool(
+    server, 'resolve_error_log',
+    'Marks a recorded error as resolved, removing it from the unresolved list.',
+    { error_log_id: z.number() },
+    (a) => `resolve error log ${a.error_log_id}`,
+    (a) => adminPost(`/admin/error_logs/${a.error_log_id}/resolve`),
+  )
+
+  registerMutateTool(
+    server, 'reopen_error_log',
+    'Reopens a previously resolved error.',
+    { error_log_id: z.number() },
+    (a) => `reopen error log ${a.error_log_id}`,
+    (a) => adminPost(`/admin/error_logs/${a.error_log_id}/reopen`),
+  )
+
+  registerMutateTool(
     server, 'revoke_api_token',
     'Soft-revokes an API token (expires it immediately) — the user will need to log in again. Issue/last-used history is kept.',
     { api_token_id: z.number() },

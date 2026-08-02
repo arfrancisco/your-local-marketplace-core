@@ -157,6 +157,25 @@ export interface AdminFeedbackSubmission {
   created_at: string
 }
 
+export interface AdminErrorLog {
+  id: number
+  source: string
+  exception_class: string
+  message: string
+  request_path: string | null
+  request_method: string | null
+  user_id: number | null
+  fingerprint: string
+  occurrences_count: number
+  first_seen_at: string
+  last_seen_at: string
+  resolved: boolean
+  resolved_at: string | null
+  created_at: string
+  // Only returned by the detail endpoint, not the list.
+  backtrace?: string | null
+}
+
 export interface AdminApiToken {
   id: number
   user_id: number

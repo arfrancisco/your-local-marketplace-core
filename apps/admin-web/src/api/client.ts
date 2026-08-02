@@ -1,7 +1,8 @@
 import type {
   AdminUser, AdminVendorProfile, AdminShop, AdminItem, AdminOrder, AdminOrderStatusEvent,
   AdminFeedbackSubmission, AdminApiToken, AdminVerificationChallenge, AdminCustomerProfile,
-  AdminAddress, AdminCart, AdminTag, AdminEarlyAccessSignup, AdminConversation, Pagination,
+  AdminAddress, AdminCart, AdminTag, AdminEarlyAccessSignup, AdminConversation, AdminErrorLog,
+  Pagination,
 } from './types'
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1'
@@ -84,6 +85,36 @@ function qs(params?: Record<string, string | number | undefined>): string {
   return '?' + entries.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`).join('&')
 }
 
+export interface ClientErrorReport {
+  name?: string
+  message: string
+  stack?: string
+}
+
+// Fire-and-forget crash reporting to our own API — this is what stands in for
+// a third-party error-monitoring SDK. Deliberately returns void and swallows
+// every failure: it is called from an ErrorBoundary and from an
+// 'unhandledrejection' listener, i.e. when the app is *already* broken, so a
+// failed report must never surface a second error or reject an unhandled
+// promise (which would re-enter the listener and loop).
+//
+// Note this posts to the *public* /client_errors endpoint, not an /admin one:
+// admin-web can crash before the operator has entered Basic Auth credentials.
+export function reportClientError(report: ClientErrorReport): void {
+  try {
+    void request('/client_errors', 'POST', {
+      name: report.name,
+      message: report.message,
+      stack: report.stack,
+      source: 'admin-web',
+      url: window.location.href,
+      user_agent: navigator.userAgent,
+    }).catch(() => {})
+  } catch {
+    // ignore
+  }
+}
+
 export const api = {
   // Users
   listUsers: (params?: { status?: string; q?: string; page?: number }) =>
@@ -138,6 +169,13 @@ export const api = {
     request<{ feedback_submission: AdminFeedbackSubmission }>(`/admin/feedback_submissions/${id}/resolve`, 'POST'),
   reopenFeedback: (id: number) =>
     request<{ feedback_submission: AdminFeedbackSubmission }>(`/admin/feedback_submissions/${id}/reopen`, 'POST'),
+
+  // Error logs
+  listErrorLogs: (params?: { resolved?: string; source?: string; page?: number }) =>
+    request<{ error_logs: AdminErrorLog[]; meta: Pagination }>(`/admin/error_logs${qs(params)}`),
+  getErrorLog: (id: number) => request<{ error_log: AdminErrorLog }>(`/admin/error_logs/${id}`),
+  resolveErrorLog: (id: number) => request<{ error_log: AdminErrorLog }>(`/admin/error_logs/${id}/resolve`, 'POST'),
+  reopenErrorLog: (id: number) => request<{ error_log: AdminErrorLog }>(`/admin/error_logs/${id}/reopen`, 'POST'),
 
   // API tokens
   listApiTokens: (params?: { user_id?: number; page?: number }) =>

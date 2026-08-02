@@ -105,6 +105,21 @@ export function registerReadTools(server: McpServer) {
   )
 
   server.registerTool(
+    'list_error_logs',
+    { description: 'List recorded errors (backend and frontend), newest activity first. Filter by resolved ("true"/"false") ' +
+        'or source ("backend", "customer-web", "vendor-web", "admin-web"). One row per distinct error: repeats increment ' +
+        'occurrences_count rather than adding rows. Backtraces are omitted here — use get_error_log for the full one.',
+      inputSchema: { resolved: z.string().optional(), source: z.string().optional(), page: z.number().optional() } },
+    async (args) => textResult(await adminGet(`/admin/error_logs${qs(args)}`)),
+  )
+
+  server.registerTool(
+    'get_error_log',
+    { description: 'Get a single error log by id, including its full backtrace.', inputSchema: { error_log_id: z.number() } },
+    async ({ error_log_id }) => textResult(await adminGet(`/admin/error_logs/${error_log_id}`)),
+  )
+
+  server.registerTool(
     'list_api_tokens',
     { description: 'List API bearer tokens, optionally filtered by user_id. Never returns the token secret itself.',
       inputSchema: { user_id: z.number().optional(), page: z.number().optional() } },

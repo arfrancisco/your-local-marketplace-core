@@ -94,6 +94,33 @@ export interface UpdateAddressPayload {
   delivery_instructions?: string
 }
 
+export interface ClientErrorReport {
+  name?: string
+  message: string
+  stack?: string
+}
+
+// Fire-and-forget crash reporting to our own API — this is what stands in for
+// a third-party error-monitoring SDK. Deliberately returns void and swallows
+// every failure: it is called from an ErrorBoundary and from an
+// 'unhandledrejection' listener, i.e. when the app is *already* broken, so a
+// failed report must never surface a second error or reject an unhandled
+// promise (which would re-enter the listener and loop).
+export function reportClientError(report: ClientErrorReport): void {
+  try {
+    void request('/client_errors', 'POST', {
+      name: report.name,
+      message: report.message,
+      stack: report.stack,
+      source: 'customer-web',
+      url: window.location.href,
+      user_agent: navigator.userAgent,
+    }).catch(() => {})
+  } catch {
+    // ignore
+  }
+}
+
 export const api = {
   register: (payload: RegisterPayload) =>
     request<{ token: string; user: User }>('/auth/register', 'POST', { user: payload }),

@@ -57,6 +57,33 @@ async function request<T>(path: string, method = 'GET', body?: Body): Promise<T>
   return data as T
 }
 
+export interface ClientErrorReport {
+  name?: string
+  message: string
+  stack?: string
+}
+
+// Fire-and-forget crash reporting to our own API — this is what stands in for
+// a third-party error-monitoring SDK. Deliberately returns void and swallows
+// every failure: it is called from an ErrorBoundary and from an
+// 'unhandledrejection' listener, i.e. when the app is *already* broken, so a
+// failed report must never surface a second error or reject an unhandled
+// promise (which would re-enter the listener and loop).
+export function reportClientError(report: ClientErrorReport): void {
+  try {
+    void request('/client_errors', 'POST', {
+      name: report.name,
+      message: report.message,
+      stack: report.stack,
+      source: 'vendor-web',
+      url: window.location.href,
+      user_agent: navigator.userAgent,
+    }).catch(() => {})
+  } catch {
+    // ignore
+  }
+}
+
 export const api = {
   login: (email: string, password: string) =>
     request<{ token: string; user: User }>('/auth/login', 'POST', { email, password }),

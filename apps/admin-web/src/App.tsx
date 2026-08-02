@@ -12,6 +12,7 @@ import { OrdersPage } from './pages/OrdersPage'
 import { OrderDetailPage } from './pages/OrderDetailPage'
 import { ConversationDetailPage } from './pages/ConversationDetailPage'
 import { FeedbackPage } from './pages/FeedbackPage'
+import { ErrorLogsPage } from './pages/ErrorLogsPage'
 import { ApiTokensPage } from './pages/ApiTokensPage'
 import { VerificationChallengesPage } from './pages/VerificationChallengesPage'
 import { CustomerProfilesPage } from './pages/CustomerProfilesPage'
@@ -40,6 +41,7 @@ function Header() {
         <Link to="/shops">Shops</Link>
         <Link to="/orders">Orders</Link>
         <Link to="/feedback">Feedback</Link>
+        <Link to="/error_logs">Errors</Link>
         <Link to="/api_tokens">API tokens</Link>
         <Link to="/verification_challenges">Verifications</Link>
         <Link to="/customer_profiles">Customers</Link>
@@ -69,6 +71,7 @@ export default function App() {
         <Route path="/orders/:id" element={<RequireAuth><OrderDetailPage /></RequireAuth>} />
         <Route path="/conversations/:id" element={<RequireAuth><ConversationDetailPage /></RequireAuth>} />
         <Route path="/feedback" element={<RequireAuth><FeedbackPage /></RequireAuth>} />
+        <Route path="/error_logs" element={<RequireAuth><ErrorLogsPage /></RequireAuth>} />
         <Route path="/api_tokens" element={<RequireAuth><ApiTokensPage /></RequireAuth>} />
         <Route path="/verification_challenges" element={<RequireAuth><VerificationChallengesPage /></RequireAuth>} />
         <Route path="/customer_profiles" element={<RequireAuth><CustomerProfilesPage /></RequireAuth>} />
