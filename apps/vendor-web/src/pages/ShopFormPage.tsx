@@ -1,11 +1,32 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { FulfillmentMethod, Rating, Shop } from '../api/types'
 import { TourCallout } from '../components/TourCallout'
 import { RatingList, RatingSummary } from '../components/Ratings'
+import { ImageCropModal } from '../components/ImageCropModal'
 
 const METHODS: FulfillmentMethod[] = ['pickup', 'delivery']
+
+// Facebook's own conventions: a square identity thumbnail and a wide banner.
+// Both are cropped client-side to these exact ratios before upload, so the
+// customer-side list card and shop-detail hero never have to letterbox.
+type PhotoField = 'profile_photo' | 'cover_photo'
+
+const PHOTO_FIELDS: Record<PhotoField, { aspect: number; title: string; hint: string; maxWidth: number }> = {
+  profile_photo: {
+    aspect: 1,
+    title: 'Crop your profile picture',
+    hint: 'Square. This is the thumbnail customers see next to your shop name.',
+    maxWidth: 1024,
+  },
+  cover_photo: {
+    aspect: 3,
+    title: 'Crop your cover photo',
+    hint: 'Wide banner. This runs across the top of your shop page.',
+    maxWidth: 1920,
+  },
+}
 
 interface ShopFormPageProps {
   /** Onboarding step 2 (OnboardingPage) renders this same component with
@@ -34,8 +55,15 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
   const [address, setAddress] = useState('')
   const [contact, setContact] = useState('')
   const [methods, setMethods] = useState<FulfillmentMethod[]>(['pickup'])
+  // Cropped output, not the file the vendor picked — the raw file only ever
+  // lives inside the crop dialog.
   const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null)
   const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null)
+  const [profilePreview, setProfilePreview] = useState<string | null>(null)
+  const [coverPreview, setCoverPreview] = useState<string | null>(null)
+  // The file waiting to be cropped, and which field it belongs to. Non-null
+  // means the crop dialog is open.
+  const [cropping, setCropping] = useState<{ field: PhotoField; file: File } | null>(null)
   const [openingMessage, setOpeningMessage] = useState('')
   const [openingMessagePhotos, setOpeningMessagePhotos] = useState<FileList | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -76,8 +104,36 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
     api.listShopRatings(shop.slug).then((res) => setRatings(res.ratings)).catch(() => setRatings([]))
   }, [shop?.slug])
 
+  // Object URLs for the cropped previews, revoked when replaced or on unmount.
+  useEffect(() => () => {
+    if (profilePreview) URL.revokeObjectURL(profilePreview)
+  }, [profilePreview])
+  useEffect(() => () => {
+    if (coverPreview) URL.revokeObjectURL(coverPreview)
+  }, [coverPreview])
+
   function toggleMethod(method: FulfillmentMethod) {
     setMethods((prev) => (prev.includes(method) ? prev.filter((m) => m !== method) : [...prev, method]))
+  }
+
+  function pickPhoto(field: PhotoField, e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    // Clear the input so cancelling the crop and re-picking the same file
+    // still fires a change event.
+    e.target.value = ''
+    if (file) setCropping({ field, file })
+  }
+
+  function onCropConfirmed(cropped: File) {
+    if (!cropping) return
+    if (cropping.field === 'profile_photo') {
+      setProfilePhotoFile(cropped)
+      setProfilePreview(URL.createObjectURL(cropped))
+    } else {
+      setCoverPhotoFile(cropped)
+      setCoverPreview(URL.createObjectURL(cropped))
+    }
+    setCropping(null)
   }
 
   async function onSubmit(e: FormEvent) {
@@ -109,6 +165,13 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
 
   return (
     <div className="card narrow">
+      {/* Editing is reached straight from the dashboard, and until now the
+          only way out was the browser's back button. */}
+      {editing && (
+        <p className="back-link">
+          <Link to="/shops">← Back to dashboard</Link>
+        </p>
+      )}
       <div className="row spread">
         <h1>{editing ? 'Edit shop' : 'New shop'}</h1>
         {showTour && (
@@ -155,35 +218,61 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
           )}
         </div>
 
-        {/* Plain uploads for now — cropping to fixed aspect ratios is a
-            follow-up pass, not built yet. */}
-        <label>
-          Profile picture (JPEG/PNG/WebP)
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={(e) => setProfilePhotoFile(e.target.files?.[0] ?? null)}
-          />
-        </label>
-        {shop?.profile_photo && (
-          <div className="thumbs">
-            <img src={`http://localhost:3000${shop.profile_photo.url}`} alt={shop.profile_photo.filename} />
-          </div>
-        )}
+        <fieldset className="photo-field">
+          <legend>Shop photos</legend>
 
-        <label>
-          Cover photo (JPEG/PNG/WebP)
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={(e) => setCoverPhotoFile(e.target.files?.[0] ?? null)}
-          />
-        </label>
-        {shop?.cover_photo && (
-          <div className="thumbs">
-            <img src={`http://localhost:3000${shop.cover_photo.url}`} alt={shop.cover_photo.filename} />
-          </div>
-        )}
+          <label>
+            Profile picture (square, JPEG/PNG/WebP)
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(e) => pickPhoto('profile_photo', e)}
+            />
+          </label>
+          {profilePreview ? (
+            <div className="photo-preview-row">
+              <img className="photo-preview square" src={profilePreview} alt="Cropped profile picture preview" />
+              <p className="muted">Cropped. Save the shop to upload it.</p>
+            </div>
+          ) : (
+            shop?.profile_photo && (
+              <div className="photo-preview-row">
+                <img
+                  className="photo-preview square"
+                  src={`http://localhost:3000${shop.profile_photo.url}`}
+                  alt={shop.profile_photo.filename}
+                />
+                <p className="muted">Current profile picture.</p>
+              </div>
+            )
+          )}
+
+          <label>
+            Cover photo (wide banner, JPEG/PNG/WebP)
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(e) => pickPhoto('cover_photo', e)}
+            />
+          </label>
+          {coverPreview ? (
+            <div className="photo-preview-row">
+              <img className="photo-preview wide" src={coverPreview} alt="Cropped cover photo preview" />
+              <p className="muted">Cropped. Save the shop to upload it.</p>
+            </div>
+          ) : (
+            shop?.cover_photo && (
+              <div className="photo-preview-row">
+                <img
+                  className="photo-preview wide"
+                  src={`http://localhost:3000${shop.cover_photo.url}`}
+                  alt={shop.cover_photo.filename}
+                />
+                <p className="muted">Current cover photo.</p>
+              </div>
+            )
+          )}
+        </fieldset>
 
         <div className="tour-anchor">
           <fieldset>
@@ -233,6 +322,21 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
         {error && <p role="alert" className="error">{error}</p>}
         <button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save shop'}</button>
       </form>
+
+      {/* Outside the <form> on purpose: a fixed-position overlay renders the
+          same anywhere, and nothing inside it can accidentally submit. */}
+      {cropping && (
+        <ImageCropModal
+          key={cropping.field}
+          file={cropping.file}
+          aspect={PHOTO_FIELDS[cropping.field].aspect}
+          title={PHOTO_FIELDS[cropping.field].title}
+          hint={PHOTO_FIELDS[cropping.field].hint}
+          maxWidth={PHOTO_FIELDS[cropping.field].maxWidth}
+          onCancel={() => setCropping(null)}
+          onConfirm={onCropConfirmed}
+        />
+      )}
 
       {editing && shop && (
         <section>
