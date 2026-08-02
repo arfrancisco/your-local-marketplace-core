@@ -26,6 +26,8 @@ const activeShop: Shop = {
   contact_number: null,
   address: null,
   fulfillment_methods: ['pickup'],
+  average_rating: null,
+  ratings_count: 0,
   status: 'active',
   accepting_orders: true,
   open: true,

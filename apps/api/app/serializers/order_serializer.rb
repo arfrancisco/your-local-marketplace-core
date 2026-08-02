@@ -6,6 +6,12 @@ module OrderSerializer
       id: order.id,
       public_reference: order.public_reference,
       shop_id: order.shop_id,
+      # Needed by the vendor's private customer-notes UI to look up prior
+      # notes about this customer. Safe on the shared payload: this endpoint
+      # is already gated to the order's two participants, so the customer
+      # only ever sees their own id and the vendor only sees the id of a
+      # customer they are actively serving.
+      customer_profile_id: order.customer_profile_id,
       status: order.status,
       can_transition_to: Order::TRANSITIONS.fetch(order.status, []),
       fulfillment_method: order.fulfillment_method,
@@ -27,7 +33,10 @@ module OrderSerializer
       accepted_at: order.accepted_at,
       completed_at: order.completed_at,
       cancelled_at: order.cancelled_at,
-      conversation_id: order.conversation&.id
+      conversation_id: order.conversation&.id,
+      # Only the customer may rate, and only once, so an order has at most one
+      # rating this phase — .first is the whole set, not a shortcut.
+      rating: order.ratings.first && RatingSerializer.call(order.ratings.first)
     }
   end
 

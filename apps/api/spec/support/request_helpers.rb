@@ -6,6 +6,10 @@ module RequestHelpers
     { "Authorization" => "Bearer #{raw}" }
   end
 
+  def admin_auth_headers(username: ENV.fetch("ADMIN_USERNAME", "admin"), password: ENV.fetch("ADMIN_PASSWORD", "admin"))
+    { "Authorization" => "Basic #{Base64.strict_encode64("#{username}:#{password}")}" }
+  end
+
   def json
     JSON.parse(response.body)
   end

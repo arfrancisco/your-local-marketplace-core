@@ -55,6 +55,10 @@ Rails.application.routes.draw do
       # Beta feedback/complaints intake. Public — works signed-in or not.
       post "feedback",          to: "feedback#create"
 
+      # Frontend error reporting (customer-web/vendor-web/admin-web error
+      # boundaries). Public — a crashed client may not have a valid token.
+      post "client_errors",     to: "client_errors#create"
+
       # Customer cart, scoped to one shop at a time (ADR 0008). Requires a
       # customer profile; cart-to-order checkout is not built yet (rest of M3).
       get    "cart",             to: "cart#show"
@@ -76,6 +80,14 @@ Rails.application.routes.draw do
       post "orders/:id/mark_paid",      to: "orders#mark_paid"
       get  "orders/:id/conversation",   to: "conversations#show"
       post "orders/:id/messages",       to: "conversations#create_message"
+
+      # Ratings (M4) — customer rates the shop once an order is completed,
+      # once per completed order (see Ratings::Create for the actual gate).
+      post "orders/:id/ratings",        to: "ratings#create"
+
+      # Public reviews list for a shop's page — same auth shape as the
+      # other shops#* discovery actions above.
+      get "shops/:slug/ratings",        to: "shops#ratings"
 
       # Current user's saved addresses (descriptive, not geo).
       get    "addresses",      to: "addresses#index"
@@ -102,6 +114,85 @@ Rails.application.routes.draw do
         post   "items/:id/enable",            to: "items#enable"
         post   "items/:id/disable",           to: "items#disable"
         delete "items/:id/photos/:photo_id",  to: "items#destroy_photo"
+
+        # Private notes a vendor keeps about a specific customer — never
+        # visible to the customer or to any other vendor (see
+        # Api::V1::Vendor::CustomerNotesController).
+        get    "customer_notes",     to: "customer_notes#index"
+        post   "customer_notes",     to: "customer_notes#create"
+        patch  "customer_notes/:id", to: "customer_notes#update"
+        delete "customer_notes/:id", to: "customer_notes#destroy"
+      end
+
+      # Internal admin surface: one shared Basic-Auth credential
+      # (ADMIN_USERNAME/PASSWORD), not a User role — see
+      # Api::V1::Admin::BaseController. Guarded the same way as Sidekiq::Web
+      # below: only drawn if credentials are actually configured (or in
+      # dev/test, so specs can hit it without the env var set), so
+      # production never silently ships with an admin/admin fallback
+      # reachable before the operator actually sets real credentials.
+      if Rails.env.local? || ENV["ADMIN_USERNAME"].present?
+        namespace :admin do
+          get   "users",                to: "users#index"
+          get   "users/:id",            to: "users#show"
+          post  "users/:id/suspend",    to: "users#suspend"
+          post  "users/:id/reactivate", to: "users#reactivate"
+
+          get   "vendor_profiles",             to: "vendor_profiles#index"
+          get   "vendor_profiles/:id",         to: "vendor_profiles#show"
+          post  "vendor_profiles/:id/approve", to: "vendor_profiles#approve"
+          post  "vendor_profiles/:id/reject",  to: "vendor_profiles#reject"
+
+          get    "shops",     to: "shops#index"
+          get    "shops/:id", to: "shops#show"
+          patch  "shops/:id", to: "shops#update"
+          delete "shops/:id", to: "shops#destroy"
+
+          get    "items",     to: "items#index"
+          get    "items/:id", to: "items#show"
+          patch  "items/:id", to: "items#update"
+          delete "items/:id", to: "items#destroy"
+
+          get  "orders",                 to: "orders#index"
+          get  "orders/:id",             to: "orders#show"
+          post "orders/:id/transitions", to: "orders#transition"
+
+          get  "feedback_submissions",             to: "feedback_submissions#index"
+          get  "feedback_submissions/:id",         to: "feedback_submissions#show"
+          post "feedback_submissions/:id/resolve", to: "feedback_submissions#resolve"
+          post "feedback_submissions/:id/reopen",  to: "feedback_submissions#reopen"
+
+          get    "api_tokens",     to: "api_tokens#index"
+          get    "api_tokens/:id", to: "api_tokens#show"
+          delete "api_tokens/:id", to: "api_tokens#destroy" # soft-revoke
+
+          get "verification_challenges",     to: "verification_challenges#index"
+          get "verification_challenges/:id", to: "verification_challenges#show"
+          get "order_status_events",         to: "order_status_events#index"
+          get "order_status_events/:id",     to: "order_status_events#show"
+          get "conversations/:id",           to: "conversations#show"
+
+          get "customer_profiles",     to: "customer_profiles#index"
+          get "customer_profiles/:id", to: "customer_profiles#show"
+          get "addresses",             to: "addresses#index"
+          get "addresses/:id",         to: "addresses#show"
+          get "carts",                 to: "carts#index"
+          get "carts/:id",             to: "carts#show"
+
+          get    "tags",     to: "tags#index"
+          delete "tags/:id", to: "tags#destroy"
+
+          get    "early_access_signups",     to: "early_access_signups#index"
+          delete "early_access_signups/:id", to: "early_access_signups#destroy"
+
+          get "vendor_customer_notes",     to: "vendor_customer_notes#index"
+          get "vendor_customer_notes/:id", to: "vendor_customer_notes#show"
+
+          get  "error_logs",             to: "error_logs#index"
+          get  "error_logs/:id",         to: "error_logs#show"
+          post "error_logs/:id/resolve", to: "error_logs#resolve"
+          post "error_logs/:id/reopen",  to: "error_logs#reopen"
+        end
       end
     end
   end
@@ -115,6 +206,12 @@ Rails.application.routes.draw do
   # React Router can take over.
   get "vendor", to: "static#vendor_app"
   get "vendor/*path", to: "static#vendor_app"
+
+  # admin-web, same mechanism as vendor-web above — served under /admin/*.
+  # Its own API surface (Api::V1::Admin::*) is Basic-Auth gated, not this
+  # static shell; the shell itself is just the SPA's index.html.
+  get "admin", to: "static#admin_app"
+  get "admin/*path", to: "static#admin_app"
 
   # Sidekiq's dashboard. Guarded so it is never publicly reachable; in
   # production, SIDEKIQ_WEB_USERNAME/PASSWORD must be set to mount it.

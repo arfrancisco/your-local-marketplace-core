@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import { useAuth } from '../auth'
 import { OrderChat } from '../OrderChat'
-import type { Order, OrderStatus, Photo } from '../api/types'
+import type { Order, OrderStatus, Photo, VendorCustomerNote } from '../api/types'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
 
@@ -27,6 +27,113 @@ function PhotoLightbox({ photo, onClose }: { photo: Photo | null; onClose: () =>
         </a>
       </div>
     </div>
+  )
+}
+
+// Private notes this vendor has written about the customer on this order,
+// across all of their orders — not just this one. Nothing here is ever shown
+// to the customer or to any other vendor; the API scopes reads to the
+// signed-in vendor. The caption below says so explicitly, because a vendor
+// typing "suspected scam attempt" needs zero ambiguity about who can read it.
+function CustomerNotes({ customerProfileId, orderId }: { customerProfileId: number; orderId: number }) {
+  const [notes, setNotes] = useState<VendorCustomerNote[]>([])
+  const [loading, setLoading] = useState(true)
+  const [draft, setDraft] = useState('')
+  const [flagged, setFlagged] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    api
+      .listCustomerNotes(customerProfileId)
+      .then((res) => {
+        if (active) setNotes(res.customer_notes)
+      })
+      .catch(() => {
+        if (active) setError('Could not load your notes')
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [customerProfileId])
+
+  async function onAdd(e: React.FormEvent) {
+    e.preventDefault()
+    if (!draft.trim()) return
+    setError(null)
+    setSaving(true)
+    try {
+      const res = await api.createCustomerNote(orderId, draft.trim(), flagged)
+      setNotes((prev) => [res.customer_note, ...prev])
+      setDraft('')
+      setFlagged(false)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not save note')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function onDelete(id: number) {
+    setError(null)
+    try {
+      await api.deleteCustomerNote(id)
+      setNotes((prev) => prev.filter((n) => n.id !== id))
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not delete note')
+    }
+  }
+
+  return (
+    <section className="card">
+      <h2>Private notes about this customer</h2>
+      <p className="muted">
+        Only visible to you — never shown to the customer or other vendors.
+      </p>
+
+      {loading ? (
+        <p className="muted">Loading notes…</p>
+      ) : notes.length === 0 ? (
+        <p className="muted">No notes yet.</p>
+      ) : (
+        <ul className="list">
+          {notes.map((n) => (
+            <li key={n.id}>
+              {n.flagged && <strong>⚑ Flagged </strong>}
+              {n.note}
+              <span className="muted"> — {new Date(n.created_at).toLocaleDateString()}</span>
+              <button type="button" onClick={() => onDelete(n.id)} aria-label={`Delete note ${n.id}`}>
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <form onSubmit={onAdd}>
+        <label htmlFor="customer-note">Add a private note</label>
+        <textarea
+          id="customer-note"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="e.g. No-showed for pickup."
+        />
+        <label>
+          <input type="checkbox" checked={flagged} onChange={(e) => setFlagged(e.target.checked)} />
+          Flag as problem customer
+        </label>
+        <button type="submit" disabled={saving || !draft.trim()}>
+          {saving ? 'Saving…' : 'Save note'}
+        </button>
+      </form>
+
+      {error && <p role="alert" className="error">{error}</p>}
+    </section>
   )
 }
 
@@ -139,6 +246,8 @@ export function OrderDetailPage() {
           )}
         </div>
       )}
+
+      <CustomerNotes customerProfileId={order.customer_profile_id} orderId={order.id} />
 
       <h2>Chat</h2>
       <OrderChat orderId={order.id} currentUserId={user.id} />

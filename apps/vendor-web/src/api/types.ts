@@ -26,6 +26,10 @@ export interface Shop {
   accepting_orders: boolean
   open: boolean
   photos: Photo[]
+  // Public standing, same values customers see. null average when unrated —
+  // render "no reviews", never "0 stars".
+  average_rating: number | null
+  ratings_count: number
   // Vendor-only — never present on shop payloads served to customers (see
   // ShopSerializer's include_payment_info flag on the API). Read by order
   // participants live via Order.opening_message/opening_message_photos.
@@ -58,6 +62,7 @@ export interface Order {
   id: number
   public_reference: string
   shop_id: number
+  customer_profile_id: number
   status: OrderStatus
   can_transition_to: OrderStatus[]
   fulfillment_method: FulfillmentMethod
@@ -77,6 +82,17 @@ export interface Order {
   completed_at: string | null
   cancelled_at: string | null
   conversation_id: number | null
+  // The customer's review of this order, once they leave one. Read-only for
+  // vendors this phase — they can't review back yet.
+  rating: Rating | null
+}
+
+export interface Rating {
+  id: number
+  score: number
+  comment: string | null
+  reviewer_display_name: string
+  created_at: string
 }
 
 export interface Message {
@@ -108,6 +124,19 @@ export interface Item {
   position: number
   tags: Tag[]
   photos: Photo[]
+}
+
+// A vendor's private note about a customer. Only ever readable by the vendor
+// who wrote it: never the customer it is about, never another vendor. Not a
+// rating and not related to one.
+export interface VendorCustomerNote {
+  id: number
+  customer_profile_id: number
+  order_id: number | null
+  note: string
+  flagged: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface User {

@@ -145,6 +145,94 @@ RSpec.describe "Api::V1 Discovery", type: :request do
     end
   end
 
+  describe "shop rating aggregates" do
+    # Ratings hang off a completed order, so each helper call builds the whole
+    # chain: a customer, their completed order at this shop, and the review.
+    def rate!(shop, score)
+      order = create(:order, :completed, shop: shop, customer_profile: create(:user, :customer).customer_profile)
+      create(:rating, order: order, reviewer_user: order.customer_profile.user, reviewee: shop, score: score)
+    end
+
+    it "reports a null average and zero count for an unrated shop" do
+      shop = create(:shop, :open)
+      get "/api/v1/shops/#{shop.slug}"
+
+      expect(json.dig("shop", "average_rating")).to be_nil
+      expect(json.dig("shop", "ratings_count")).to eq(0)
+    end
+
+    it "reports the average rounded to one decimal place and the count" do
+      shop = create(:shop, :open)
+      [5, 4, 4].each { |score| rate!(shop, score) }
+
+      get "/api/v1/shops/#{shop.slug}"
+
+      # A JSON number, not a BigDecimal serialized as a string.
+      expect(json.dig("shop", "average_rating")).to eq(4.3)
+      expect(json.dig("shop", "ratings_count")).to eq(3)
+    end
+
+    it "includes the aggregates on the shop listing too" do
+      shop = create(:shop, :open)
+      rate!(shop, 2)
+
+      get "/api/v1/shops"
+
+      listed = json["shops"].find { |s| s["slug"] == shop.slug }
+      expect(listed["average_rating"]).to eq(2.0)
+      expect(listed["ratings_count"]).to eq(1)
+    end
+  end
+
+  describe "GET /api/v1/shops/:slug/ratings" do
+    let(:shop) { create(:shop, :open) }
+
+    def rate!(shop, score, comment: nil, created_at: Time.current)
+      order = create(:order, :completed, shop: shop, customer_profile: create(:user, :customer).customer_profile)
+      create(:rating, order: order, reviewer_user: order.customer_profile.user,
+                      reviewee: shop, score: score, comment: comment, created_at: created_at)
+    end
+
+    it "lists the shop's reviews newest first, without authentication" do
+      rate!(shop, 3, comment: "Older", created_at: 2.days.ago)
+      rate!(shop, 5, comment: "Newer", created_at: 1.hour.ago)
+
+      get "/api/v1/shops/#{shop.slug}/ratings"
+
+      expect(response).to have_http_status(:ok)
+      expect(json["ratings"].map { |r| r["comment"] }).to eq(%w[Newer Older])
+      expect(json["ratings"].first.keys)
+        .to match_array(%w[id score comment reviewer_display_name created_at])
+    end
+
+    it "returns an empty list for a shop with no reviews" do
+      get "/api/v1/shops/#{shop.slug}/ratings"
+      expect(json["ratings"]).to eq([])
+    end
+
+    it "honours limit and offset" do
+      3.times { |i| rate!(shop, 5, comment: "Review #{i}", created_at: i.hours.ago) }
+
+      get "/api/v1/shops/#{shop.slug}/ratings", params: { limit: 1, offset: 1 }
+
+      expect(json["ratings"].size).to eq(1)
+      expect(json["ratings"].first["comment"]).to eq("Review 1")
+    end
+
+    it "clamps an oversized limit rather than erroring" do
+      rate!(shop, 5)
+      get "/api/v1/shops/#{shop.slug}/ratings", params: { limit: 5_000 }
+      expect(response).to have_http_status(:ok)
+      expect(json["ratings"].size).to eq(1)
+    end
+
+    it "404s for a shop that is not open" do
+      hidden = create(:shop) # draft
+      get "/api/v1/shops/#{hidden.slug}/ratings"
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
   describe "GET /api/v1/tags" do
     it "lists tags alphabetically" do
       Tag.for_names(["Savory", "Bread", "Vegan"])

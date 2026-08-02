@@ -24,6 +24,17 @@ export interface Shop {
   fulfillment_methods: FulfillmentMethod[]
   open: boolean
   photos: Photo[]
+  // null when the shop has no reviews yet — render "no reviews", never "0 stars".
+  average_rating: number | null
+  ratings_count: number
+}
+
+export interface Rating {
+  id: number
+  score: number
+  comment: string | null
+  reviewer_display_name: string
+  created_at: string
 }
 
 export interface Item {
@@ -140,6 +151,8 @@ export interface Order {
   completed_at: string | null
   cancelled_at: string | null
   conversation_id: number | null
+  // At most one — only the customer rates, and only once (M4).
+  rating: Rating | null
 }
 
 export interface Message {

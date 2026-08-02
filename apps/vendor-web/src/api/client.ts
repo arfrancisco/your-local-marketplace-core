@@ -1,4 +1,4 @@
-import type { Item, Message, Order, Shop, User } from './types'
+import type { Item, Message, Order, Rating, Shop, User, VendorCustomerNote } from './types'
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1'
 // Shared with customer-web's key — both apps are same-origin now (customer
@@ -72,6 +72,17 @@ export const api = {
   openShop: (id: number) => request<{ shop: Shop }>(`/vendor/shops/${id}/open`, 'POST'),
   closeShop: (id: number) => request<{ shop: Shop }>(`/vendor/shops/${id}/close`, 'POST'),
 
+  // The same public review list customers see, read-only here — a vendor
+  // should be able to read what was said about them. Keyed by slug, not id,
+  // because it's the public discovery endpoint (no vendor-only variant).
+  listShopRatings: (slug: string, params?: { limit?: number; offset?: number }) => {
+    const query = new URLSearchParams()
+    if (params?.limit !== undefined) query.set('limit', String(params.limit))
+    if (params?.offset !== undefined) query.set('offset', String(params.offset))
+    const suffix = query.toString() ? `?${query}` : ''
+    return request<{ ratings: Rating[] }>(`/shops/${slug}/ratings${suffix}`)
+  },
+
   listItems: (shopId: number) => request<{ items: Item[] }>(`/vendor/shops/${shopId}/items`),
   createItem: (shopId: number, form: FormData) =>
     request<{ item: Item }>(`/vendor/shops/${shopId}/items`, 'POST', form),
@@ -99,4 +110,24 @@ export const api = {
     }
     return request<{ message: Message }>(`/orders/${orderId}/messages`, 'POST', { body })
   },
+
+  // Private vendor-only notes about customers. The API scopes every one of
+  // these to the signed-in vendor, so these can only ever read or write the
+  // current vendor's own notes.
+  listCustomerNotes: (customerProfileId?: number) =>
+    request<{ customer_notes: VendorCustomerNote[] }>(
+      `/vendor/customer_notes${customerProfileId ? `?customer_profile_id=${customerProfileId}` : ''}`
+    ),
+  createCustomerNote: (orderId: number, note: string, flagged?: boolean) =>
+    request<{ customer_note: VendorCustomerNote }>('/vendor/customer_notes', 'POST', {
+      order_id: orderId,
+      note,
+      flagged: flagged ?? false,
+    }),
+  updateCustomerNote: (id: number, note: string, flagged?: boolean) =>
+    request<{ customer_note: VendorCustomerNote }>(`/vendor/customer_notes/${id}`, 'PATCH', {
+      note,
+      flagged: flagged ?? false,
+    }),
+  deleteCustomerNote: (id: number) => request<null>(`/vendor/customer_notes/${id}`, 'DELETE'),
 }

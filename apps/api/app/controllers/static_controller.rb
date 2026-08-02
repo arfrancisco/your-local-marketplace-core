@@ -1,12 +1,17 @@
-# Serves the two SPAs' index.html files for any client-side route (see
-# config/routes.rb) — vendor-web under /vendor/*, customer-web everywhere
-# else. Public/unauthenticated on purpose, same as any static HTML page —
-# each SPA handles its own login redirect once it boots. send_file (not
-# render file:) since this is an API-only app with no ActionView rendering
-# pipeline.
+# Serves the three SPAs' index.html files for any client-side route (see
+# config/routes.rb) — vendor-web under /vendor/*, admin-web under /admin/*,
+# customer-web everywhere else. Public/unauthenticated on purpose, same as
+# any static HTML page — each SPA handles its own login redirect once it
+# boots (admin-web's login is HTTP Basic against the Api::V1::Admin API,
+# not this shell). send_file (not render file:) since this is an API-only
+# app with no ActionView rendering pipeline.
 class StaticController < ApplicationController
   def vendor_app
     serve_spa Rails.root.join("public/vendor/index.html"), build_hint: "apps/vendor-web"
+  end
+
+  def admin_app
+    serve_spa Rails.root.join("public/admin/index.html"), build_hint: "apps/admin-web"
   end
 
   def customer_app

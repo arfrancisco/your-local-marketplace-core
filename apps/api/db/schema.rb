@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_01_200003) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_02_064238) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -136,13 +136,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_200003) do
     t.index ["mobile_number"], name: "index_early_access_signups_on_mobile_number", unique: true, where: "(mobile_number IS NOT NULL)"
   end
 
+  create_table "error_logs", force: :cascade do |t|
+    t.text "backtrace"
+    t.datetime "created_at", null: false
+    t.string "exception_class", null: false
+    t.string "fingerprint", null: false
+    t.datetime "first_seen_at", null: false
+    t.datetime "last_seen_at", null: false
+    t.text "message", null: false
+    t.integer "occurrences_count", default: 1, null: false
+    t.string "request_method"
+    t.string "request_path"
+    t.datetime "resolved_at"
+    t.string "source", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id"
+    t.index ["fingerprint"], name: "index_error_logs_on_fingerprint", unique: true
+    t.index ["resolved_at"], name: "index_error_logs_on_resolved_at"
+    t.index ["user_id"], name: "index_error_logs_on_user_id"
+  end
+
   create_table "feedback_submissions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email"
     t.text "message", null: false
     t.string "page_url"
+    t.datetime "resolved_at"
     t.datetime "updated_at", null: false
     t.bigint "user_id"
+    t.index ["resolved_at"], name: "index_feedback_submissions_on_resolved_at"
     t.index ["user_id"], name: "index_feedback_submissions_on_user_id"
   end
 
@@ -236,6 +258,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_200003) do
     t.index ["shop_id"], name: "index_orders_on_shop_id"
   end
 
+  create_table "ratings", force: :cascade do |t|
+    t.text "comment"
+    t.datetime "created_at", null: false
+    t.bigint "order_id", null: false
+    t.bigint "reviewee_id", null: false
+    t.string "reviewee_type", null: false
+    t.bigint "reviewer_user_id", null: false
+    t.integer "score", null: false
+    t.datetime "updated_at", null: false
+    t.index ["order_id", "reviewer_user_id", "reviewee_type", "reviewee_id"], name: "index_ratings_on_order_reviewer_reviewee", unique: true
+    t.index ["order_id"], name: "index_ratings_on_order_id"
+    t.index ["reviewee_type", "reviewee_id"], name: "index_ratings_on_reviewee"
+    t.index ["reviewer_user_id"], name: "index_ratings_on_reviewer_user_id"
+  end
+
   create_table "shops", force: :cascade do |t|
     t.boolean "accepting_orders", default: false, null: false
     t.string "address"
@@ -282,6 +319,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_200003) do
     t.index ["mobile_number"], name: "index_users_on_mobile_number", unique: true, where: "(mobile_number IS NOT NULL)"
   end
 
+  create_table "vendor_customer_notes", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "customer_profile_id", null: false
+    t.boolean "flagged", default: false, null: false
+    t.text "note", null: false
+    t.bigint "order_id"
+    t.datetime "updated_at", null: false
+    t.bigint "vendor_profile_id", null: false
+    t.index ["customer_profile_id"], name: "index_vendor_customer_notes_on_customer_profile_id"
+    t.index ["order_id"], name: "index_vendor_customer_notes_on_order_id"
+    t.index ["vendor_profile_id", "customer_profile_id"], name: "index_vendor_customer_notes_on_vendor_and_customer"
+    t.index ["vendor_profile_id"], name: "index_vendor_customer_notes_on_vendor_profile_id"
+  end
+
   create_table "vendor_profiles", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "display_name", null: false
@@ -320,6 +371,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_200003) do
   add_foreign_key "conversations", "orders"
   add_foreign_key "customer_profiles", "addresses", column: "default_address_id"
   add_foreign_key "customer_profiles", "users"
+  add_foreign_key "error_logs", "users"
   add_foreign_key "feedback_submissions", "users"
   add_foreign_key "item_tags", "items"
   add_foreign_key "item_tags", "tags"
@@ -333,7 +385,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_200003) do
   add_foreign_key "orders", "carts"
   add_foreign_key "orders", "customer_profiles"
   add_foreign_key "orders", "shops"
+  add_foreign_key "ratings", "orders"
+  add_foreign_key "ratings", "users", column: "reviewer_user_id"
   add_foreign_key "shops", "vendor_profiles"
+  add_foreign_key "vendor_customer_notes", "customer_profiles"
+  add_foreign_key "vendor_customer_notes", "orders"
+  add_foreign_key "vendor_customer_notes", "vendor_profiles"
   add_foreign_key "vendor_profiles", "users"
   add_foreign_key "verification_challenges", "users"
 end

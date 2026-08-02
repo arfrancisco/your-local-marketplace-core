@@ -1,4 +1,4 @@
-import type { Address, Cart, FulfillmentMethod, Item, Message, Order, Shop, Tag, User } from './types'
+import type { Address, Cart, FulfillmentMethod, Item, Message, Order, Rating, Shop, Tag, User } from './types'
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1'
 // Shared with vendor-web's key — both apps are same-origin now (customer at
@@ -133,6 +133,16 @@ export const api = {
   listItems: (slug: string) => request<{ items: Item[] }>(`/shops/${slug}/items`),
   listTags: () => request<{ tags: Tag[] }>('/tags'),
 
+  // Public shop reviews. The aggregate (average_rating/ratings_count) already
+  // rides along on the Shop payload; this is the list behind it.
+  listShopRatings: (slug: string, params?: { limit?: number; offset?: number }) => {
+    const query = new URLSearchParams()
+    if (params?.limit !== undefined) query.set('limit', String(params.limit))
+    if (params?.offset !== undefined) query.set('offset', String(params.offset))
+    const suffix = query.toString() ? `?${query}` : ''
+    return request<{ ratings: Rating[] }>(`/shops/${slug}/ratings${suffix}`)
+  },
+
   // Cart is scoped to one shop at a time (ADR 0008). Checkout/order placement
   // is not built yet — the cart itself is real, persisted backend state.
   getCart: (shopId: number) => request<{ cart: Cart | null }>(`/cart?shop_id=${shopId}`),
@@ -152,6 +162,10 @@ export const api = {
   listOrders: () => request<{ orders: Order[] }>('/orders'),
   getOrder: (id: number) => request<{ order: Order }>(`/orders/${id}`),
   cancelOrder: (id: number) => request<{ order: Order }>(`/orders/${id}/transitions`, 'POST', { to_status: 'cancelled' }),
+
+  // Only valid on a completed order, and only once (enforced by the API).
+  rateOrder: (orderId: number, score: number, comment?: string) =>
+    request<{ rating: Rating }>(`/orders/${orderId}/ratings`, 'POST', { score, comment }),
 
   getConversation: (orderId: number) =>
     request<{ conversation: { id: number; order_id: number }; messages: Message[] }>(

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import { useAuth } from '../auth'
 import { OrderChat } from '../OrderChat'
+import { Stars } from '../components/Ratings'
 import type { Order, Photo } from '../api/types'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
@@ -27,6 +28,73 @@ function PhotoLightbox({ photo, onClose }: { photo: Photo | null; onClose: () =>
           Open full size (save from here)
         </a>
       </div>
+    </div>
+  )
+}
+
+// Rating is only offered once the order is completed, and only once — the API
+// enforces both, this just keeps the form from showing when it can't succeed.
+function RateOrderCard({ order, onRated }: { order: Order; onRated: (updated: Order) => void }) {
+  const [score, setScore] = useState(0)
+  const [comment, setComment] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  if (order.status !== 'completed') return null
+
+  if (order.rating) {
+    return (
+      <div className="card">
+        <h2 className="section">Your rating</h2>
+        <Stars score={order.rating.score} />
+        {order.rating.comment && <p>{order.rating.comment}</p>}
+        <p className="muted small">You rated this order.</p>
+      </div>
+    )
+  }
+
+  async function onSubmit() {
+    if (score < 1) return
+    setError(null)
+    setSubmitting(true)
+    try {
+      const res = await api.rateOrder(order.id, score, comment.trim() || undefined)
+      onRated({ ...order, rating: res.rating })
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not submit your rating')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="card">
+      <h2 className="section">Rate this order</h2>
+      <div className="row gap star-picker">
+        {[1, 2, 3, 4, 5].map((value) => (
+          <button
+            key={value}
+            type="button"
+            className="star-btn"
+            aria-label={`${value} star${value === 1 ? '' : 's'}`}
+            aria-pressed={score === value}
+            onClick={() => setScore(value)}
+          >
+            {value <= score ? '★' : '☆'}
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        placeholder="Anything you'd like to say about this order? (optional)"
+        aria-label="Review comment"
+        rows={3}
+      />
+      {error && <p role="alert" className="error">{error}</p>}
+      <button onClick={onSubmit} disabled={submitting || score < 1}>
+        {submitting ? 'Submitting…' : 'Submit rating'}
+      </button>
     </div>
   )
 }
@@ -107,6 +175,8 @@ export function OrderPage() {
           )}
         </div>
       )}
+
+      <RateOrderCard order={order} onRated={setOrder} />
 
       <h2 className="section">Chat with the vendor</h2>
       <OrderChat orderId={order.id} currentUserId={user.id} />

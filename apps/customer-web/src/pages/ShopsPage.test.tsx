@@ -17,8 +17,8 @@ describe('ShopsPage', () => {
   it('renders shops in the order the API returns them (rotation preserved)', async () => {
     listShops.mockResolvedValue({
       shops: [
-        { id: 3, name: 'Charlie', slug: 'charlie', description: null, contact_number: null, address: null, fulfillment_methods: ['pickup'], open: true, photos: [] },
-        { id: 1, name: 'Alpha', slug: 'alpha', description: null, contact_number: null, address: null, fulfillment_methods: ['pickup'], open: true, photos: [] },
+        { id: 3, name: 'Charlie', slug: 'charlie', description: null, contact_number: null, address: null, fulfillment_methods: ['pickup'], open: true, photos: [], average_rating: null, ratings_count: 0 },
+        { id: 1, name: 'Alpha', slug: 'alpha', description: null, contact_number: null, address: null, fulfillment_methods: ['pickup'], open: true, photos: [], average_rating: 4.5, ratings_count: 2 },
       ],
     })
 

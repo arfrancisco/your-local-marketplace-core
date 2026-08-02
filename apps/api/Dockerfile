@@ -1,10 +1,11 @@
 # syntax = docker/dockerfile:1
 #
 # Build context for this Dockerfile is the REPO ROOT, not apps/api — it needs
-# to see apps/customer-web and apps/vendor-web too, since this one image now
-# serves all three (API, customer-web at /, vendor-web at /vendor/*). If
-# deploying with `railway up`, run it from the repo root with
-# `--path-as-root . ` and point at this file, not `apps/api` as the root.
+# to see apps/customer-web, apps/vendor-web, and apps/admin-web too, since
+# this one image now serves all four (API, customer-web at /, vendor-web at
+# /vendor/*, admin-web at /admin/*). If deploying with `railway up`, run it
+# from the repo root with `--path-as-root . ` and point at this file, not
+# `apps/api` as the root.
 
 # ARGs used in a FROM must be declared before the *first* FROM in the file —
 # they don't hoist from further down, even for a later stage's own FROM line.
@@ -25,6 +26,14 @@ WORKDIR /build
 COPY apps/vendor-web/package*.json ./
 RUN npm ci
 COPY apps/vendor-web/ ./
+ENV VITE_API_BASE_URL=/api/v1
+RUN npm run build
+
+FROM node:20-slim AS admin-web-build
+WORKDIR /build
+COPY apps/admin-web/package*.json ./
+RUN npm ci
+COPY apps/admin-web/ ./
 ENV VITE_API_BASE_URL=/api/v1
 RUN npm run build
 
@@ -73,10 +82,12 @@ RUN apt-get update -qq && \
 COPY --from=build /usr/local/bundle /usr/local/bundle
 COPY --from=build /rails /rails
 
-# The two SPA builds — customer-web at the public root, vendor-web under
-# /vendor/ (see config/routes.rb + app/controllers/static_controller.rb).
+# The three SPA builds — customer-web at the public root, vendor-web under
+# /vendor/, admin-web under /admin/ (see config/routes.rb +
+# app/controllers/static_controller.rb).
 COPY --from=customer-web-build /build/dist /rails/public
 COPY --from=vendor-web-build /build/dist /rails/public/vendor
+COPY --from=admin-web-build /build/dist /rails/public/admin
 
 # Run and own only the runtime files as a non-root user for security
 RUN useradd rails --create-home --shell /bin/bash && \

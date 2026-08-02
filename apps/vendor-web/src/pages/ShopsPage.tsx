@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Shop } from '../api/types'
 import { TourCallout } from '../components/TourCallout'
+import { RatingSummary } from '../components/Ratings'
 
 interface ShopsPageProps {
   /** Onboarding step 3 (OnboardingPage) renders this same component with
@@ -108,6 +109,13 @@ export function ShopsPage({ onboardingMode = false, onTourDone }: ShopsPageProps
                   <p className="muted">
                     {shop.open ? 'Open' : shop.status === 'active' ? 'Closed' : 'Draft'} ·{' '}
                     {shop.fulfillment_methods.join(', ') || 'no fulfillment'}
+                  </p>
+                  <p className="muted">
+                    <RatingSummary
+                      averageRating={shop.average_rating}
+                      ratingsCount={shop.ratings_count}
+                      emptyLabel="No reviews yet"
+                    />
                   </p>
                 </div>
                 <div className="row gap">

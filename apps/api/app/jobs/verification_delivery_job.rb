@@ -1,8 +1,8 @@
 require "net/http"
 require "json"
 
-# Delivers a verification code out of band, via Semaphore (SMS) or Cloudflare
-# Email Service (email). Runs on Sidekiq in production; inline/async elsewhere.
+# Delivers a verification code out of band, via Semaphore (SMS) or Resend
+# (email). Runs on Sidekiq in production; inline/async elsewhere.
 #
 # Provider credentials are optional at the ENV level on purpose: until they're
 # provisioned, this job just logs the code (same as before a real provider was
@@ -35,23 +35,27 @@ class VerificationDeliveryJob < ApplicationJob
   private
 
   def deliver_email(challenge, code)
-    account_id = ENV["CLOUDFLARE_ACCOUNT_ID"]
-    api_token = ENV["CLOUDFLARE_EMAIL_API_TOKEN"]
+    api_key = ENV["RESEND_API_KEY"]
     from_address = ENV["EMAIL_FROM_ADDRESS"]
-    return if account_id.blank? || api_token.blank? || from_address.blank?
+    return if api_key.blank? || from_address.blank?
 
-    uri = URI("https://api.cloudflare.com/client/v4/accounts/#{account_id}/email/sending/send")
+    uri = URI("https://api.resend.com/emails")
     body = {
-      to: challenge.sent_to,
+      to: [challenge.sent_to],
       from: from_address,
       subject: "Your KapitMarket PH verification code",
       text: "Your verification code is #{code}. It expires in 10 minutes. " \
             "If you didn't request this, you can ignore this email.",
-      html: "<p>Your verification code is <strong>#{code}</strong>.</p>" \
-            "<p>It expires in 10 minutes. If you didn't request this, you can ignore this email.</p>"
+      html: <<~HTML
+        <div style="font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.5; color: #1a1a1a; max-width: 480px;">
+          <p style="margin: 0 0 20px;">Your KapitMarket PH verification code is:</p>
+          <p style="font-size: 36px; font-weight: 700; letter-spacing: 6px; margin: 0 0 20px;">#{code}</p>
+          <p style="margin: 0; color: #555;">It expires in 10 minutes. If you didn't request this, you can ignore this email.</p>
+        </div>
+      HTML
     }
 
-    post_json(uri, body, headers: { "Authorization" => "Bearer #{api_token}" })
+    post_json(uri, body, headers: { "Authorization" => "Bearer #{api_key}" })
   end
 
   def deliver_sms(challenge, code)

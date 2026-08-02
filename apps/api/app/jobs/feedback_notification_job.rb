@@ -1,11 +1,11 @@
 require "net/http"
 require "json"
 
-# Best-effort email notification for a new feedback submission, via
-# Cloudflare Email Service (same HTTP contract as VerificationDeliveryJob).
-# The submission itself is already durably stored before this runs — this is
-# just for immediate visibility during the beta, so a provider outage or
-# missing config should never fail loudly.
+# Best-effort email notification for a new feedback submission, via Resend
+# (same HTTP contract as VerificationDeliveryJob). The submission itself is
+# already durably stored before this runs — this is just for immediate
+# visibility during the beta, so a provider outage or missing config should
+# never fail loudly.
 class FeedbackNotificationJob < ApplicationJob
   queue_as :default
 
@@ -13,23 +13,22 @@ class FeedbackNotificationJob < ApplicationJob
     submission = FeedbackSubmission.find_by(id: feedback_submission_id)
     return if submission.nil?
 
-    account_id = ENV["CLOUDFLARE_ACCOUNT_ID"]
-    api_token = ENV["CLOUDFLARE_EMAIL_API_TOKEN"]
+    api_key = ENV["RESEND_API_KEY"]
     from_address = ENV["EMAIL_FROM_ADDRESS"]
     to_address = ENV["FEEDBACK_NOTIFICATION_EMAIL"]
-    return if account_id.blank? || api_token.blank? || from_address.blank? || to_address.blank?
+    return if api_key.blank? || from_address.blank? || to_address.blank?
 
-    uri = URI("https://api.cloudflare.com/client/v4/accounts/#{account_id}/email/sending/send")
+    uri = URI("https://api.resend.com/emails")
     reply_line = submission.email.present? ? "From: #{submission.email}\n" : ""
     page_line = submission.page_url.present? ? "Page: #{submission.page_url}\n" : ""
     body = {
-      to: to_address,
+      to: [to_address],
       from: from_address,
       subject: "New KapitMarket PH beta feedback (##{submission.id})",
       text: "#{reply_line}#{page_line}\n#{submission.message}"
     }
 
-    post_json(uri, body, headers: { "Authorization" => "Bearer #{api_token}" })
+    post_json(uri, body, headers: { "Authorization" => "Bearer #{api_key}" })
   end
 
   private

@@ -72,7 +72,13 @@ export function ShopsPage() {
               )}
               <h2>{shop.name}</h2>
               {shop.description && <p className="muted">{shop.description}</p>}
-              <p className="tagline">{shop.fulfillment_methods.join(' · ') || 'pickup'}</p>
+              <p className="tagline">
+                {shop.fulfillment_methods.join(' · ') || 'pickup'}
+              </p>
+              {/* Aggregate only on the card; nothing at all for an unrated shop. */}
+              {shop.ratings_count > 0 && shop.average_rating !== null && (
+                <p className="tagline">★ {shop.average_rating.toFixed(1)}</p>
+              )}
             </Link>
           </li>
         ))}

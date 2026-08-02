@@ -118,6 +118,22 @@ h3 { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.25rem; }
 .muted { color: #8a7862; font-size: 0.9rem; margin: 0.2rem 0; }
 .small { font-size: 0.8rem; }
 .tagline { color: #4f7a5c; font-size: 0.8rem; text-transform: capitalize; }
+
+/* Ratings (M4). Stars are plain text, not an icon set. */
+.stars { color: #d9a441; letter-spacing: 0.05em; }
+.rating-summary { color: #8a7862; font-size: 0.9rem; }
+.star-picker { margin-bottom: 0.5rem; }
+.star-btn {
+  background: none;
+  border: none;
+  padding: 0 0.1rem;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: #d9a441;
+  cursor: pointer;
+}
+.star-btn:hover { transform: scale(1.1); }
+.review p { margin: 0.35rem 0; }
 .error { color: #b91c1c; font-size: 0.9rem; }
 
 .plain { text-decoration: none; color: inherit; display: block; }

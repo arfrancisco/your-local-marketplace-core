@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import { useAuth } from '../auth'
-import type { FulfillmentMethod, Item, Shop } from '../api/types'
+import type { FulfillmentMethod, Item, Rating, Shop } from '../api/types'
 import { colorFor, emojiFor } from '../visuals'
 import { ItemDetailModal } from '../components/ItemDetailModal'
+import { RatingList, RatingSummary } from '../components/Ratings'
 import { readGuestCart, writeGuestCart, clearGuestCart } from '../guestCart'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
@@ -35,6 +36,7 @@ export function ShopDetailPage() {
   const [placingOrder, setPlacingOrder] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [cartOpen, setCartOpen] = useState(false)
+  const [ratings, setRatings] = useState<Rating[]>([])
 
   useEffect(() => {
     if (!slug) return
@@ -89,6 +91,13 @@ export function ShopDetailPage() {
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
   }, [slug, user])
+
+  // Reviews are public and independent of the cart flow, so they load on their
+  // own — a failure here should leave the shop itself perfectly usable.
+  useEffect(() => {
+    if (!slug) return
+    api.listShopRatings(slug).then((res) => setRatings(res.ratings)).catch(() => setRatings([]))
+  }, [slug])
 
   function requireLogin() {
     navigate(`/login?return_to=${encodeURIComponent(`/shops/${slug}`)}`)
@@ -183,6 +192,11 @@ export function ShopDetailPage() {
         {shop.fulfillment_methods.join(' · ')}
         {shop.address ? ` · ${shop.address}` : ''}
       </p>
+      {/* Standing at a glance next to the name; the empty case is covered by
+          the Reviews section below, so nothing renders here when unrated. */}
+      {shop.ratings_count > 0 && (
+        <p><RatingSummary averageRating={shop.average_rating} ratingsCount={shop.ratings_count} /></p>
+      )}
 
       <h2 className="section">Menu</h2>
       {items.length === 0 && <p>No items listed yet.</p>}
@@ -273,6 +287,16 @@ export function ShopDetailPage() {
           </button>
         </div>
       )}
+
+      <h2 className="section">Reviews</h2>
+      <p>
+        <RatingSummary
+          averageRating={shop.average_rating}
+          ratingsCount={shop.ratings_count}
+          emptyLabel="No reviews yet."
+        />
+      </p>
+      {ratings.length > 0 && <RatingList ratings={ratings} />}
 
       <ItemDetailModal
         item={viewingItem}

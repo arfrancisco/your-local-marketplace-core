@@ -10,6 +10,7 @@ const { shop, item, user } = vi.hoisted(() => ({
   shop: {
     id: 1, name: "Lola's Kitchen", slug: 'lolas-kitchen', description: null,
     contact_number: null, address: null, fulfillment_methods: ['pickup'], open: true, photos: [],
+    average_rating: null, ratings_count: 0,
   },
   item: {
     id: 10, shop_id: 1, name: 'Adobo Bowl', description: null, price_cents: 18000,
@@ -29,6 +30,7 @@ vi.mock('../api/client', async (importOriginal) => {
       ...actual.api,
       getShop: vi.fn().mockResolvedValue({ shop }),
       listItems: vi.fn().mockResolvedValue({ items: [item] }),
+      listShopRatings: vi.fn().mockResolvedValue({ ratings: [] }),
       me: vi.fn().mockResolvedValue({ user }),
       getCart: vi.fn().mockResolvedValue({ cart: null }),
       addCartItem: vi.fn(),

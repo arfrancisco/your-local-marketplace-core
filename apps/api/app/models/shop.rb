@@ -5,6 +5,7 @@ class Shop < ApplicationRecord
   has_many :items, dependent: :destroy
   has_many :carts, dependent: :destroy
   has_many :orders, dependent: :destroy
+  has_many :ratings, as: :reviewee, dependent: :destroy
   has_images :photos, max_count: 3
   has_images :opening_message_photos, max_count: 5
 

@@ -17,6 +17,12 @@ FactoryBot.define do
       after(:create) { |order| create(:conversation, order: order) unless order.conversation }
     end
 
+    # A finished order — the only state a rating may be attached to.
+    trait :completed do
+      status { "completed" }
+      completed_at { Time.current }
+    end
+
     trait :with_item do
       after(:create) do |order|
         create(:order_item, order: order, unit_price_cents: 10_000, quantity: 1, line_total_cents: 10_000)
@@ -35,6 +41,14 @@ FactoryBot.define do
 
   factory :conversation do
     order
+  end
+
+  factory :rating do
+    order
+    reviewer_user { order.customer_profile.user }
+    reviewee { order.shop }
+    score { 5 }
+    comment { "Great food, quick handoff." }
   end
 
   factory :message do
