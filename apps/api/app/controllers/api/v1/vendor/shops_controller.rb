@@ -74,8 +74,8 @@ module Api
         end
 
         def shop_params
-          params.require(:shop).permit(:name, :description, :contact_number, :address, :opening_message,
-                                        fulfillment_methods: [])
+          params.require(:shop).permit(:name, :description, :contact_number, :building, :address,
+                                        :opening_message, fulfillment_methods: [])
         end
 
         def attach_photos(shop)

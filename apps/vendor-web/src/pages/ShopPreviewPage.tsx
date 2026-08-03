@@ -11,6 +11,22 @@ function formatPrice(cents: number, currency: string) {
   return `${currency} ${(cents / 100).toFixed(2)}`
 }
 
+// Matches customer-web's own BackArrowIcon — a real stroked icon reads as a
+// tappable button against a photo; the Unicode "←" glyph was too thin.
+function BackArrowIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M19 12H5M12 19l-7-7 7-7"
+        stroke="currentColor"
+        strokeWidth="2.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 // Read-only mirror of customer-web's ShopDetailPage — same cover-photo hero,
 // identity card, and item list markup, so a vendor sees the actual page a
 // customer would land on before they ever open their shop. No cart/checkout/
@@ -53,7 +69,7 @@ export function ShopPreviewPage() {
   return (
     <div>
       <p className="back-link">
-        <Link to="/shops">← Back to dashboard</Link>
+        <Link to={`/shops/${id}/edit`}>← Back to editing</Link>
       </p>
       <div className="preview-banner">
         This is a preview of your shop's page — it's exactly what a customer
@@ -68,8 +84,10 @@ export function ShopPreviewPage() {
             {emojiFor(fallbackKey)}
           </div>
         )}
-        <span className="shop-back" aria-hidden>←</span>
-        <div className="card shop-identity">
+        <span className="shop-back" aria-hidden>
+          <BackArrowIcon />
+        </span>
+        <div className="shop-identity">
           {shop.profile_photo ? (
             <img className="shop-avatar" src={`${API_ORIGIN}${shop.profile_photo.url}`} alt="" />
           ) : (
@@ -79,9 +97,10 @@ export function ShopPreviewPage() {
           )}
           <div className="shop-identity-text">
             <h1>{shop.name}</h1>
+            {shop.description && <p className="muted shop-description">{shop.description}</p>}
             <p className="tagline">
               {shop.fulfillment_methods.join(' · ')}
-              {shop.address ? ` · ${shop.address}` : ''}
+              {shop.building ? ` · ${shop.building}` : ''}
             </p>
             {shop.ratings_count > 0 && (
               <RatingSummary averageRating={shop.average_rating} ratingsCount={shop.ratings_count} />
@@ -89,8 +108,6 @@ export function ShopPreviewPage() {
           </div>
         </div>
       </div>
-
-      {shop.description && <p className="muted">{shop.description}</p>}
 
       <h2 className="section">Menu</h2>
       {items.length === 0 && <p>No items listed yet.</p>}

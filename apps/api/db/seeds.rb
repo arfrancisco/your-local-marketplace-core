@@ -228,7 +228,13 @@ DEMO_SHOPS.each_with_index do |data, i|
   shop.name = data[:name]
   shop.slug = data[:slug]
   shop.description = data[:description]
-  shop.address = data[:address]
+  # `address` is the private exact-unit detail (vendor/order-context only);
+  # `building` is the public-safe label shown to browsing customers — both
+  # split here from the single "Tower X, <unit detail>" string every demo
+  # address already follows.
+  building_part, unit_part = data[:address].to_s.split(",", 2).map(&:strip)
+  shop.building = building_part
+  shop.address = unit_part.presence || building_part
   shop.contact_number = owner.mobile_number
   shop.fulfillment_methods = data[:fulfillment]
   shop.save!

@@ -5,7 +5,9 @@ module ShopSerializer
   # discovery or by customers — opening_message/opening_message_photos are
   # only ever meant to be seen by the vendor themselves (in shop settings)
   # or read live by an order's two participants via OrderSerializer
-  # (ADR 0009), never broadcast on the open shop listing.
+  # (ADR 0009), never broadcast on the open shop listing. The vendor's exact
+  # unit (`address`) is gated the same way, for the same reason — only
+  # `building` (e.g. "Tower B") is safe to hand to every anonymous browser.
   def call(shop, include_payment_info: false)
     {
       id: shop.id,
@@ -13,7 +15,7 @@ module ShopSerializer
       slug: shop.slug,
       description: shop.description,
       contact_number: shop.contact_number,
-      address: shop.address,
+      building: shop.building,
       fulfillment_methods: shop.fulfillment_methods,
       status: shop.status,
       accepting_orders: shop.accepting_orders,
@@ -37,6 +39,7 @@ module ShopSerializer
 
   def payment_info(shop)
     {
+      address: shop.address,
       opening_message: shop.opening_message,
       opening_message_photos: PhotoSerializer.list(shop.opening_message_photos)
     }

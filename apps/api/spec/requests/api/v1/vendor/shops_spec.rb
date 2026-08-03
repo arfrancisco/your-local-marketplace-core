@@ -5,8 +5,9 @@ RSpec.describe "Api::V1::Vendor Shops", type: :request do
   let(:vendor_profile) { vendor_user.vendor_profile }
 
   let(:valid_params) do
-    { shop: { name: "Corner Kitchen", description: "Home food", address: "Tower A 12F",
-              contact_number: "+639170001234", fulfillment_methods: %w[pickup delivery] } }
+    { shop: { name: "Corner Kitchen", description: "Home food", building: "Tower A",
+              address: "Unit 12F", contact_number: "+639170001234",
+              fulfillment_methods: %w[pickup delivery] } }
   end
 
   describe "POST /api/v1/vendor/shops" do
@@ -18,6 +19,13 @@ RSpec.describe "Api::V1::Vendor Shops", type: :request do
       expect(response).to have_http_status(:created)
       expect(json.dig("shop", "slug")).to eq("corner-kitchen")
       expect(Shop.last.vendor_profile).to eq(vendor_profile)
+    end
+
+    it "returns both the public building and the private exact-unit address to the vendor themselves" do
+      post "/api/v1/vendor/shops", params: valid_params, headers: auth_headers(vendor_user)
+
+      expect(json.dig("shop", "building")).to eq("Tower A")
+      expect(json.dig("shop", "address")).to eq("Unit 12F")
     end
 
     it "rejects a shop with no fulfillment method" do

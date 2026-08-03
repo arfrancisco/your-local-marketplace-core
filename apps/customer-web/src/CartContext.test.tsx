@@ -11,7 +11,7 @@ import type { Item, Shop } from './api/types'
 
 const shop: Shop = {
   id: 1, name: "Lola's Kitchen", slug: 'lolas-kitchen', description: null,
-  contact_number: null, address: null, fulfillment_methods: ['pickup'], open: true,
+  contact_number: null, building: null, fulfillment_methods: ['pickup'], open: true,
   profile_photo: null, cover_photo: null, average_rating: null, ratings_count: 0,
 }
 

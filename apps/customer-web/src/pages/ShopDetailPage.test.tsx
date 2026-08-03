@@ -11,7 +11,7 @@ import { api, ApiError, setToken } from '../api/client'
 const { shop, item, user } = vi.hoisted(() => ({
   shop: {
     id: 1, name: "Lola's Kitchen", slug: 'lolas-kitchen', description: null,
-    contact_number: null, address: null, fulfillment_methods: ['pickup'], open: true,
+    contact_number: null, building: null, fulfillment_methods: ['pickup'], open: true,
     profile_photo: null, cover_photo: null,
     average_rating: null, ratings_count: 0,
   },

@@ -52,6 +52,7 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
   const [shop, setShop] = useState<Shop | null>(null)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [building, setBuilding] = useState('')
   const [address, setAddress] = useState('')
   const [contact, setContact] = useState('')
   const [methods, setMethods] = useState<FulfillmentMethod[]>(['pickup'])
@@ -89,6 +90,7 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
       setShop(s)
       setName(s.name)
       setDescription(s.description ?? '')
+      setBuilding(s.building ?? '')
       setAddress(s.address ?? '')
       setContact(s.contact_number ?? '')
       setMethods(s.fulfillment_methods)
@@ -143,6 +145,7 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
     const fd = new FormData()
     fd.append('shop[name]', name)
     fd.append('shop[description]', description)
+    fd.append('shop[building]', building)
     fd.append('shop[address]', address)
     fd.append('shop[contact_number]', contact)
     methods.forEach((m) => fd.append('shop[fulfillment_methods][]', m))
@@ -174,6 +177,7 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
       )}
       <div className="row spread">
         <h1>{editing ? 'Edit shop' : 'New shop'}</h1>
+        {editing && <Link className="button" to={`/shops/${id}/preview`}>Preview shop</Link>}
         {showTour && (
           <button type="button" className="tour-skip" onClick={() => setTourStep(2)}>
             Skip tour
@@ -190,8 +194,27 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
         </label>
         <label>
-          Address (unit / building)
-          <input value={address} onChange={(e) => setAddress(e.target.value)} />
+          Building / Tower
+          <input
+            value={building}
+            onChange={(e) => setBuilding(e.target.value)}
+            placeholder="e.g. Tower B"
+          />
+          <p className="muted small">
+            Shown publicly on your shop page — customers see this, but never your exact unit.
+          </p>
+        </label>
+        <label>
+          Unit number (private)
+          <input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="e.g. Unit 7A"
+          />
+          <p className="muted small">
+            Never shown to customers browsing your shop. Share it privately in your opening
+            message if a customer needs it to pick up or receive a delivery.
+          </p>
         </label>
         <label>
           Contact number

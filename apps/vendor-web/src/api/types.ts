@@ -20,7 +20,9 @@ export interface Shop {
   slug: string
   description: string | null
   contact_number: string | null
-  address: string | null
+  // Public-safe location label ("Tower B") — always present, safe on any
+  // shop payload. `address` (the exact unit) is vendor-only, see below.
+  building: string | null
   fulfillment_methods: FulfillmentMethod[]
   status: 'draft' | 'active' | 'suspended'
   accepting_orders: boolean
@@ -39,6 +41,9 @@ export interface Shop {
   // participants live via Order.opening_message/opening_message_photos.
   opening_message?: string | null
   opening_message_photos?: Photo[]
+  // The exact unit, e.g. "Unit 7A" — vendor-only, same gate as above.
+  // Never shown to a customer; share it via the opening message if needed.
+  address?: string | null
   created_at: string
   updated_at: string
 }

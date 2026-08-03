@@ -302,6 +302,30 @@ button:disabled { opacity: 0.6; cursor: default; }
   flex-wrap: wrap;
 }
 
+.inventory-table th.reorder-col,
+.inventory-table td.reorder-cell { width: 1%; white-space: nowrap; }
+.reorder-buttons { display: flex; flex-direction: column; gap: 0.2rem; }
+.reorder-buttons button {
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  line-height: 1;
+  font-size: 0.85rem;
+}
+
+/* States what's actually true right now, distinct from the action button
+   next to it (which says what tapping it *will do* — easy to conflate the
+   two when both are just "Show"/"Hide" text). */
+.item-status {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.item-status.is-shown { background: #dcfce7; color: #166534; }
+.item-status.is-hidden { background: #f3f4f6; color: #6b7280; }
+
 @media (max-width: 640px) {
   /* Rows become stacked blocks. The header row is dropped (table semantics
      are gone once tr/td are display:block anyway) and each cell grows its
@@ -347,6 +371,16 @@ button:disabled { opacity: 0.6; cursor: default; }
     padding-top: 0.55rem;
   }
   .inventory-table td.actions::before { content: none; }
+
+  /* Self-explanatory arrows, and the row itself already implies "this item";
+     right-aligned like the actions row rather than stacked with a label. */
+  .inventory-table td.reorder-cell {
+    justify-content: flex-end;
+    padding-top: 0.55rem;
+    padding-bottom: 0;
+  }
+  .inventory-table td.reorder-cell::before { content: none; }
+  .reorder-buttons { flex-direction: row; }
 }
 
 /* Hamburger menu drawer — the header's nav links live in here now
@@ -545,12 +579,21 @@ h2.section { margin-top: 1.5rem; }
 .item-main { display: flex; align-items: center; gap: 0.85rem; }
 .price-col { text-align: right; }
 
-.shop-hero { position: relative; }
+/* Cover photo and identity panel read as one continuous card — a single
+   rounded/bordered/clipped container, photo on top, opaque identity panel
+   flush below it with no gap and no overlap. */
+.shop-hero {
+  position: relative;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
 .shop-cover {
   display: block;
   width: 100%;
   height: 190px;
-  border-radius: 10px;
   object-fit: cover;
   font-size: 3.5rem;
 }
@@ -561,21 +604,18 @@ h2.section { margin-top: 1.5rem; }
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
+  background: #fff;
   color: #111827;
-  font-size: 1.1rem;
-  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 .shop-identity {
-  position: relative;
-  margin: -2.5rem 1rem 1rem;
   display: flex;
   align-items: center;
   gap: 0.85rem;
+  padding: 1rem 1.1rem;
 }
 .shop-avatar {
   width: 60px;
@@ -587,11 +627,12 @@ h2.section { margin-top: 1.5rem; }
 }
 .shop-identity-text { min-width: 0; }
 .shop-identity-text h1 { margin: 0 0 0.15rem; font-size: 1.3rem; }
+.shop-description { margin: 0 0 0.25rem; }
 .shop-identity-text .tagline { margin: 0 0 0.2rem; }
 
 @media (max-width: 640px) {
   .shop-cover { height: 150px; }
-  .shop-identity { margin-top: -2rem; gap: 0.6rem; }
+  .shop-identity { gap: 0.6rem; padding: 0.85rem 1rem; }
   .shop-avatar { width: 50px; height: 50px; }
   .shop-identity-text h1 { font-size: 1.1rem; }
 }

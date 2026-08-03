@@ -16,6 +16,17 @@ RSpec.describe "Api::V1 Discovery", type: :request do
       expect(slugs).to eq([open_shop.slug])
     end
 
+    it "shows the building label but never the vendor's exact unit" do
+      shop = create(:shop, :open, building: "Tower A", address: "Unit 12F")
+
+      get "/api/v1/shops", headers: auth_headers(customer)
+
+      body = json["shops"].first
+      expect(body["building"]).to eq("Tower A")
+      expect(body).not_to have_key("address")
+      expect(shop.address).to eq("Unit 12F") # sanity: the private detail still exists on the record
+    end
+
     it "orders by the daily rotation service, not alphabetically" do
       # The non-alphabetical claim itself is proven deterministically (with
       # controlled ids) in spec/services/shop_rotation_spec.rb. This only

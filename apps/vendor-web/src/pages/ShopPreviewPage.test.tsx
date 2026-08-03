@@ -24,7 +24,8 @@ const shop: Shop = {
   slug: 'lolas-kitchen',
   description: 'Home-cooked meals from unit 12F.',
   contact_number: null,
-  address: 'Tower A, Unit 12F',
+  building: 'Tower A',
+  address: 'Unit 12F',
   fulfillment_methods: ['pickup'],
   status: 'active',
   accepting_orders: true,
@@ -71,6 +72,16 @@ describe('ShopPreviewPage', () => {
     vi.mocked(api.listShopRatings).mockResolvedValue({ ratings: [] })
   })
 
+  it('links back to editing this shop, not the dashboard', async () => {
+    vi.mocked(api.getShop).mockResolvedValue({ shop })
+    vi.mocked(api.listItems).mockResolvedValue({ items: [item()] })
+
+    renderAt('/shops/1/preview')
+
+    const link = await screen.findByRole('link', { name: /back to editing/i })
+    expect(link).toHaveAttribute('href', '/shops/1/edit')
+  })
+
   it('renders the shop as a customer would see it, read-only', async () => {
     vi.mocked(api.getShop).mockResolvedValue({ shop })
     vi.mocked(api.listItems).mockResolvedValue({ items: [item()] })
@@ -82,6 +93,17 @@ describe('ShopPreviewPage', () => {
     expect(screen.getByText(/preview of your shop/i)).toBeInTheDocument()
     // No cart affordance anywhere on this page.
     expect(screen.queryByRole('button', { name: /add/i })).not.toBeInTheDocument()
+  })
+
+  it('shows the building but never the exact unit — this is what a customer sees', async () => {
+    vi.mocked(api.getShop).mockResolvedValue({ shop })
+    vi.mocked(api.listItems).mockResolvedValue({ items: [item()] })
+
+    renderAt('/shops/1/preview')
+
+    await screen.findByRole('heading', { name: "Lola's Kitchen" })
+    expect(screen.getByText(/Tower A/)).toBeInTheDocument()
+    expect(screen.queryByText(/Unit 12F/)).not.toBeInTheDocument()
   })
 
   it('filters out disabled items — customers never see them at all', async () => {

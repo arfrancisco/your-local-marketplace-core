@@ -19,7 +19,7 @@ function shop(id: number, name: string, overrides: Partial<Shop> = {}): Shop {
     slug: name.toLowerCase(),
     description: null,
     contact_number: null,
-    address: null,
+    building: null,
     fulfillment_methods: ['pickup'],
     open: true,
     profile_photo: null,

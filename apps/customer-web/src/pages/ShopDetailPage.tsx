@@ -14,11 +14,31 @@ function formatPrice(cents: number, currency: string) {
   return `${currency} ${(cents / 100).toFixed(2)}`
 }
 
-// Cover photo hero with the back button overlaid on it, and the shop's identity
-// (profile photo, name, tagline, rating) on a white card floating up from the
-// cover's bottom edge. The card is the point: the same text laid directly over
-// a photo was the "hard to read" complaint, and a plain opaque background fixes
-// the contrast rather than a bigger font would.
+// A left-chevron with a real, adjustable stroke — the Unicode "←" glyph reads
+// as too thin/faint sitting on a photo to register as a tappable back button.
+function BackArrowIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M19 12H5M12 19l-7-7 7-7"
+        stroke="currentColor"
+        strokeWidth="2.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+// Cover photo + identity panel read as one continuous card (overflow: hidden
+// on the shared .shop-hero wrapper clips both to one rounded rectangle, no
+// gap, no floating-card overlap) — the back button sits directly on the
+// photo, and everything else (name, description, tagline, rating) sits below
+// it on a plain opaque background. That's the actual fix for "hard to read":
+// a contrast problem, not a font-size one. Only `building` (e.g. "Tower B")
+// is shown here, never the vendor's exact unit — that stays private to the
+// vendor and to an order's two participants (ShopSerializer's
+// include_payment_info gate on the API).
 function ShopHero({ shop }: { shop: Shop }) {
   const fallbackKey = `${shop.name} ${shop.description ?? ''}`
 
@@ -33,10 +53,10 @@ function ShopHero({ shop }: { shop: Shop }) {
       )}
 
       <Link to="/shops" className="shop-back" aria-label="Back to all shops">
-        <span aria-hidden>←</span>
+        <BackArrowIcon />
       </Link>
 
-      <div className="card shop-identity">
+      <div className="shop-identity">
         {shop.profile_photo ? (
           <img className="shop-avatar" src={`${API_ORIGIN}${shop.profile_photo.url}`} alt="" />
         ) : (
@@ -46,9 +66,10 @@ function ShopHero({ shop }: { shop: Shop }) {
         )}
         <div className="shop-identity-text">
           <h1>{shop.name}</h1>
+          {shop.description && <p className="muted shop-description">{shop.description}</p>}
           <p className="tagline">
             {shop.fulfillment_methods.join(' · ')}
-            {shop.address ? ` · ${shop.address}` : ''}
+            {shop.building ? ` · ${shop.building}` : ''}
           </p>
           {/* Standing at a glance next to the name; the empty case is covered by
               the Reviews section below, so nothing renders here when unrated. */}
@@ -109,8 +130,6 @@ export function ShopDetailPage() {
   return (
     <div>
       <ShopHero shop={shop} />
-
-      {shop.description && <p className="muted">{shop.description}</p>}
 
       <h2 className="section">Menu</h2>
       {items.length === 0 && <p>No items listed yet.</p>}

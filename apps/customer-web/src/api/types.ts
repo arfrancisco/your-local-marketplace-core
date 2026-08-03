@@ -20,7 +20,10 @@ export interface Shop {
   slug: string
   description: string | null
   contact_number: string | null
-  address: string | null
+  // Public-safe location label only ("Tower B") — the vendor's exact unit
+  // is never sent to this app; it's private to the vendor themselves and to
+  // an order's two participants (see the API's ShopSerializer).
+  building: string | null
   fulfillment_methods: FulfillmentMethod[]
   open: boolean
   // Shop identity images (Facebook-style) — profile_photo is the small

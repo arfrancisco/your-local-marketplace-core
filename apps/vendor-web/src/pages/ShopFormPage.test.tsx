@@ -52,7 +52,8 @@ const existingShop: Shop = {
   slug: 'tita-nena-kitchen',
   description: 'Home cooking',
   contact_number: '0917',
-  address: 'Tower A, Unit 3B',
+  building: 'Tower A',
+  address: 'Unit 3B',
   fulfillment_methods: ['pickup'],
   status: 'active',
   accepting_orders: true,
@@ -238,5 +239,19 @@ describe('ShopFormPage back navigation', () => {
 
     expect(await screen.findByRole('heading', { name: 'New shop' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /back to dashboard/i })).not.toBeInTheDocument()
+  })
+
+  it('offers a preview link when editing, pointing at this shop', async () => {
+    renderAt('/shops/5/edit', '/shops/:id/edit')
+
+    const link = await screen.findByRole('link', { name: /preview shop/i })
+    expect(link).toHaveAttribute('href', '/shops/5/preview')
+  })
+
+  it('shows no preview link when creating a shop', async () => {
+    renderAt('/shops/new', '/shops/new')
+
+    expect(await screen.findByRole('heading', { name: 'New shop' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /preview shop/i })).not.toBeInTheDocument()
   })
 })
