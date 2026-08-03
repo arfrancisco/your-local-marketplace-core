@@ -6,6 +6,7 @@ import { colorFor, emojiFor } from '../visuals'
 import { RatingList, RatingSummary } from '../components/Ratings'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
+const REVIEWS_PER_PAGE = 5
 
 function formatPrice(cents: number, currency: string) {
   return `${currency} ${(cents / 100).toFixed(2)}`
@@ -39,6 +40,12 @@ export function ShopPreviewPage() {
   const [items, setItems] = useState<Item[]>([])
   const [ratings, setRatings] = useState<Rating[]>([])
   const [loading, setLoading] = useState(true)
+  // Collapsed by default, paginated once opened — matches customer-web's own
+  // ShopDetailPage exactly, since the whole point of this page is to be
+  // what a customer actually sees.
+  const [reviewsOpen, setReviewsOpen] = useState(false)
+  const [reviewsLoading, setReviewsLoading] = useState(false)
+  const [reviewsPage, setReviewsPage] = useState(0)
 
   useEffect(() => {
     if (!id) return
@@ -57,14 +64,20 @@ export function ShopPreviewPage() {
   }, [id])
 
   useEffect(() => {
-    if (!shop?.slug) return
-    api.listShopRatings(shop.slug).then((res) => setRatings(res.ratings)).catch(() => setRatings([]))
-  }, [shop?.slug])
+    if (!shop?.slug || !reviewsOpen) return
+    setReviewsLoading(true)
+    api
+      .listShopRatings(shop.slug, { limit: REVIEWS_PER_PAGE, offset: reviewsPage * REVIEWS_PER_PAGE })
+      .then((res) => setRatings(res.ratings))
+      .catch(() => setRatings([]))
+      .finally(() => setReviewsLoading(false))
+  }, [shop?.slug, reviewsOpen, reviewsPage])
 
   if (loading) return <p>Loading preview…</p>
   if (!shop) return <p>This shop is not available.</p>
 
   const fallbackKey = `${shop.name} ${shop.description ?? ''}`
+  const totalReviewPages = Math.max(1, Math.ceil(shop.ratings_count / REVIEWS_PER_PAGE))
 
   return (
     <div>
@@ -113,7 +126,7 @@ export function ShopPreviewPage() {
       {items.length === 0 && <p>No items listed yet.</p>}
       <ul className="list">
         {items.map((item) => (
-          <li key={item.id} className={`card row spread ${item.sold_out ? 'dimmed' : ''}`}>
+          <li key={item.id} className={`card row spread item-row ${item.sold_out ? 'dimmed' : ''}`}>
             <div className="item-main">
               {item.photos[0] ? (
                 <img className="thumb" src={`${API_ORIGIN}${item.photos[0].url}`} alt={item.name} />
@@ -136,15 +149,49 @@ export function ShopPreviewPage() {
         ))}
       </ul>
 
-      <h2 className="section">Reviews</h2>
-      <p>
+      <div className="row spread reviews-header">
+        <h2 className="section">Reviews</h2>
         <RatingSummary
           averageRating={shop.average_rating}
           ratingsCount={shop.ratings_count}
           emptyLabel="No reviews yet."
         />
-      </p>
-      {ratings.length > 0 && <RatingList ratings={ratings} />}
+      </div>
+
+      {shop.ratings_count > 0 && (
+        <button
+          type="button"
+          className="reviews-toggle"
+          onClick={() => setReviewsOpen((open) => !open)}
+          aria-expanded={reviewsOpen}
+        >
+          {reviewsOpen ? 'Hide reviews' : `Show reviews (${shop.ratings_count})`}
+        </button>
+      )}
+
+      {reviewsOpen && (
+        <>
+          {reviewsLoading ? <p className="muted">Loading reviews…</p> : <RatingList ratings={ratings} />}
+
+          {totalReviewPages > 1 && (
+            <div className="row spread reviews-pagination">
+              <button type="button" onClick={() => setReviewsPage((p) => p - 1)} disabled={reviewsPage === 0}>
+                ← Newer
+              </button>
+              <span className="muted small">
+                Page {reviewsPage + 1} of {totalReviewPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setReviewsPage((p) => p + 1)}
+                disabled={reviewsPage >= totalReviewPages - 1}
+              >
+                Older →
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }

@@ -61,6 +61,22 @@ h2 { font-size: 1.1rem; margin: 0 0 0.25rem; }
 .review p { margin: 0.35rem 0; }
 .error { color: #b91c1c; font-size: 0.9rem; }
 
+/* Heading + aggregate score share one line; the review list itself is
+   collapsed behind a toggle by default (ShopPreviewPage/ShopReviewsPage). */
+.reviews-header { margin-top: 1.5rem; }
+.reviews-header h2.section { margin: 0; }
+.reviews-toggle {
+  background: none;
+  border: none;
+  padding: 0.3rem 0;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.reviews-pagination { margin-top: 0.75rem; }
+
 label { display: block; margin: 0.6rem 0; font-size: 0.9rem; }
 input, textarea {
   display: block;
@@ -601,6 +617,26 @@ h2.section { margin-top: 1.5rem; }
 .item-main { display: flex; align-items: center; gap: 0.85rem; }
 .price-col { text-align: right; }
 
+/* Menu item photo (shop preview) bleeds to the card's own edges instead of
+   floating inside a border of padding — same fixed-square treatment as
+   customer-web's own item rows. Scoped via .item-row so the shared .card/
+   .thumb/.price-col classes stay untouched everywhere else they're used. */
+.item-row { padding: 0; overflow: hidden; align-items: stretch; }
+/* Centered, not top-pinned: description/tags length varies enough between
+   items that the fixed-size photo rarely matches the card's full height
+   exactly — center keeps any leftover space split evenly top/bottom rather
+   than dumped as a visible strip under the photo. */
+.item-row .item-main { align-items: center; padding: 0; }
+.item-row .item-main > div { padding: 0.85rem 0; min-width: 0; }
+.item-row .thumb {
+  width: 108px;
+  height: 108px;
+  border-radius: 0;
+  margin: 0;
+}
+.item-row .thumb.tile { font-size: 2.1rem; }
+.item-row .price-col { padding: 0.85rem 1.1rem 0.85rem 0; }
+
 /* Cover photo and identity panel read as one continuous card — a single
    rounded/bordered/clipped container, photo on top, opaque identity panel
    flush below it with no gap and no overlap. */
@@ -633,29 +669,34 @@ h2.section { margin-top: 1.5rem; }
   justify-content: center;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
+/* Avatar bleeds flush to the hero card's left edge instead of floating
+   inside padding on all sides — same treatment as the item-row photos
+   above. Centered (not stretched) so it stays a fixed square regardless of
+   whether the optional description/rating lines are present next to it. */
 .shop-identity {
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  padding: 1rem 1.1rem;
+  padding: 0;
 }
 .shop-avatar {
-  width: 60px;
-  height: 60px;
-  border-radius: 10px;
+  width: 100px;
+  height: 100px;
+  border-radius: 0;
   object-fit: cover;
   flex-shrink: 0;
-  font-size: 1.6rem;
+  font-size: 2.3rem;
 }
-.shop-identity-text { min-width: 0; }
+.shop-identity-text { min-width: 0; padding: 1rem 1.1rem 1rem 0; }
 .shop-identity-text h1 { margin: 0 0 0.15rem; font-size: 1.3rem; }
 .shop-description { margin: 0 0 0.25rem; }
 .shop-identity-text .tagline { margin: 0 0 0.2rem; }
 
 @media (max-width: 640px) {
   .shop-cover { height: 150px; }
-  .shop-identity { gap: 0.6rem; padding: 0.85rem 1rem; }
-  .shop-avatar { width: 50px; height: 50px; }
+  .shop-identity { gap: 0.6rem; }
+  .shop-avatar { width: 72px; height: 72px; }
+  .shop-identity-text { padding: 0.85rem 1rem 0.85rem 0; }
   .shop-identity-text h1 { font-size: 1.1rem; }
 }
 
