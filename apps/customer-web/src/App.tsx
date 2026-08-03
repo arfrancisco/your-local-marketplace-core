@@ -4,6 +4,7 @@ import { useAuth } from './auth'
 import { api } from './api/client'
 import type { Order, OrderStatus } from './api/types'
 import { CartButton } from './components/CartButton'
+import { useCart } from './CartContext'
 import { HamburgerMenu } from './components/HamburgerMenu'
 import { ShopsPage } from './pages/ShopsPage'
 import { ShopDetailPage } from './pages/ShopDetailPage'
@@ -51,6 +52,28 @@ const ACTIVE_ORDER_STATUSES: OrderStatus[] = [
 
 const ACTIVE_ORDER_REFRESH_MS = 45_000
 
+function formatPrice(cents: number, currency: string) {
+  return `${currency} ${(cents / 100).toFixed(2)}`
+}
+
+// Fills the bar's flex space with a running total once there's something in
+// the cart, instead of leaving it blank next to the cart icon — the current
+// task (finish this order) takes priority over the track-your-order
+// reminder below, which only shows once the cart is empty again. Plain bold
+// text rather than a pill button (unlike the track-your-order case below) —
+// the round cart icon already reads as the tappable action, so this doesn't
+// need its own button chrome competing for attention next to it.
+function CartSummaryButton() {
+  const { count, subtotalCents, currency, openCart } = useCart()
+  if (count === 0) return null
+
+  return (
+    <button className="cart-summary-bar" onClick={openCart}>
+      {count} item{count === 1 ? '' : 's'} · {formatPrice(subtotalCents, currency)}
+    </button>
+  )
+}
+
 // Global (not page-scoped) — a signed-in customer with an order in flight
 // should be able to jump back to it from anywhere, not just from /orders.
 // Lives in the bottom bar, growing to fill the space next to the cart icon
@@ -95,7 +118,7 @@ function ActiveOrderButton() {
   }
 
   return (
-    <button className="active-order-fab" onClick={onClick}>
+    <button className="bar-primary" onClick={onClick}>
       {activeOrders.length === 1
         ? 'Track your order'
         : `Track your orders (${activeOrders.length})`}
@@ -111,6 +134,16 @@ function BetaBanner() {
   )
 }
 
+// The bar's flex-1 slot shows one thing at a time: the cart summary whenever
+// there's something in the cart (the task at hand), falling back to the
+// track-your-order reminder only once the cart is empty. Showing both
+// together would just recreate the clutter this bar replaced.
+function BottomBarStatus() {
+  const { count } = useCart()
+  if (count > 0) return <CartSummaryButton />
+  return <ActiveOrderButton />
+}
+
 // A single fixed bar across the bottom of the screen, not two separate
 // floating chips — two small buttons stacked close together (the previous
 // design) were easy to mispress with a thumb, and had no background of their
@@ -121,7 +154,7 @@ function BetaBanner() {
 function BottomBar() {
   return (
     <div className="bottom-bar">
-      <ActiveOrderButton />
+      <BottomBarStatus />
       <CartButton />
     </div>
   )

@@ -284,13 +284,14 @@ button.link {
 .cart-total { margin: 0.5rem 0; padding-top: 0.5rem; border-top: 1px solid #ecdfcd; }
 
 /* Fixed action bar across the bottom of the screen (App.tsx's BottomBar) —
-   cart icon always on the right; "track your order" (when present) grows to
-   fill the space next to it via flex: 1, rather than the two floating as
-   separate stacked chips. A single opaque bar reads as one deliberate
-   control surface: two big, clearly separated tap targets instead of two
-   small ones close together, and its own background means it never visually
-   blends into (or covers) page content scrolling underneath — .container's
-   bottom padding, below, keeps content from ever landing behind it. */
+   cart icon always on the right; .bar-primary (cart summary, or "track your
+   order" once the cart is empty) grows to fill the space next to it via
+   flex: 1, rather than the two floating as separate stacked chips. A single
+   opaque bar reads as one deliberate control surface: two big, clearly
+   separated tap targets instead of two small ones close together, and its
+   own background means it never visually blends into (or covers) page
+   content scrolling underneath — .container's bottom padding, below, keeps
+   content from ever landing behind it. */
 .bottom-bar {
   position: fixed;
   left: 0;
@@ -306,10 +307,22 @@ button.link {
   border-top: 1px solid #ecdfcd;
   box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
 }
-.active-order-fab {
+.bar-primary {
   flex: 1;
   border-radius: 999px;
   padding: 0.7rem 1.25rem;
+}
+/* Plain bold text, not a pill — the cart icon next to it is the actual
+   tappable action, so this just reports what's in the cart. */
+.cart-summary-bar {
+  flex: 1;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: #2b2420;
 }
 
 /* Modal */
@@ -862,7 +875,7 @@ button.link {
   .cart-badge { min-width: 17px; height: 17px; line-height: 17px; font-size: 0.65rem; }
 
   .bottom-bar { padding: 0.55rem 0.75rem; gap: 0.5rem; }
-  .active-order-fab { font-size: 0.85rem; padding: 0.55rem 0.95rem; }
+  .bar-primary { font-size: 0.85rem; padding: 0.55rem 0.95rem; }
 
   /* Centered dialogs become full-width bottom sheets; the side drawer (nav,
      cart) keeps its own edge-anchored layout via .modal.drawer's existing
