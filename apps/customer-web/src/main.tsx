@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './auth'
+import { CartProvider } from './CartContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { reportClientError } from './api/client'
 
@@ -25,7 +26,11 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <BrowserRouter>
         <AuthProvider>
-          <App />
+          {/* Inside AuthProvider (the cart branches on signed-in vs guest) and
+              inside the router (checkout navigates to the new order). */}
+          <CartProvider>
+            <App />
+          </CartProvider>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>

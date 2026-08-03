@@ -60,6 +60,13 @@ export function ItemDetailModal({ item, onClose, onAddToCart }: Props) {
         {item.tags.length > 0 && <p className="muted small">{item.tags.map((t) => t.name).join(', ')}</p>}
         {item.sold_out && <p className="sold-out-label">Sold out</p>}
 
+        {/* Deliberately a one-shot "Add to cart" that closes back to the list,
+            not the same −/+ stepper the item cards now carry. The stepper's job
+            is quick repeat-adjustment while scanning the menu; this modal is a
+            detail/gallery view you open for one item, and closing on add gives
+            immediate feedback (the card behind it now reads "− 1 +" and the
+            header cart icon bumps). A second stepper here would just be a
+            second place to hold the same number with no clear "done". */}
         {item.sold_out ? (
           <button style={{ marginTop: '0.5rem' }} disabled>Sold out</button>
         ) : (

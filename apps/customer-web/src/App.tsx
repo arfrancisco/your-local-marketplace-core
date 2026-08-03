@@ -3,8 +3,8 @@ import { Navigate, Route, Routes, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from './auth'
 import { api } from './api/client'
 import type { Order, OrderStatus } from './api/types'
-import { vendorWebUrl } from './vendorWeb'
-import { FeedbackModal } from './components/FeedbackModal'
+import { CartButton } from './components/CartButton'
+import { HamburgerMenu } from './components/HamburgerMenu'
 import { ShopsPage } from './pages/ShopsPage'
 import { ShopDetailPage } from './pages/ShopDetailPage'
 import { LoginPage } from './pages/LoginPage'
@@ -16,41 +16,29 @@ import { AccountPage } from './pages/AccountPage'
 import { OrderPage } from './pages/OrderPage'
 import { OrdersPage } from './pages/OrdersPage'
 
-function Header() {
-  const { user, logout } = useAuth()
-  const [feedbackOpen, setFeedbackOpen] = useState(false)
+// Nav is down to two icons: everything that used to be an inline link row now
+// lives in the hamburger drawer, and the cart moved out of ShopDetailPage into
+// here so it is reachable from every page. The cluster is position: fixed (the
+// established .cart-fab/.active-order-fab convention) so it stays pinned in the
+// top right as the page scrolls under it; the top offset lines it up with the
+// top bar at scroll 0, below the beta banner.
+function HeaderActions() {
+  return (
+    <div className="header-actions">
+      <CartButton />
+      <HamburgerMenu />
+    </div>
+  )
+}
 
+function Header() {
   return (
     <header className="topbar">
       <div className="brand-block">
         <Link to="/shops" className="brand">Prisma KapitMarket</Link>
         <p className="brand-tagline">By the community, for the community</p>
       </div>
-      {user ? (
-        <div className="row gap">
-          <Link to="/shops">Home</Link>
-          <Link to="/orders">My orders</Link>
-          <Link to="/account">My account</Link>
-          {user.vendor_profile && (
-            // Real page navigation, not React Router's Link — this crosses
-            // into the separate vendor-web SPA, and this app's own catch-all
-            // route would otherwise swallow client-side nav to a path that
-            // doesn't exist here.
-            <a href={vendorWebUrl('/shops')}>Vendor dashboard</a>
-          )}
-          <button onClick={() => setFeedbackOpen(true)}>Send feedback</button>
-          <span className="muted">{user.customer_profile?.display_name ?? user.email}</span>
-          <button onClick={logout}>Sign out</button>
-        </div>
-      ) : (
-        <div className="row gap">
-          <Link to="/shops">Home</Link>
-          <button onClick={() => setFeedbackOpen(true)}>Send feedback</button>
-          <Link to="/login">Sign in</Link>
-          <Link to="/login?mode=register">Create account</Link>
-        </div>
-      )}
-      {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
+      <HeaderActions />
     </header>
   )
 }
@@ -67,8 +55,8 @@ const ACTIVE_ORDER_REFRESH_MS = 45_000
 
 // Global (not page-scoped) — a signed-in customer with an order in flight
 // should be able to jump back to it from anywhere, not just from /orders.
-// Bottom-right, distinct from ShopDetailPage's top-right cart button; the
-// two never actually appear on the same page anyway.
+// Bottom-right, keeping the top-right corner clear for the header's cart and
+// menu icons.
 function ActiveOrderButton() {
   const { user } = useAuth()
   const navigate = useNavigate()

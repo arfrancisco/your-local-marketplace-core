@@ -4,12 +4,15 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ShopDetailPage } from './ShopDetailPage'
 import { AuthProvider } from '../auth'
+import { CartProvider } from '../CartContext'
+import { CartButton } from '../components/CartButton'
 import { api, ApiError, setToken } from '../api/client'
 
 const { shop, item, user } = vi.hoisted(() => ({
   shop: {
     id: 1, name: "Lola's Kitchen", slug: 'lolas-kitchen', description: null,
-    contact_number: null, address: null, fulfillment_methods: ['pickup'], open: true, photos: [],
+    contact_number: null, address: null, fulfillment_methods: ['pickup'], open: true,
+    profile_photo: null, cover_photo: null,
     average_rating: null, ratings_count: 0,
   },
   item: {
@@ -41,18 +44,29 @@ vi.mock('../api/client', async (importOriginal) => {
   }
 })
 
+// CartButton stands in for the header here: the cart lives in the global
+// header now, not on this page, but the page's flow still ends at the cart, so
+// the tests need something to open it with.
 function renderPage(initialEntries = ['/shops/lolas-kitchen']) {
   return render(
     <MemoryRouter initialEntries={initialEntries}>
       <AuthProvider>
-        <Routes>
-          <Route path="/shops/:slug" element={<ShopDetailPage />} />
-          <Route path="/login" element={<p>Login page</p>} />
-          <Route path="/orders/:id" element={<p>Order page</p>} />
-        </Routes>
+        <CartProvider>
+          <CartButton />
+          <Routes>
+            <Route path="/shops" element={<p>All shops page</p>} />
+            <Route path="/shops/:slug" element={<ShopDetailPage />} />
+            <Route path="/login" element={<p>Login page</p>} />
+            <Route path="/orders/:id" element={<p>Order page</p>} />
+          </Routes>
+        </CartProvider>
       </AuthProvider>
     </MemoryRouter>,
   )
+}
+
+function addButton(name = 'Adobo Bowl') {
+  return screen.getByRole('button', { name: new RegExp(`add ${name} to cart`, 'i') })
 }
 
 describe('ShopDetailPage cart flow', () => {
@@ -65,25 +79,28 @@ describe('ShopDetailPage cart flow', () => {
     renderPage()
 
     await screen.findByText('Adobo Bowl')
-    await userEvent.click(screen.getByRole('button', { name: /add to cart/i }))
+    await userEvent.click(addButton())
     expect(api.addCartItem).not.toHaveBeenCalled()
 
-    const cartFab = await screen.findByRole('button', { name: /1 item.*180\.00/i })
-    await userEvent.click(cartFab)
-    expect(await screen.findByText('Your cart')).toBeInTheDocument()
+    const cartIcon = await screen.findByRole('button', { name: /cart, 1 item/i })
+    await userEvent.click(cartIcon)
+    const drawer = await screen.findByRole('dialog', { name: /your cart/i })
+    expect(within(drawer).getByText('Your cart')).toBeInTheDocument()
+    // Line total and subtotal, one item in the cart.
+    expect(within(drawer).getAllByText('PHP 180.00')).toHaveLength(2)
   })
 
   it('redirects an anonymous visitor to login on checkout, retaining the guest cart', async () => {
     renderPage()
 
     await screen.findByText('Adobo Bowl')
-    await userEvent.click(screen.getByRole('button', { name: /add to cart/i }))
-    const cartFab = await screen.findByRole('button', { name: /1 item/i })
-    await userEvent.click(cartFab)
+    await userEvent.click(addButton())
+    await userEvent.click(await screen.findByRole('button', { name: /cart, 1 item/i }))
     await userEvent.click(screen.getByRole('button', { name: /place order/i }))
 
     expect(await screen.findByText('Login page')).toBeInTheDocument()
     expect(api.checkout).not.toHaveBeenCalled()
+    expect(localStorage.getItem('kapitmarket_guest_cart:1')).toBe(JSON.stringify({ 10: 1 }))
   })
 
   it('merges a pre-existing guest cart into the backend cart when a signed-in customer visits the shop', async () => {
@@ -100,13 +117,13 @@ describe('ShopDetailPage cart flow', () => {
     await screen.findByText('Adobo Bowl')
 
     expect(api.addCartItem).toHaveBeenCalledWith(1, 10, 2)
-    const cartFab = await screen.findByRole('button', { name: /2 item/i })
-    await userEvent.click(cartFab)
+    const cartIcon = await screen.findByRole('button', { name: /cart, 2 items/i })
+    await userEvent.click(cartIcon)
     expect(await screen.findByText('Your cart')).toBeInTheDocument()
     expect(localStorage.getItem('kapitmarket_guest_cart:1')).toBeNull()
   })
 
-  it('adds to the real backend cart for a signed-in customer, then places an order via the floating cart button', async () => {
+  it('adds to the real backend cart for a signed-in customer, then places an order from the cart drawer', async () => {
     setToken('fake-token')
     vi.mocked(api.addCartItem).mockResolvedValue({
       cart: { id: 1, shop_id: 1, status: 'active', subtotal_cents: 18000, items: [{ id: 100, item_id: 10, name: 'Adobo Bowl', price_cents: 18000, currency: 'PHP', quantity: 1, line_total_cents: 18000 }] },
@@ -118,14 +135,14 @@ describe('ShopDetailPage cart flow', () => {
     renderPage()
     await screen.findByText('Adobo Bowl')
 
-    await userEvent.click(screen.getByRole('button', { name: /add to cart/i }))
+    await userEvent.click(addButton())
     expect(api.addCartItem).toHaveBeenCalledWith(1, 10)
 
-    // The cart summary panel is collapsed by default behind the floating
-    // "N items · subtotal" button — it only appears once that's clicked.
-    const cartFab = await screen.findByRole('button', { name: /1 item.*180\.00/i })
+    // The cart is a drawer behind the header icon now — nothing about it is on
+    // the page itself until that icon is clicked.
+    const cartIcon = await screen.findByRole('button', { name: /cart, 1 item/i })
     expect(screen.queryByText('Your cart')).not.toBeInTheDocument()
-    await userEvent.click(cartFab)
+    await userEvent.click(cartIcon)
     expect(await screen.findByText('Your cart')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: /place order/i }))
@@ -133,7 +150,7 @@ describe('ShopDetailPage cart flow', () => {
     expect(await screen.findByText('Order page')).toBeInTheDocument()
   })
 
-  it('renders a sold-out item dimmed with a disabled Add to cart button', async () => {
+  it('renders a sold-out item dimmed with a disabled Sold out button and no stepper', async () => {
     const soldOutItem = { ...item, id: 20, name: 'Pandesal', sold_out: true, stock_count: 0 }
     vi.mocked(api.listItems).mockResolvedValueOnce({ items: [item, soldOutItem] })
 
@@ -144,6 +161,7 @@ describe('ShopDetailPage cart flow', () => {
     expect(row).toHaveClass('dimmed')
     expect(within(row).getAllByText('Sold out')).toHaveLength(2) // label + disabled button
     expect(within(row).getByRole('button', { name: /sold out/i })).toBeDisabled()
+    expect(within(row).queryByRole('button', { name: /add pandesal to cart/i })).not.toBeInTheDocument()
   })
 
   it('flags a sold-out line already in the cart and disables Place order', async () => {
@@ -161,8 +179,7 @@ describe('ShopDetailPage cart flow', () => {
     renderPage()
     await screen.findByText('Adobo Bowl')
 
-    const cartFab = await screen.findByRole('button', { name: /1 item/i })
-    await userEvent.click(cartFab)
+    await userEvent.click(await screen.findByRole('button', { name: /cart, 1 item/i }))
 
     expect(await screen.findByText(/gone sold out/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /place order/i })).toBeDisabled()
@@ -182,12 +199,95 @@ describe('ShopDetailPage cart flow', () => {
 
     renderPage()
     await screen.findByText('Adobo Bowl')
-    await userEvent.click(screen.getByRole('button', { name: /add to cart/i }))
+    await userEvent.click(addButton())
 
-    const cartFab = await screen.findByRole('button', { name: /1 item/i })
-    await userEvent.click(cartFab)
+    await userEvent.click(await screen.findByRole('button', { name: /cart, 1 item/i }))
     await userEvent.click(screen.getByRole('button', { name: /place order/i }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/no longer available/i)
+  })
+})
+
+describe('ShopDetailPage item stepper', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  it('swaps the "+" for a "− n +" stepper once the item is in the cart, without opening the cart', async () => {
+    renderPage()
+    await screen.findByText('Adobo Bowl')
+
+    const row = screen.getByText('Adobo Bowl').closest('li')!
+    expect(within(row).queryByText('1')).not.toBeInTheDocument()
+
+    await userEvent.click(addButton())
+    expect(within(row).getByText('1')).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: /remove one adobo bowl/i })).toBeInTheDocument()
+
+    await userEvent.click(within(row).getByRole('button', { name: /add adobo bowl to cart/i }))
+    expect(within(row).getByText('2')).toBeInTheDocument()
+    expect(screen.queryByText('Your cart')).not.toBeInTheDocument()
+  })
+
+  it('steps back down to a bare "+" when the last one is removed', async () => {
+    renderPage()
+    await screen.findByText('Adobo Bowl')
+
+    const row = screen.getByText('Adobo Bowl').closest('li')!
+    await userEvent.click(addButton())
+    await userEvent.click(within(row).getByRole('button', { name: /remove one adobo bowl/i }))
+
+    expect(within(row).queryByRole('button', { name: /remove one adobo bowl/i })).not.toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: /add adobo bowl to cart/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /cart, empty/i })).toBeInTheDocument()
+  })
+})
+
+describe('ShopDetailPage hero', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    // clearAllMocks keeps implementations, so the photo-bearing shop set by one
+    // test would otherwise leak into the fallback test below it.
+    vi.mocked(api.getShop).mockResolvedValue({ shop } as never)
+  })
+
+  it('renders the cover photo and profile photo when the shop has them', async () => {
+    vi.mocked(api.getShop).mockResolvedValue({
+      shop: {
+        ...shop,
+        cover_photo: { id: 1, url: '/covers/1.jpg', filename: 'c.jpg', byte_size: 1, content_type: 'image/jpeg' },
+        profile_photo: { id: 2, url: '/avatars/2.jpg', filename: 'p.jpg', byte_size: 1, content_type: 'image/jpeg' },
+      },
+    } as never)
+
+    renderPage()
+    await screen.findByRole('heading', { name: "Lola's Kitchen" })
+
+    expect(document.querySelector('img.shop-cover')).toHaveAttribute('src', expect.stringContaining('/covers/1.jpg'))
+    expect(document.querySelector('img.shop-avatar')).toHaveAttribute('src', expect.stringContaining('/avatars/2.jpg'))
+  })
+
+  it('falls back to the emoji/colour tiles when the shop has no photos', async () => {
+    renderPage()
+    await screen.findByRole('heading', { name: "Lola's Kitchen" })
+
+    expect(document.querySelector('img.shop-cover')).toBeNull()
+    expect(document.querySelector('.shop-cover.tile')).toBeInTheDocument()
+    expect(document.querySelector('.shop-avatar.tile')).toBeInTheDocument()
+  })
+
+  it('offers a circular back button overlaid on the cover instead of a text link', async () => {
+    renderPage()
+    await screen.findByRole('heading', { name: "Lola's Kitchen" })
+
+    const back = screen.getByRole('link', { name: /back to all shops/i })
+    expect(back).toHaveAttribute('href', '/shops')
+    expect(back).toHaveClass('shop-back')
+    expect(screen.queryByText(/all shops$/i)).not.toBeInTheDocument()
+
+    await userEvent.click(back)
+    expect(await screen.findByText('All shops page')).toBeInTheDocument()
   })
 })

@@ -2,7 +2,7 @@
 // items is public; only checkout requires a real account (the backend
 // Cart/CartItem, ADR 0008, requires a customer_profile). Once the visitor
 // signs in, this is drained into the real backend cart and cleared — see
-// ShopDetailPage's load effect.
+// CartContext's loadShopCart.
 const PREFIX = 'kapitmarket_guest_cart:'
 
 function storageKey(shopId: number): string {

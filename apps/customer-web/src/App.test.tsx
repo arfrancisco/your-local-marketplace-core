@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './auth'
+import { CartProvider } from './CartContext'
 import { api, setToken } from './api/client'
 import type { User } from './api/types'
 
@@ -47,10 +49,16 @@ function renderApp(initialEntries = ['/shops']) {
   return render(
     <MemoryRouter initialEntries={initialEntries}>
       <AuthProvider>
-        <App />
+        <CartProvider>
+          <App />
+        </CartProvider>
       </AuthProvider>
     </MemoryRouter>,
   )
+}
+
+async function openMenu() {
+  await userEvent.click(await screen.findByRole('button', { name: /^menu$/i }))
 }
 
 describe('Header', () => {
@@ -61,8 +69,18 @@ describe('Header', () => {
     vi.mocked(api.listOrders).mockResolvedValue({ orders: [] })
   })
 
-  it('always shows an explicit Home link, signed in or out', async () => {
+  it('shows only the brand plus the cart and menu icons — no inline link row', async () => {
     renderApp()
+
+    expect(await screen.findByRole('link', { name: /prisma kapitmarket/i })).toHaveAttribute('href', '/shops')
+    expect(screen.getByRole('button', { name: /^menu$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^cart, empty$/i })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /^home$/i })).not.toBeInTheDocument()
+  })
+
+  it('always shows an explicit Home link in the drawer, signed in or out', async () => {
+    renderApp()
+    await openMenu()
     expect(await screen.findByRole('link', { name: /^home$/i })).toHaveAttribute('href', '/shops')
   })
 
@@ -74,6 +92,7 @@ describe('Header', () => {
       }),
     })
     renderApp()
+    await openMenu()
 
     const link = await screen.findByRole('link', { name: /vendor dashboard/i })
     expect(link.tagName).toBe('A')
@@ -84,6 +103,7 @@ describe('Header', () => {
     setToken('tok123')
     vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
     renderApp()
+    await openMenu()
 
     await screen.findByRole('link', { name: /my account/i })
     expect(screen.queryByRole('link', { name: /vendor dashboard/i })).not.toBeInTheDocument()
