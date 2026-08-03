@@ -16,16 +16,14 @@ import { AccountPage } from './pages/AccountPage'
 import { OrderPage } from './pages/OrderPage'
 import { OrdersPage } from './pages/OrdersPage'
 
-// Nav is down to two icons: everything that used to be an inline link row now
-// lives in the hamburger drawer, and the cart moved out of ShopDetailPage into
-// here so it is reachable from every page. The cluster is position: fixed (the
-// established .cart-fab/.active-order-fab convention) so it stays pinned in the
-// top right as the page scrolls under it; the top offset lines it up with the
-// top bar at scroll 0, below the beta banner.
+// The hamburger is the only thing left up here — position: fixed so it stays
+// pinned in the top right as the page scrolls under it; the top offset lines
+// it up with the top bar at scroll 0, below the beta banner. The cart moved
+// to a floating bottom-right button (BottomFabs, below) so it doesn't crowd
+// the header on narrow screens.
 function HeaderActions() {
   return (
     <div className="header-actions">
-      <CartButton />
       <HamburgerMenu />
     </div>
   )
@@ -111,6 +109,19 @@ function BetaBanner() {
   )
 }
 
+// Cart and "track your order" both float bottom-right, stacked in one fixed
+// wrapper rather than each managing its own fixed position — that way they
+// never land on top of each other regardless of which are present (cart
+// alone, both, or neither once ActiveOrderButton returns null).
+function BottomFabs() {
+  return (
+    <div className="bottom-fabs">
+      <CartButton />
+      <ActiveOrderButton />
+    </div>
+  )
+}
+
 export default function App() {
   return (
     <>
@@ -133,7 +144,7 @@ export default function App() {
         </Routes>
       </main>
 
-      <ActiveOrderButton />
+      <BottomFabs />
     </>
   )
 }

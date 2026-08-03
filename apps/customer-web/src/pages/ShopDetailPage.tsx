@@ -153,7 +153,7 @@ export function ShopDetailPage() {
         {items.map((item) => {
           const quantity = quantityOf(item.id)
           return (
-            <li key={item.id} className={`card row spread ${item.sold_out ? 'dimmed' : ''}`}>
+            <li key={item.id} className={`card row spread item-row ${item.sold_out ? 'dimmed' : ''}`}>
               <button className="item-main clickable" onClick={() => setViewingItem(item)} aria-label={`View ${item.name}`}>
                 {item.photos[0] ? (
                   <img className="thumb" src={`${API_ORIGIN}${item.photos[0].url}`} alt={item.name} />

@@ -3,10 +3,10 @@ import { useCart } from '../CartContext'
 
 const BUMP_MS = 300
 
-// Persistent cart icon. Lives in the header cluster (with the hamburger) but is
-// position: fixed, so it stays pinned in the top right while the page scrolls
-// beneath it — on every page, not just the shop page. Replaces the old
-// page-local .cart-fab.
+// Persistent cart icon. Floats bottom-right (App.tsx's .bottom-fabs wrapper,
+// alongside the active-order button) rather than sitting in the top header
+// cluster with the hamburger, so it stays reachable without crowding the
+// brand/tagline on narrow screens — on every page, not just the shop page.
 export function CartButton() {
   const { count, openCart } = useCart()
   const [bumping, setBumping] = useState(false)
