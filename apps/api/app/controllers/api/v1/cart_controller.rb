@@ -5,7 +5,7 @@ module Api
     # than a confusing empty cart.
     class CartController < BaseController
       before_action :require_customer_profile
-      before_action :set_shop, only: %i[show add_item]
+      before_action :set_shop, only: %i[show add_item clear]
       before_action :set_cart_item, only: %i[update_item remove_item]
       before_action :set_checkout_cart, only: %i[checkout]
 
@@ -13,6 +13,14 @@ module Api
       def show
         cart = customer_profile.carts.active.find_by(shop: @shop)
         render json: { cart: cart && CartSerializer.call(cart) }
+      end
+
+      # DELETE /api/v1/cart?shop_id=:shop_id — clears the customer's active
+      # cart for this shop. Used by the frontend's one-shop-at-a-time cart
+      # policy when the customer confirms replacing it with a different shop.
+      def clear
+        Carts::Clear.new(customer_profile: customer_profile, shop: @shop).call
+        head :no_content
       end
 
       # POST /api/v1/cart/items (shop_id, item_id, quantity)

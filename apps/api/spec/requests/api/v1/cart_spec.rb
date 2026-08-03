@@ -63,6 +63,35 @@ RSpec.describe "Api::V1 Cart", type: :request do
     end
   end
 
+  describe "DELETE /api/v1/cart" do
+    it "clears the active cart for the shop" do
+      post "/api/v1/cart/items", params: { shop_id: shop.id, item_id: item.id, quantity: 1 }, headers: auth_headers(customer)
+
+      delete "/api/v1/cart", params: { shop_id: shop.id }, headers: auth_headers(customer)
+      expect(response).to have_http_status(:no_content)
+
+      get "/api/v1/cart", params: { shop_id: shop.id }, headers: auth_headers(customer)
+      expect(json["cart"]).to be_nil
+    end
+
+    it "is a no-op when there is no active cart for the shop" do
+      delete "/api/v1/cart", params: { shop_id: shop.id }, headers: auth_headers(customer)
+      expect(response).to have_http_status(:no_content)
+    end
+
+    it "does not touch a different shop's cart" do
+      other_shop = create(:shop, :open)
+      other_item = create(:item, shop: other_shop)
+      post "/api/v1/cart/items", params: { shop_id: shop.id, item_id: item.id, quantity: 1 }, headers: auth_headers(customer)
+      post "/api/v1/cart/items", params: { shop_id: other_shop.id, item_id: other_item.id, quantity: 1 }, headers: auth_headers(customer)
+
+      delete "/api/v1/cart", params: { shop_id: shop.id }, headers: auth_headers(customer)
+
+      get "/api/v1/cart", params: { shop_id: other_shop.id }, headers: auth_headers(customer)
+      expect(json.dig("cart", "items").first["item_id"]).to eq(other_item.id)
+    end
+  end
+
   describe "PATCH /api/v1/cart/items/:id" do
     it "updates the quantity" do
       post "/api/v1/cart/items", params: { shop_id: shop.id, item_id: item.id, quantity: 1 }, headers: auth_headers(customer)

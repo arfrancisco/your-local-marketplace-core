@@ -60,8 +60,10 @@ Rails.application.routes.draw do
       post "client_errors",     to: "client_errors#create"
 
       # Customer cart, scoped to one shop at a time (ADR 0008). Requires a
-      # customer profile; cart-to-order checkout is not built yet (rest of M3).
+      # customer profile. `delete "cart"` clears a whole shop's cart (the
+      # frontend's one-shop-at-a-time policy) rather than one line at a time.
       get    "cart",             to: "cart#show"
+      delete "cart",             to: "cart#clear"
       post   "cart/items",       to: "cart#add_item"
       patch  "cart/items/:id",   to: "cart#update_item"
       delete "cart/items/:id",   to: "cart#remove_item"
