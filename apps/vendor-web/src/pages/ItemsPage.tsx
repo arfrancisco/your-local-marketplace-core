@@ -31,6 +31,39 @@ export function ItemsPage() {
     setItems((prev) => prev.map((i) => (i.id === item.id ? res.item : i)))
   }
 
+  // Swaps this item's position with its neighbor's, rather than renumbering
+  // the whole list — position values don't need to be contiguous, just
+  // ordered, so a swap between the two affected rows is all a reorder needs.
+  const [moving, setMoving] = useState(false)
+
+  function positionFormData(position: number) {
+    const fd = new FormData()
+    fd.append('item[position]', String(position))
+    return fd
+  }
+
+  async function moveItem(index: number, direction: -1 | 1) {
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= items.length || moving) return
+    const current = items[index]
+    const target = items[targetIndex]
+    setMoving(true)
+    try {
+      const [currentRes, targetRes] = await Promise.all([
+        api.updateItem(current.id, positionFormData(target.position)),
+        api.updateItem(target.id, positionFormData(current.position)),
+      ])
+      setItems((prev) => {
+        const next = [...prev]
+        next[index] = targetRes.item
+        next[targetIndex] = currentRes.item
+        return next
+      })
+    } finally {
+      setMoving(false)
+    }
+  }
+
   async function onCreate(e: FormEvent) {
     e.preventDefault()
     setError(null)
@@ -81,16 +114,38 @@ export function ItemsPage() {
         <table className="inventory-table">
           <thead>
             <tr>
+              <th scope="col" className="reorder-col">Order</th>
               <th scope="col">Item</th>
               <th scope="col">Price</th>
               <th scope="col">Stock</th>
               <th scope="col">Tags</th>
+              <th scope="col">Status</th>
               <th scope="col" className="actions-col">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {items.map((item, index) => (
               <tr key={item.id} className={item.enabled ? '' : 'dimmed'}>
+                <td data-label="Order" className="reorder-cell">
+                  <div className="reorder-buttons">
+                    <button
+                      type="button"
+                      onClick={() => moveItem(index, -1)}
+                      disabled={index === 0 || moving}
+                      aria-label={`Move ${item.name} up`}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveItem(index, 1)}
+                      disabled={index === items.length - 1 || moving}
+                      aria-label={`Move ${item.name} down`}
+                    >
+                      ↓
+                    </button>
+                  </div>
+                </td>
                 <td data-label="Item" className="item-name">{item.name}</td>
                 <td data-label="Price">{formatPrice(item.price_cents, item.currency)}</td>
                 <td data-label="Stock">
@@ -102,6 +157,14 @@ export function ItemsPage() {
                 </td>
                 <td data-label="Tags">
                   {item.tags.length > 0 ? item.tags.map((t) => t.name).join(', ') : '—'}
+                </td>
+                <td data-label="Status">
+                  {/* The action button below says what tapping it will do; this
+                      says what's actually true right now — easy to conflate
+                      the two when they're both just "Show"/"Hide" text. */}
+                  <span className={`item-status ${item.enabled ? 'is-shown' : 'is-hidden'}`}>
+                    {item.enabled ? 'Shown in shop' : 'Hidden from shop'}
+                  </span>
                 </td>
                 <td className="actions">
                   <div className="inventory-actions">

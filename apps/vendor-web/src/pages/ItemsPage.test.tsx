@@ -16,6 +16,7 @@ vi.mock('../api/client', async (importOriginal) => {
       createItem: vi.fn(),
       enableItem: vi.fn(),
       disableItem: vi.fn(),
+      updateItem: vi.fn(),
     },
   }
 })
@@ -116,10 +117,12 @@ describe('ItemsPage', () => {
     renderAt('/shops/5/items')
 
     expect(await screen.findByRole('table')).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Order' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Item' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Price' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Stock' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Tags' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Actions' })).toBeInTheDocument()
 
     // Header row plus one row per item.
@@ -155,5 +158,53 @@ describe('ItemsPage', () => {
     expect(api.disableItem).toHaveBeenCalledWith(1)
     // The row flips to "Show" once the item comes back disabled.
     expect(await screen.findAllByRole('button', { name: 'Show' })).toHaveLength(2)
+  })
+
+  it('states plainly whether an item is currently shown or hidden, separate from the action button', async () => {
+    vi.mocked(api.listItems).mockResolvedValue({
+      items: [
+        { ...baseItem, id: 1, name: 'Lumpia', enabled: true },
+        { ...baseItem, id: 2, name: 'Turon', enabled: false },
+      ],
+    })
+
+    renderAt('/shops/5/items')
+
+    expect(await screen.findByText('Shown in shop')).toBeInTheDocument()
+    expect(screen.getByText('Hidden from shop')).toBeInTheDocument()
+  })
+
+  it('reorders items by swapping positions with a neighbor', async () => {
+    vi.mocked(api.listItems).mockResolvedValue({
+      items: [
+        { ...baseItem, id: 1, name: 'Lumpia', position: 0 },
+        { ...baseItem, id: 2, name: 'Turon', position: 1 },
+      ],
+    })
+    vi.mocked(api.updateItem).mockImplementation(async (id) =>
+      id === 1
+        ? { item: { ...baseItem, id: 1, name: 'Lumpia', position: 1 } }
+        : { item: { ...baseItem, id: 2, name: 'Turon', position: 0 } },
+    )
+
+    renderAt('/shops/5/items')
+    await screen.findByText('Lumpia')
+
+    // The first row can't move up, the last row can't move down.
+    expect(screen.getByRole('button', { name: 'Move Lumpia up' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Move Turon down' })).toBeDisabled()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Move Lumpia down' }))
+
+    expect(api.updateItem).toHaveBeenCalledTimes(2)
+    const [firstCall, secondCall] = vi.mocked(api.updateItem).mock.calls
+    expect(firstCall[0]).toBe(1)
+    expect((firstCall[1] as FormData).get('item[position]')).toBe('1')
+    expect(secondCall[0]).toBe(2)
+    expect((secondCall[1] as FormData).get('item[position]')).toBe('0')
+
+    // Rows swap places: Turon now leads.
+    const names = (await screen.findAllByRole('cell', { name: /Lumpia|Turon/ })).map((c) => c.textContent)
+    expect(names).toEqual(['Turon', 'Lumpia'])
   })
 })
