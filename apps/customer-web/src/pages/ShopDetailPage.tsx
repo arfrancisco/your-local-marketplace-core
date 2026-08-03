@@ -258,6 +258,8 @@ export function ShopDetailPage() {
         item={viewingItem}
         onClose={() => setViewingItem(null)}
         onAddToCart={addToCart}
+        onDecrement={(item) => changeQuantity(item.id, quantityOf(item.id) - 1)}
+        quantity={viewingItem ? quantityOf(viewingItem.id) : 0}
       />
     </div>
   )

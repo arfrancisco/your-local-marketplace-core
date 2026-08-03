@@ -10,13 +10,32 @@ interface Props {
   // Adding to cart works whether signed in or not (a local, shop-scoped cart
   // for anonymous visitors) — only checkout itself requires an account.
   onAddToCart: (item: Item) => void
+  onDecrement: (item: Item) => void
+  quantity: number
 }
 
 function formatPrice(cents: number, currency: string) {
   return `${currency} ${(cents / 100).toFixed(2)}`
 }
 
-export function ItemDetailModal({ item, onClose, onAddToCart }: Props) {
+// Same stroked arrow as the shop hero's own back button (ShopDetailPage) —
+// duplicated locally rather than shared, matching this app's existing
+// per-component icon convention.
+function BackArrowIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M19 12H5M12 19l-7-7 7-7"
+        stroke="currentColor"
+        strokeWidth="2.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+export function ItemDetailModal({ item, onClose, onAddToCart, onDecrement, quantity }: Props) {
   const [active, setActive] = useState(0)
   if (!item) return null
 
@@ -26,7 +45,12 @@ export function ItemDetailModal({ item, onClose, onAddToCart }: Props) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" aria-label="Close" onClick={onClose}>×</button>
+        {/* Back button replaces the old top-right "×" — same overlaid-circle
+            treatment as the shop hero's own back button, so "how do I leave
+            this view" reads the same way across the app. */}
+        <button className="shop-back" aria-label="Back" onClick={onClose}>
+          <BackArrowIcon />
+        </button>
 
         {/* Gallery: main image + thumbnail strip when there is more than one. */}
         {current ? (
@@ -60,20 +84,28 @@ export function ItemDetailModal({ item, onClose, onAddToCart }: Props) {
         {item.tags.length > 0 && <p className="muted small">{item.tags.map((t) => t.name).join(', ')}</p>}
         {item.sold_out && <p className="sold-out-label">Sold out</p>}
 
-        {/* Deliberately a one-shot "Add to cart" that closes back to the list,
-            not the same −/+ stepper the item cards now carry. The stepper's job
-            is quick repeat-adjustment while scanning the menu; this modal is a
-            detail/gallery view you open for one item, and closing on add gives
-            immediate feedback (the card behind it now reads "− 1 +" and the
-            header cart icon bumps). A second stepper here would just be a
-            second place to hold the same number with no clear "done". */}
-        {item.sold_out ? (
-          <button style={{ marginTop: '0.5rem' }} disabled>Sold out</button>
-        ) : (
-          <button style={{ marginTop: '0.5rem' }} onClick={() => { onAddToCart(item); onClose() }}>
-            Add to cart
-          </button>
-        )}
+        {/* Same +/− stepper as the item cards behind this modal, bottom-right
+            of the box — one control, one place to hold the count, whether
+            you're scanning the menu or looking at this detail view. */}
+        <div className="row end" style={{ marginTop: '0.5rem' }}>
+          {item.sold_out ? (
+            <button disabled>Sold out</button>
+          ) : quantity === 0 ? (
+            <button className="qty-btn" onClick={() => onAddToCart(item)} aria-label={`Add ${item.name} to cart`}>
+              +
+            </button>
+          ) : (
+            <div className="row gap item-stepper">
+              <button className="qty-btn" onClick={() => onDecrement(item)} aria-label={`Remove one ${item.name}`}>
+                −
+              </button>
+              <span className="item-qty">{quantity}</span>
+              <button className="qty-btn" onClick={() => onAddToCart(item)} aria-label={`Add ${item.name} to cart`}>
+                +
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
