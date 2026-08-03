@@ -20,13 +20,22 @@ function uniqueMobile() {
   return `+63917${Math.floor(1000000 + Math.random() * 8999999)}`
 }
 
+// The verification code isn't sent by an action this test itself waits on —
+// mobile verification is auto-requested by a useEffect the moment screen 2
+// mounts (VerifyMobilePage.tsx), so there's no UI signal to wait for before
+// the challenge exists server-side. Poll briefly instead of fetching once,
+// rather than a blind sleep.
 async function fetchVerificationCode(page: Page, email: string, purpose: string): Promise<string> {
-  const res = await page.request.get(
-    `${API_BASE}/api/v1/test_helpers/verification_code?email=${encodeURIComponent(email)}&purpose=${purpose}`
-  )
-  expect(res.ok(), `test_helpers/verification_code should 200 for ${purpose}`).toBeTruthy()
-  const body = await res.json()
-  return body.code
+  let code: string | undefined
+  await expect(async () => {
+    const res = await page.request.get(
+      `${API_BASE}/api/v1/test_helpers/verification_code?email=${encodeURIComponent(email)}&purpose=${purpose}`
+    )
+    expect(res.ok(), `test_helpers/verification_code should 200 for ${purpose}`).toBeTruthy()
+    code = (await res.json()).code
+  }).toPass({ timeout: 5000 })
+
+  return code!
 }
 
 async function fillScreen1(page: Page, email: string, mobile: string, isResident: boolean) {
@@ -73,6 +82,9 @@ test('full flow: register, verify mobile, complete profile as a resident', async
   })
 
   await test.step('lands in the app, signed in', async () => {
+    // Nav is behind a hamburger menu now — "My account" isn't on-screen
+    // until it's opened.
+    await page.getByRole('button', { name: 'Menu' }).click()
     await expect(page.getByText('My account')).toBeVisible()
   })
 })

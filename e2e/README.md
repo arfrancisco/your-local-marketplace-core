@@ -60,6 +60,25 @@ npm test
 
 Override the frontend URLs with `CUSTOMER_WEB_URL` / `VENDOR_WEB_URL` env
 vars if you're running against something other than the local default ports.
+Override the API URL with `API_BASE_URL` (no `/api/v1` suffix — the specs
+append it themselves).
+
+## Troubleshooting
+
+- **A Rails dev server is often already running** (e.g. left over from
+  manual testing) **without `ENABLE_TEST_HELPERS=true`.** Rails refuses to
+  start a second instance on the same `tmp/pids/server.pid`, even on a
+  different port, so you can't just start a correctly-configured one
+  alongside it. Either stop the existing server first, or point a fresh one
+  at a different pidfile and port: `bin/rails server -p 3001 --pid
+  tmp/pids/server-e2e.pid`, then point `API_BASE_URL` / `CUSTOMER_WEB_URL` /
+  `VENDOR_WEB_URL` (and each frontend's own `VITE_API_BASE_URL`) at that
+  port instead. Remember to add whatever port(s) you pick to `CORS_ORIGINS`
+  too.
+- **Don't set `VITE_SKIP_VERIFICATION=true`** in customer-web's env while
+  running `registration-and-verification.spec.ts` — that flag (see
+  `docs/open-decisions.md`) skips the mobile-verification screen entirely,
+  which is exactly what that spec exercises.
 
 ## What's covered
 

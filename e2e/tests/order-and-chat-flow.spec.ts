@@ -35,14 +35,24 @@ test('vendor opening message, checkout, real-time chat, and status transition', 
     await vendor.fill('input[type=password]', PASSWORD)
     await vendor.click('button[type=submit]')
     await vendor.waitForURL('**/shops')
+    // Vendor-web is a single-shop dashboard (not a shop list) — /shops lands
+    // directly on this vendor's one shop, with an "Edit shop details" link.
+    await expect(vendor.getByRole('heading', { name: SHOP_NAME })).toBeVisible()
 
-    await vendor.locator('li.card', { hasText: SHOP_NAME }).getByText('Edit').click()
+    await vendor.click('text=Edit shop details')
     await vendor.waitForURL('**/shops/*/edit')
     // The edit form's fields populate asynchronously after fetching the shop;
     // wait for that before typing so the fetch doesn't clobber our input.
     await vendor.waitForFunction(() => (document.querySelector('input') as HTMLInputElement | null)?.value.length)
     await vendor.waitForTimeout(500) // let React StrictMode's double effect-fire settle
-    await vendor.getByLabel('Message').fill(OPENING_MESSAGE_TEXT)
+    // Placeholder, not getByLabel('Message') — a label wrapping a text
+    // control's accessible name includes that control's current value (per
+    // the accname spec), so once this shop's opening message is non-empty
+    // (true from the second run onward, since this reuses the same seeded
+    // shop every time), the name becomes "Message" + the saved text and
+    // stops matching an exact "Message" lookup entirely. The placeholder
+    // is stable regardless of the field's current value.
+    await vendor.getByPlaceholder('e.g. GCash to 0917-xxx-xxxx. Please send proof of payment here.').fill(OPENING_MESSAGE_TEXT)
     await vendor.click('button[type=submit]')
     await vendor.waitForURL('**/shops')
   })
@@ -58,10 +68,10 @@ test('vendor opening message, checkout, real-time chat, and status transition', 
 
     await customer.click(`text=${SHOP_NAME}`)
     await customer.waitForURL('**/shops/pizza-my-heart')
-    await customer.click('button:has-text("Add to cart")')
-    // Cart summary is now behind a floating toggle button (item count +
-    // subtotal), not shown inline automatically — open it before checkout.
-    await customer.click('.cart-fab')
+    await customer.click('button[aria-label="Add Pepperoni Slice to cart"]')
+    // Cart summary is a fixed bottom bar (item count + subtotal), not shown
+    // inline automatically — open it before checkout.
+    await customer.click('.cart-summary-bar')
     await expect(customer.getByText('Your cart')).toBeVisible()
 
     await customer.click('button:has-text("Place order")')

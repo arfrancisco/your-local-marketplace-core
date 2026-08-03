@@ -130,7 +130,11 @@ test('full upgrade flow: verify email, become a vendor, onboarding tour to a rea
   await test.step('onboarding: create the first shop with the payment callout visible', async () => {
     await expect(page.getByText(/this is how you get paid/i)).toBeVisible()
     await page.getByLabel('Name', { exact: true }).fill("Ana's Kitchen")
-    await page.getByLabel('Message').fill('GCash to 0917-555-0000. Please send proof of payment here.')
+    // Placeholder, not getByLabel('Message') — a label wrapping a text
+    // control's accessible name includes that control's current value, so
+    // this stops matching once the field is non-empty (see
+    // order-and-chat-flow.spec.ts, which hits this for real on a reused shop).
+    await page.getByPlaceholder('e.g. GCash to 0917-xxx-xxxx. Please send proof of payment here.').fill('GCash to 0917-555-0000. Please send proof of payment here.')
     await page.getByRole('button', { name: 'Save shop' }).click()
   })
 
@@ -161,7 +165,7 @@ test('a vendor with an existing shop skips onboarding entirely', async ({ page }
 
   await page.getByRole('button', { name: 'Get started' }).click()
   await page.getByLabel('Name', { exact: true }).fill('Returning Vendor Shop')
-  await page.getByLabel('Message').fill('Bank transfer to 1234-5678.')
+  await page.getByPlaceholder('e.g. GCash to 0917-xxx-xxxx. Please send proof of payment here.').fill('Bank transfer to 1234-5678.')
   await page.getByRole('button', { name: 'Save shop' }).click()
   await clickThroughTour(page)
   await page.waitForURL('**/shops')
