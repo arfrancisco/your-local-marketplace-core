@@ -52,7 +52,7 @@ Recommended review stops after M0 and after M3.
 - Direct single-item order placement; no cart stage (0003)
 - Cart deferred (0004); order edits deferred (0005)
 - Images on Cloudflare R2, S3-compatible Active Storage; upload limits:
-  JPEG/PNG/WebP, 5MB, 6/item, 3/shop, 1/chat message (0006)
+  JPEG/PNG/WebP, 5MB, 3/item, 1 per shop photo field, 1/chat message (0006)
 - `GET /shops` uses a daily rotating order, never alphabetical (0007)
 
 ## Conventions

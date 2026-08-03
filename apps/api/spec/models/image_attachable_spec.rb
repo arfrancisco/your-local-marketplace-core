@@ -1,6 +1,7 @@
 require "rails_helper"
 
-# Exercises the ADR 0006 image rules through Item (max 6) and Shop (max 3).
+# Exercises the ADR 0006 image rules through Item (max 3) and Shop (max 1
+# per photo field).
 RSpec.describe ImageAttachable, type: :model do
   def png
     { io: File.open(Rails.root.join("spec/fixtures/files/sample.png")), filename: "sample.png", content_type: "image/png" }
@@ -37,10 +38,17 @@ RSpec.describe ImageAttachable, type: :model do
       expect(shop.errors[:cover_photo].join).to match(/more than 1/)
     end
 
-    it "allows up to 6 photos on an item" do
+    it "allows up to 3 photos on an item" do
       item = build(:item)
-      6.times { item.photos.attach(png) }
+      3.times { item.photos.attach(png) }
       expect(item).to be_valid
+    end
+
+    it "rejects a 4th photo on an item" do
+      item = build(:item)
+      4.times { item.photos.attach(png) }
+      expect(item).not_to be_valid
+      expect(item.errors[:photos].join).to match(/more than 3/)
     end
   end
 end

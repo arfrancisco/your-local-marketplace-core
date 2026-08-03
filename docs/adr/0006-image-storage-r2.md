@@ -35,8 +35,10 @@ Conservative defaults — easy to loosen later, costly to walk back after abuse:
 
 - Allowed types: JPEG, PNG, WebP only (no GIF, no arbitrary types).
 - Max size: 5 MB per image.
-- Item photos: max 6 per item.
-- Shop photos: max 3 per shop.
+- Item photos: max 3 per item (lowered from 6 on 2026-08-03 — most listings
+  only ever used one or two, and a shorter cap keeps the item form and the
+  customer-facing gallery lighter).
+- Shop photos: max 1 per photo field (`profile_photo`, `cover_photo`).
 - Chat: max 1 image per message.
 - Rate-limit upload endpoints per user.
 
