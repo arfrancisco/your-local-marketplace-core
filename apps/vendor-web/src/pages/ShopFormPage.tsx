@@ -1,9 +1,8 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
-import type { FulfillmentMethod, Rating, Shop } from '../api/types'
+import type { FulfillmentMethod, Shop } from '../api/types'
 import { TourCallout } from '../components/TourCallout'
-import { RatingList, RatingSummary } from '../components/Ratings'
 import { ImageCropModal } from '../components/ImageCropModal'
 
 const METHODS: FulfillmentMethod[] = ['pickup', 'delivery']
@@ -69,7 +68,6 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
   const [openingMessagePhotos, setOpeningMessagePhotos] = useState<FileList | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [ratings, setRatings] = useState<Rating[]>([])
 
   useEffect(() => {
     // One shop per vendor for now — direct navigation to /shops/new after
@@ -97,14 +95,6 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
       setOpeningMessage(s.opening_message ?? '')
     })
   }, [id, editing])
-
-  // Read-only: vendors see their standing and what was said, but can't reply
-  // to or remove a review. Only meaningful for a shop that already exists,
-  // and only once we know its slug (the reviews endpoint is slug-keyed).
-  useEffect(() => {
-    if (!shop?.slug) return
-    api.listShopRatings(shop.slug).then((res) => setRatings(res.ratings)).catch(() => setRatings([]))
-  }, [shop?.slug])
 
   // Object URLs for the cropped previews, revoked when replaced or on unmount.
   useEffect(() => () => {
@@ -359,20 +349,6 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
           onCancel={() => setCropping(null)}
           onConfirm={onCropConfirmed}
         />
-      )}
-
-      {editing && shop && (
-        <section>
-          <h2>Reviews</h2>
-          <p>
-            <RatingSummary
-              averageRating={shop.average_rating}
-              ratingsCount={shop.ratings_count}
-              emptyLabel="No reviews yet."
-            />
-          </p>
-          {ratings.length > 0 && <RatingList ratings={ratings} />}
-        </section>
       )}
     </div>
   )

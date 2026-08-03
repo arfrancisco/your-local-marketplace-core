@@ -171,6 +171,7 @@ export function ShopDashboardPage({ onboardingMode = false, onTourDone }: ShopDa
             />
           )}
         </div>
+        <Link className="button" to={`/shops/${shop.id}/reviews`}>Reviews</Link>
       </div>
 
       {confirmingClose && (
