@@ -334,6 +334,26 @@ button.link {
 .modal-done { text-align: center; }
 .modal.wide { max-width: 480px; }
 
+/* Anchored to the bottom of the screen instead of centred — the cart uses
+   this so its contents (qty steppers, "Place order") land near the floating
+   cart icon that opens it (bottom-right, see .bottom-fabs), reachable by
+   thumb without the reach-and-recenter of a dialog floating mid-screen.
+   align-self: flex-end overrides .modal-backdrop's align-items: center on
+   the cross axis only, the same trick .modal.drawer uses on the main axis. */
+.modal.sheet {
+  align-self: flex-end;
+  width: 100%;
+  max-width: 420px;
+  max-height: 85vh;
+  overflow-y: auto;
+  border-radius: 16px 16px 0 0;
+  animation: sheet-in 180ms ease-out;
+}
+@keyframes sheet-in {
+  from { transform: translateY(110%); }
+  to { transform: translateY(0); }
+}
+
 /* Item photo gallery (inside ItemDetailModal). The wrapper bleeds out past
    .modal's own 1.5rem padding (negative margin) flush to the card's left/
    right/top edges, clipping the photo to match the card's own top corners —

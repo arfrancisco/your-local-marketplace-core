@@ -126,7 +126,7 @@ describe('CartContext + header cart icon', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: /cart, 1 item$/i }))
     const drawer = await screen.findByRole('dialog', { name: /your cart/i })
-    expect(drawer).toHaveClass('drawer')
+    expect(drawer).toHaveClass('sheet')
     expect(screen.getByText('Adobo Bowl')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: /close cart/i }))

@@ -4,11 +4,13 @@ function formatPrice(cents: number, currency: string) {
   return `${currency} ${(cents / 100).toFixed(2)}`
 }
 
-// The cart used to be an inline card sitting in ShopDetailPage's document flow.
-// It is a right-anchored drawer now, opened from the header's persistent cart
-// icon, so it is reachable from anywhere without scrolling to find it. Shares
-// the .modal-backdrop/.modal convention with every other overlay in this app;
-// .drawer is what pins it to the right edge instead of centering it.
+// The cart used to be an inline card sitting in ShopDetailPage's document flow,
+// then a right-anchored drawer. It is a bottom sheet now, opened from the
+// floating cart icon (bottom-right, see .bottom-fabs) — anchoring the sheet
+// to the bottom keeps the qty steppers and "Place order" near where the
+// thumb already is, instead of reaching up to a dialog floating mid-screen.
+// Shares the .modal-backdrop/.modal convention with every other overlay in
+// this app; .sheet is what pins it to the bottom edge instead of centering it.
 export function CartModal() {
   const {
     shop,
@@ -32,7 +34,7 @@ export function CartModal() {
   return (
     <div className="modal-backdrop" onClick={closeCart}>
       <div
-        className="modal drawer"
+        className="modal sheet"
         role="dialog"
         aria-modal="true"
         aria-label="Your cart"
