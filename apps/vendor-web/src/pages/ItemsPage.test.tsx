@@ -49,6 +49,12 @@ function renderAt(path: string) {
   )
 }
 
+// Row actions live behind each item's "⋮" kebab menu now — open it before
+// querying for Edit/Hide/Show/Archive.
+async function openMenuFor(itemName: string) {
+  await userEvent.click(await screen.findByRole('button', { name: `More actions for ${itemName}` }))
+}
+
 describe('ItemsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -96,22 +102,27 @@ describe('ItemsPage', () => {
     expect(fd.get('item[stock_count]')).toBe('10')
   })
 
-  it('shows an Edit link per item, and a sold-out/in-stock hint when stock is tracked', async () => {
+  it('shows an Edit entry per item, and a sold-out/in-stock hint when stock is tracked', async () => {
     vi.mocked(api.listItems).mockResolvedValue({
       items: [
         { ...baseItem, id: 1, stock_count: 4, sold_out: false },
-        { ...baseItem, id: 2, stock_count: 0, sold_out: true },
+        { ...baseItem, id: 2, name: 'Turon', stock_count: 0, sold_out: true },
       ],
     })
 
     renderAt('/shops/5/items')
+    await screen.findByText('Lumpia')
 
-    expect(await screen.findAllByRole('link', { name: 'Edit' })).toHaveLength(2)
     expect(screen.getByText('4 in stock')).toBeInTheDocument()
-    expect(screen.getByText('Sold out')).toBeInTheDocument()
+    // Appears twice for the sold-out item: once as the sold-out label next
+    // to its name, once as the stock hint under its price.
+    expect(screen.getAllByText('Sold out')).toHaveLength(2)
+
+    await openMenuFor('Lumpia')
+    expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument()
   })
 
-  it('lays the items out as a table row per item, with a cell per column', async () => {
+  it('lays the items out as a card per item, with name/price/tags visible directly', async () => {
     vi.mocked(api.listItems).mockResolvedValue({
       items: [
         { ...baseItem, id: 1, name: 'Lumpia', tags: [{ id: 7, name: 'savory', slug: 'savory' }] },
@@ -121,23 +132,14 @@ describe('ItemsPage', () => {
 
     renderAt('/shops/5/items')
 
-    expect(await screen.findByRole('table')).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Order' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Item' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Price' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Stock' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Tags' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Actions' })).toBeInTheDocument()
-
-    // Header row plus one row per item.
-    expect(screen.getAllByRole('row')).toHaveLength(3)
-    expect(screen.getByRole('cell', { name: 'Lumpia' })).toBeInTheDocument()
-    expect(screen.getByRole('cell', { name: 'Turon' })).toBeInTheDocument()
-    expect(screen.getAllByRole('cell', { name: 'PHP 150.00' })).toHaveLength(2)
-    expect(screen.getByRole('cell', { name: 'savory' })).toBeInTheDocument()
-    // Untracked stock reads as a placeholder rather than an empty cell.
-    expect(screen.getAllByRole('cell', { name: 'Not tracked' })).toHaveLength(2)
+    expect(await screen.findAllByRole('listitem')).toHaveLength(2)
+    expect(screen.getByRole('heading', { name: 'Lumpia' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Turon' })).toBeInTheDocument()
+    expect(screen.getAllByText('PHP 150.00')).toHaveLength(2)
+    expect(screen.getByText('savory')).toBeInTheDocument()
+    // Untracked stock (the default) shows no stock hint at all, rather than
+    // a vague "Not tracked" label.
+    expect(screen.queryByText(/tracked/i)).not.toBeInTheDocument()
   })
 
   it('labels the visibility toggle Hide/Show and calls the enable/disable endpoints', async () => {
@@ -152,20 +154,22 @@ describe('ItemsPage', () => {
     })
 
     renderAt('/shops/5/items')
+    await screen.findByText('Lumpia')
 
-    const hide = await screen.findByRole('button', { name: 'Hide' })
-    expect(screen.getByRole('button', { name: 'Show' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Disable' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Enable' })).not.toBeInTheDocument()
+    await openMenuFor('Turon')
+    expect(screen.getByRole('menuitem', { name: 'Show' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Disable' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Enable' })).not.toBeInTheDocument()
 
-    await userEvent.click(hide)
+    await openMenuFor('Lumpia')
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Hide' }))
 
     expect(api.disableItem).toHaveBeenCalledWith(1)
-    // The row flips to "Show" once the item comes back disabled.
-    expect(await screen.findAllByRole('button', { name: 'Show' })).toHaveLength(2)
+    // The row flips to "Hidden from shop" once the item comes back disabled.
+    await waitFor(() => expect(screen.getAllByText('Hidden from shop')).toHaveLength(2))
   })
 
-  it('states plainly whether an item is currently shown or hidden, separate from the action button', async () => {
+  it('states plainly whether an item is currently shown or hidden, separate from the action menu', async () => {
     vi.mocked(api.listItems).mockResolvedValue({
       items: [
         { ...baseItem, id: 1, name: 'Lumpia', enabled: true },
@@ -205,12 +209,12 @@ describe('ItemsPage', () => {
     expect((callFor(1)[1] as FormData).get('item[position]')).toBe('1')
     expect((callFor(2)[1] as FormData).get('item[position]')).toBe('0')
 
-    // Rows swap places: Turon now leads.
-    const names = (await screen.findAllByRole('cell', { name: /Lumpia|Turon/ })).map((c) => c.textContent)
+    // Cards swap places: Turon now leads.
+    const names = (await screen.findAllByRole('heading', { level: 3 })).map((h) => h.textContent)
     expect(names).toEqual(['Turon', 'Lumpia'])
   })
 
-  it('archives an item, dropping it out of the active list', async () => {
+  it('archives an item behind a confirmation modal, dropping it out of the active list', async () => {
     vi.mocked(api.listItems).mockResolvedValue({
       items: [{ ...baseItem, id: 1, name: 'Lumpia' }],
     })
@@ -219,10 +223,56 @@ describe('ItemsPage', () => {
     renderAt('/shops/5/items')
     await screen.findByText('Lumpia')
 
+    await openMenuFor('Lumpia')
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Archive' }))
+
+    // Confirmation modal, not an immediate archive.
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(api.archiveItem).not.toHaveBeenCalled()
+
     await userEvent.click(screen.getByRole('button', { name: 'Archive' }))
 
     expect(api.archiveItem).toHaveBeenCalledWith(1)
     await waitFor(() => expect(screen.queryByText('Lumpia')).not.toBeInTheDocument())
+  })
+
+  it('cancels out of the archive confirmation without calling the API', async () => {
+    vi.mocked(api.listItems).mockResolvedValue({
+      items: [{ ...baseItem, id: 1, name: 'Lumpia' }],
+    })
+
+    renderAt('/shops/5/items')
+    await screen.findByText('Lumpia')
+
+    await openMenuFor('Lumpia')
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Archive' }))
+    await screen.findByRole('dialog')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(api.archiveItem).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByText('Lumpia')).toBeInTheDocument()
+  })
+
+  it('closes the actions menu when clicking outside or pressing Escape', async () => {
+    vi.mocked(api.listItems).mockResolvedValue({
+      items: [{ ...baseItem, id: 1, name: 'Lumpia' }],
+    })
+
+    renderAt('/shops/5/items')
+    await screen.findByText('Lumpia')
+
+    await openMenuFor('Lumpia')
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+
+    fireEvent.mouseDown(document.body)
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+
+    await openMenuFor('Lumpia')
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 
   it('switches to the archived-items view and unarchives from there', async () => {
@@ -239,9 +289,9 @@ describe('ItemsPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Archived items' }))
     await screen.findByText('Old Item')
     expect(screen.queryByText('Lumpia')).not.toBeInTheDocument()
-    // No Edit/Hide affordances or reorder handle for archived items — the
-    // only meaningful action is bringing it back.
-    expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument()
+    // No actions menu or reorder handle for archived items — the only
+    // meaningful action is bringing it back.
+    expect(screen.queryByRole('button', { name: /more actions/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /drag to reorder/i })).not.toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Unarchive' }))
@@ -249,7 +299,7 @@ describe('ItemsPage', () => {
     await waitFor(() => expect(screen.queryByText('Old Item')).not.toBeInTheDocument())
   })
 
-  it('reorders items by dragging a row onto another row\'s drop target', async () => {
+  it('reorders items by dragging a card onto another card\'s drop target', async () => {
     vi.mocked(api.listItems).mockResolvedValue({
       items: [
         { ...baseItem, id: 1, name: 'Lumpia', position: 0 },
@@ -267,26 +317,24 @@ describe('ItemsPage', () => {
     await screen.findByText('Lumpia')
 
     const lumpiaHandle = screen.getByRole('button', { name: /drag to reorder Lumpia/i })
-    const halohaloRow = screen.getByText('Halo-halo').closest('tr')!
+    const halohaloCard = screen.getByText('Halo-halo').closest('li')!
 
     // jsdom implements neither pointer capture nor elementFromPoint; stub
     // both so the pointer-events drag logic (which reads real screen
     // coordinates in a browser) can be exercised here.
     lumpiaHandle.setPointerCapture = vi.fn()
-    document.elementFromPoint = vi.fn().mockReturnValue(halohaloRow)
+    document.elementFromPoint = vi.fn().mockReturnValue(halohaloCard)
 
     fireEvent.pointerDown(lumpiaHandle, { pointerId: 1 })
     fireEvent.pointerMove(lumpiaHandle, { pointerId: 1, clientX: 10, clientY: 400 })
     fireEvent.pointerUp(lumpiaHandle, { pointerId: 1 })
 
-    // Dropping Lumpia (index 0) onto Halo-halo's row (index 2) shifts every
-    // row in between, so all three get a position PATCH, not just the two
+    // Dropping Lumpia (index 0) onto Halo-halo's card (index 2) shifts every
+    // card in between, so all three get a position PATCH, not just the two
     // endpoints.
     await waitFor(() => expect(api.updateItem).toHaveBeenCalledTimes(3))
 
-    const names = (await screen.findAllByRole('cell', { name: /Lumpia|Turon|Halo-halo/ })).map(
-      (c) => c.textContent,
-    )
+    const names = (await screen.findAllByRole('heading', { level: 3 })).map((h) => h.textContent)
     expect(names).toEqual(['Turon', 'Halo-halo', 'Lumpia'])
   })
 })

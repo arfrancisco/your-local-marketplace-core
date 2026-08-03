@@ -2,6 +2,11 @@ import { useEffect, useState, type FormEvent, type KeyboardEvent, type PointerEv
 import { Link, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { Item } from '../api/types'
+import { colorFor, emojiFor } from '../visuals'
+import { ItemActionsMenu } from '../components/ItemActionsMenu'
+import { ArchiveItemModal } from '../components/ArchiveItemModal'
+
+const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
 
 function formatPrice(cents: number, currency: string) {
   return `${currency} ${(cents / 100).toFixed(2)}`
@@ -23,6 +28,7 @@ export function ItemsPage() {
   const [saving, setSaving] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
+  const [archivingItem, setArchivingItem] = useState<Item | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -37,11 +43,6 @@ export function ItemsPage() {
   // Archiving/unarchiving moves an item to the other view, so it no longer
   // belongs in whichever list is currently shown — drop it locally rather
   // than trying to update it in place.
-  async function archiveItem(item: Item) {
-    await api.archiveItem(item.id)
-    setItems((prev) => prev.filter((i) => i.id !== item.id))
-  }
-
   async function unarchiveItem(item: Item) {
     await api.unarchiveItem(item.id)
     setItems((prev) => prev.filter((i) => i.id !== item.id))
@@ -107,7 +108,7 @@ export function ItemsPage() {
     // Pointer capture keeps events targeted at the handle regardless of
     // where the finger/cursor actually is, so figure out what's visually
     // underneath from the raw coordinates instead.
-    const row = document.elementFromPoint(e.clientX, e.clientY)?.closest('tr[data-item-index]')
+    const row = document.elementFromPoint(e.clientX, e.clientY)?.closest('li[data-item-index]')
     if (!row) return
     setDragOverIndex(Number(row.getAttribute('data-item-index')))
   }
@@ -172,10 +173,10 @@ export function ItemsPage() {
 
   return (
     <div>
-      <div className="row spread">
-        <h1>Inventory</h1>
-        <Link to="/shops">Back to shops</Link>
-      </div>
+      <p className="back-link">
+        <Link to="/shops">← Back to dashboard</Link>
+      </p>
+      <h1>Inventory</h1>
 
       <div className="row gap">
         <button type="button" onClick={() => setShowArchived(false)} disabled={!showArchived}>Active</button>
@@ -187,89 +188,87 @@ export function ItemsPage() {
           {showArchived ? 'No archived items.' : 'No items yet. Add your first one below.'}
         </p>
       ) : (
-        <table className="inventory-table">
-          <thead>
-            <tr>
-              {!showArchived && <th scope="col" className="reorder-col">Order</th>}
-              <th scope="col">Item</th>
-              <th scope="col">Price</th>
-              <th scope="col">Stock</th>
-              <th scope="col">Tags</th>
-              {!showArchived && <th scope="col">Status</th>}
-              <th scope="col" className="actions-col">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, index) => (
-              <tr
-                key={item.id}
-                data-item-index={index}
-                className={[
-                  item.enabled ? '' : 'dimmed',
-                  draggedIndex === index ? 'dragging' : '',
-                  dragOverIndex === index && draggedIndex !== index ? 'drag-over' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-              >
+        <ul className="list">
+          {items.map((item, index) => (
+            <li
+              key={item.id}
+              data-item-index={index}
+              className={[
+                'card',
+                'row',
+                'spread',
+                'item-row',
+                'inventory-item-row',
+                item.enabled ? '' : 'hidden-item',
+                draggedIndex === index ? 'dragging' : '',
+                dragOverIndex === index && draggedIndex !== index ? 'drag-over' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              <div className="item-main">
                 {!showArchived && (
-                  <td data-label="Order" className="reorder-cell">
-                    <button
-                      type="button"
-                      className="drag-handle"
-                      onPointerDown={(e) => onHandlePointerDown(e, index)}
-                      onPointerMove={onHandlePointerMove}
-                      onPointerUp={onHandlePointerUp}
-                      onPointerCancel={onHandlePointerUp}
-                      onKeyDown={(e) => onHandleKeyDown(e, index)}
-                      disabled={moving}
-                      aria-label={`Drag to reorder ${item.name}, or use arrow keys`}
-                    >
-                      ⠿
-                    </button>
-                  </td>
+                  <button
+                    type="button"
+                    className="drag-handle"
+                    onPointerDown={(e) => onHandlePointerDown(e, index)}
+                    onPointerMove={onHandlePointerMove}
+                    onPointerUp={onHandlePointerUp}
+                    onPointerCancel={onHandlePointerUp}
+                    onKeyDown={(e) => onHandleKeyDown(e, index)}
+                    disabled={moving}
+                    aria-label={`Drag to reorder ${item.name}, or use arrow keys`}
+                  >
+                    ⠿
+                  </button>
                 )}
-                <td data-label="Item" className="item-name">{item.name}</td>
-                <td data-label="Price">{formatPrice(item.price_cents, item.currency)}</td>
-                <td data-label="Stock">
-                  {item.stock_count === null
-                    ? 'Not tracked'
-                    : item.sold_out
-                      ? 'Sold out'
-                      : `${item.stock_count} in stock`}
-                </td>
-                <td data-label="Tags">
-                  {item.tags.length > 0 ? item.tags.map((t) => t.name).join(', ') : '—'}
-                </td>
-                {!showArchived && (
-                  <td data-label="Status">
-                    {/* The action button below says what tapping it will do; this
-                        says what's actually true right now — easy to conflate
-                        the two when they're both just "Show"/"Hide" text. */}
-                    <span className={`item-status ${item.enabled ? 'is-shown' : 'is-hidden'}`}>
-                      {item.enabled ? 'Shown in shop' : 'Hidden from shop'}
-                    </span>
-                  </td>
-                )}
-                <td className="actions">
-                  <div className="inventory-actions">
-                    {showArchived ? (
-                      <button onClick={() => unarchiveItem(item)}>Unarchive</button>
-                    ) : (
-                      <>
-                        <Link className="button" to={`/shops/${shopId}/items/${item.id}/edit`}>Edit</Link>
-                        <button onClick={() => toggleEnabled(item)}>
-                          {item.enabled ? 'Hide' : 'Show'}
-                        </button>
-                        <button onClick={() => archiveItem(item)}>Archive</button>
-                      </>
-                    )}
+                {item.photos[0] ? (
+                  <img className="thumb" src={`${API_ORIGIN}${item.photos[0].url}`} alt={item.name} />
+                ) : (
+                  <div className="thumb tile" style={{ background: colorFor(item.name) }} aria-hidden>
+                    {emojiFor(`${item.name} ${item.tags.map((t) => t.name).join(' ')}`)}
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                )}
+                <div>
+                  <h3>{item.name}</h3>
+                  {item.description && <p className="muted">{item.description}</p>}
+                  {item.tags.length > 0 && <p className="muted small">{item.tags.map((t) => t.name).join(', ')}</p>}
+                  {item.sold_out && <p className="sold-out-label">Sold out</p>}
+                </div>
+              </div>
+              <div className="price-col">
+                <strong>{formatPrice(item.price_cents, item.currency)}</strong>
+                {item.stock_count !== null && (
+                  <span className="muted small">
+                    {item.sold_out ? 'Sold out' : `${item.stock_count} in stock`}
+                  </span>
+                )}
+                {!showArchived && (
+                  // The action button below says what tapping it will do; this
+                  // says what's actually true right now — easy to conflate
+                  // the two when they're both just "Show"/"Hide" text.
+                  <span className={`item-status ${item.enabled ? 'is-shown' : 'is-hidden'}`}>
+                    {item.enabled ? 'Shown in shop' : 'Hidden from shop'}
+                  </span>
+                )}
+                {showArchived && (
+                  <button type="button" onClick={() => unarchiveItem(item)}>Unarchive</button>
+                )}
+              </div>
+              {/* Pinned to the card's top-right corner rather than stacked in
+                  price-col — keeps the bottom price row free of anything but
+                  price/stock/status. */}
+              {!showArchived && (
+                <ItemActionsMenu
+                  item={item}
+                  shopId={shopId}
+                  onToggleEnabled={() => toggleEnabled(item)}
+                  onArchiveRequest={() => setArchivingItem(item)}
+                />
+              )}
+            </li>
+          ))}
+        </ul>
       )}
 
       {!showArchived && !addOpen && (
@@ -336,6 +335,17 @@ export function ItemsPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {archivingItem && (
+        <ArchiveItemModal
+          item={archivingItem}
+          onClose={() => setArchivingItem(null)}
+          onArchived={() => {
+            setItems((prev) => prev.filter((i) => i.id !== archivingItem.id))
+            setArchivingItem(null)
+          }}
+        />
       )}
     </div>
   )

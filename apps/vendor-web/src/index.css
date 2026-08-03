@@ -277,54 +277,10 @@ button:disabled { opacity: 0.6; cursor: default; }
   cursor: pointer;
 }
 
-/* Inventory table — vendor item list on ItemsPage. A single semantic
-   <table> that reflows into stacked blocks below the mobile breakpoint
-   (no second markup, no table library). */
-.inventory-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  margin: 1rem 0;
-}
-.inventory-table th,
-.inventory-table td {
-  text-align: left;
-  vertical-align: middle;
-  padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid #e5e7eb;
-}
-.inventory-table thead th {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #6b7280;
-  background: #f9fafb;
-  white-space: nowrap;
-}
-.inventory-table tbody tr:last-child td { border-bottom: none; }
-/* De-emphasizes a hidden item's info without touching the action button in
-   the same row — row-level `opacity` would fade the Show button along with
-   everything else (opacity composites the whole element as one unit, so no
-   child can "undo" it), making the one thing you're supposed to tap here
-   look disabled. Muting each informational cell's text color individually
-   avoids that; .actions and .reorder-cell are deliberately left out. */
-.inventory-table tr.dimmed { background: #f9fafb; }
-.inventory-table tr.dimmed td:not(.actions):not(.reorder-cell) { color: #9ca3af; }
-.inventory-table .item-name { font-weight: 600; }
-.inventory-table th.actions-col,
-.inventory-table td.actions { text-align: right; }
-.inventory-actions {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-}
-
-.inventory-table th.reorder-col,
-.inventory-table td.reorder-cell { width: 1%; white-space: nowrap; }
+/* Inventory list — vendor item cards on ItemsPage. Reuses the same card/
+   item-row/thumb/price-col markup as ShopPreviewPage.tsx (which mirrors
+   customer-web's own item cards) so a vendor sees roughly what a customer
+   would, plus the vendor-only bits added below. */
 .drag-handle {
   width: 32px;
   height: 32px;
@@ -345,10 +301,10 @@ button:disabled { opacity: 0.6; cursor: default; }
 }
 .drag-handle:active { cursor: grabbing; }
 .drag-handle:disabled { cursor: not-allowed; opacity: 0.5; }
-/* The dragged row fades in place; the row currently under the pointer gets a
-   top-edge highlight showing where it'll land on drop. */
-.inventory-table tr.dragging { opacity: 0.4; }
-.inventory-table tr.drag-over { box-shadow: inset 0 2px 0 #2563eb; }
+/* The dragged card fades in place; the card currently under the pointer
+   gets a top-edge highlight showing where it'll land on drop. */
+.inventory-item-row.dragging { opacity: 0.4; }
+.inventory-item-row.drag-over { box-shadow: inset 0 2px 0 #2563eb; }
 
 /* States what's actually true right now, distinct from the action button
    next to it (which says what tapping it *will do* — easy to conflate the
@@ -363,63 +319,120 @@ button:disabled { opacity: 0.6; cursor: default; }
 .item-status.is-shown { background: #dcfce7; color: #166534; }
 .item-status.is-hidden { background: #f3f4f6; color: #6b7280; }
 
-@media (max-width: 640px) {
-  /* Rows become stacked blocks. The header row is dropped (table semantics
-     are gone once tr/td are display:block anyway) and each cell grows its
-     own label from the `data-label` attribute instead. */
-  .inventory-table,
-  .inventory-table tbody,
-  .inventory-table tr,
-  .inventory-table td {
-    display: block;
-    width: 100%;
-  }
-  .inventory-table { border: none; background: none; }
-  .inventory-table thead { display: none; }
-  .inventory-table tr {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    padding: 0.4rem 0;
-    margin-bottom: 0.75rem;
-  }
-  .inventory-table td {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.75rem;
-    text-align: right;
-    border-bottom: none;
-    padding: 0.3rem 0.9rem;
-  }
-  .inventory-table td::before {
-    content: attr(data-label);
-    flex: 0 0 auto;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #6b7280;
-  }
-  .inventory-table td.item-name { font-size: 1.05rem; }
-  /* The action buttons are self-explanatory, so no pseudo-label for them. */
-  .inventory-table td.actions {
-    justify-content: flex-end;
-    padding-top: 0.55rem;
-  }
-  .inventory-table td.actions::before { content: none; }
+/* The shared .item-row clips overflow to bleed ShopPreviewPage's photo to
+   the card's rounded corners. Inventory cards have a drag-handle before the
+   thumb, so the photo no longer reaches the edge anyway — but the clip was
+   also cutting off the actions dropdown below, so it's turned back off here.
+   position: relative anchors the pinned-corner actions menu below. */
+.item-row.inventory-item-row { overflow: visible; position: relative; }
 
-  /* The handle icon is self-explanatory, and the row itself already implies
-     "this item"; right-aligned like the actions row rather than stacked with
-     a label. Native HTML5 drag-and-drop has no touch support, so on mobile
-     this handle is really just the arrow-key entry point. */
-  .inventory-table td.reorder-cell {
-    justify-content: flex-end;
-    padding-top: 0.55rem;
-    padding-bottom: 0;
-  }
-  .inventory-table td.reorder-cell::before { content: none; }
+/* The actions menu is pinned to the card's top-right corner instead of
+   living in price-col, so the bottom price row stays free of anything but
+   price/stock/status. Reserve room in the name/description block so text
+   never runs under it. */
+.inventory-item-row > .item-actions-menu {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
 }
+.item-row.inventory-item-row .item-main > div { padding-right: 2.75rem; }
+
+/* Inventory cards stack price + stock + status in the price column, unlike
+   ShopPreviewPage's single price line — scoped so the shared .price-col
+   (used there) is untouched. Extra top padding clears the actions menu
+   pinned above it at the card's top-right corner. */
+.inventory-item-row .price-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+}
+.item-row.inventory-item-row .price-col { padding-top: 2.5rem; }
+/* De-emphasizes a hidden item's info without touching the actions menu
+   trigger — row-level `opacity` would fade that along with everything
+   else (opacity composites the whole element as one unit, so no child can
+   "undo" it), making the one thing you're supposed to tap here look
+   disabled. Muting text color individually avoids that. */
+.inventory-item-row.hidden-item .item-main,
+.inventory-item-row.hidden-item .price-col > strong,
+.inventory-item-row.hidden-item .price-col > .muted {
+  color: #9ca3af;
+}
+.inventory-item-row.hidden-item .thumb { filter: grayscale(1); }
+
+/* Below this width, cramming price/stock/status/actions into a narrow
+   right-hand column forces every line to wrap mid-text. Stacking the price
+   row full-width under the photo/name block instead gives each piece room
+   to breathe — the card gets taller, which is fine (this doesn't need to
+   match the customer-facing card's proportions exactly). */
+@media (max-width: 640px) {
+  .inventory-item-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .item-row.inventory-item-row .price-col {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 0.75rem;
+    padding: 0.75rem 1.1rem 0.85rem 1.1rem;
+    border-top: 1px solid #e5e7eb;
+  }
+}
+
+.kebab-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  line-height: 1;
+  font-size: 1.2rem;
+  color: #6b7280;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.item-actions-menu { position: relative; }
+.item-actions-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.25rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  z-index: 20;
+  min-width: 140px;
+  padding: 0.25rem;
+  display: flex;
+  flex-direction: column;
+}
+.item-actions-dropdown [role='menuitem'] {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.45rem 0.6rem;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  font: inherit;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.item-actions-dropdown [role='menuitem']:hover { background: #f3f4f6; }
+.item-actions-dropdown [role='menuitem'].menu-item-danger { color: #b91c1c; }
+.item-actions-dropdown [role='menuitem'].menu-item-danger:hover { background: #fef2f2; }
+
+.button-danger {
+  background: #b91c1c;
+  color: #fff;
+  border-color: #b91c1c;
+}
+.button-danger:hover:not(:disabled) { background: #991414; }
 
 /* Hamburger menu drawer — the header's nav links live in here now
    (HamburgerMenu.tsx). Same .modal-backdrop/.modal markup as FeedbackModal,

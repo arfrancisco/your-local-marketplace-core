@@ -32,10 +32,10 @@ export function OrdersPage() {
 
   return (
     <div>
-      <div className="row spread">
-        <h1>Orders</h1>
-        <Link to="/shops">Back to shops</Link>
-      </div>
+      <p className="back-link">
+        <Link to="/shops">← Back to dashboard</Link>
+      </p>
+      <h1>Orders</h1>
 
       {shopId && (
         <p className="muted">
