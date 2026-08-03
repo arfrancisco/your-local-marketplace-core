@@ -10,6 +10,12 @@ class FeedbackNotificationJob < ApplicationJob
   queue_as :default
 
   def perform(feedback_submission_id)
+    # Operator-awareness email, not something a developer testing locally
+    # should ever trigger — a real RESEND_API_KEY sitting in a local .env
+    # (e.g. to test the verification-code delivery flow) must not turn every
+    # dev/test feedback submission into a real message to a real inbox.
+    return unless Rails.env.production?
+
     submission = FeedbackSubmission.find_by(id: feedback_submission_id)
     return if submission.nil?
 

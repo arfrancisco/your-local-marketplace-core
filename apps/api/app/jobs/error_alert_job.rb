@@ -12,6 +12,12 @@ class ErrorAlertJob < ApplicationJob
   queue_as :default
 
   def perform(error_log_id)
+    # Operator-awareness email, not something a developer testing locally
+    # should ever trigger — a real RESEND_API_KEY sitting in a local .env
+    # (e.g. to test the verification-code delivery flow) must not turn every
+    # dev/test exception into a real message to a real inbox.
+    return unless Rails.env.production?
+
     error_log = ErrorLog.find_by(id: error_log_id)
     return if error_log.nil?
 
