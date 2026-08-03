@@ -95,8 +95,8 @@ function ActiveOrderButton() {
   return (
     <button className="active-order-fab" onClick={onClick}>
       {activeOrders.length === 1
-        ? 'Track your order →'
-        : `Track your orders (${activeOrders.length}) →`}
+        ? 'Track your order'
+        : `Track your orders (${activeOrders.length})`}
     </button>
   )
 }
