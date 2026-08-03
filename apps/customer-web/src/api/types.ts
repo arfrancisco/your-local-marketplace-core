@@ -120,6 +120,14 @@ export interface Cart {
   subtotal_cents: number
 }
 
+// Matches Order::CUSTOMER_CANCELLATION_REASONS on the backend.
+export type CancellationReasonCode =
+  | 'changed_mind'
+  | 'found_elsewhere'
+  | 'taking_too_long'
+  | 'ordered_by_mistake'
+  | 'other'
+
 export type OrderStatus =
   | 'placed'
   | 'accepted'

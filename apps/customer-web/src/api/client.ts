@@ -1,4 +1,4 @@
-import type { Address, Cart, FulfillmentMethod, Item, Message, Order, Rating, Shop, Tag, User } from './types'
+import type { Address, CancellationReasonCode, Cart, FulfillmentMethod, Item, Message, Order, Rating, Shop, Tag, User } from './types'
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1'
 // Shared with vendor-web's key — both apps are same-origin now (customer at
@@ -193,7 +193,8 @@ export const api = {
 
   listOrders: () => request<{ orders: Order[] }>('/orders'),
   getOrder: (id: number) => request<{ order: Order }>(`/orders/${id}`),
-  cancelOrder: (id: number) => request<{ order: Order }>(`/orders/${id}/transitions`, 'POST', { to_status: 'cancelled' }),
+  cancelOrder: (id: number, params: { reason_code: CancellationReasonCode | string; reason?: string }) =>
+    request<{ order: Order }>(`/orders/${id}/transitions`, 'POST', { to_status: 'cancelled', ...params }),
 
   // Only valid on a completed order, and only once (enforced by the API).
   rateOrder: (orderId: number, score: number, comment?: string) =>

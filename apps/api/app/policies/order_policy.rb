@@ -4,6 +4,8 @@ class OrderPolicy < ApplicationPolicy
   # Only the vendor marks payment received — it's their judgment call based
   # on what they see in chat (ADR 0009), not something a customer asserts.
   def mark_paid?  = vendor_owner?
+  # Vendor-initiated only — the customer is told via chat, not self-service.
+  def update_items? = vendor_owner?
 
   private
 

@@ -48,10 +48,35 @@ RSpec.describe "Api::V1 Orders", type: :request do
       expect(json.dig("order", "status")).to eq("accepted")
     end
 
-    it "lets the customer cancel their own order" do
-      post "/api/v1/orders/#{order.id}/transitions", params: { to_status: "cancelled" }, headers: auth_headers(customer)
+    it "lets the customer cancel their own order with a reason" do
+      post "/api/v1/orders/#{order.id}/transitions",
+           params: { to_status: "cancelled", reason_code: "changed_mind" }, headers: auth_headers(customer)
       expect(response).to have_http_status(:ok)
       expect(json.dig("order", "status")).to eq("cancelled")
+    end
+
+    it "422s a cancellation with no reason_code" do
+      post "/api/v1/orders/#{order.id}/transitions", params: { to_status: "cancelled" }, headers: auth_headers(customer)
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it "422s a cancellation with reason_code 'other' and no free-text reason" do
+      post "/api/v1/orders/#{order.id}/transitions",
+           params: { to_status: "cancelled", reason_code: "other" }, headers: auth_headers(customer)
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it "accepts reason_code 'other' together with a free-text reason" do
+      post "/api/v1/orders/#{order.id}/transitions",
+           params: { to_status: "cancelled", reason_code: "other", reason: "Ordering somewhere else instead" },
+           headers: auth_headers(customer)
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "lets the vendor cancel with a reason from the vendor's own list" do
+      post "/api/v1/orders/#{order.id}/transitions",
+           params: { to_status: "cancelled", reason_code: "item_unavailable" }, headers: auth_headers(vendor_user)
+      expect(response).to have_http_status(:ok)
     end
 
     it "forbids the customer from accepting their own order" do
@@ -61,6 +86,45 @@ RSpec.describe "Api::V1 Orders", type: :request do
 
     it "422s on an illegal transition" do
       post "/api/v1/orders/#{order.id}/transitions", params: { to_status: "completed" }, headers: auth_headers(vendor_user)
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
+  describe "PATCH /api/v1/orders/:id/items" do
+    let(:extra_item) { create(:item, shop: shop, name: "Halo-Halo", price_cents: 12_000) }
+
+    it "lets the vendor add a new line item and returns the updated order" do
+      patch "/api/v1/orders/#{order.id}/items",
+            params: { items: [{ item_id: extra_item.id, quantity: 2 }] },
+            headers: auth_headers(vendor_user)
+
+      expect(response).to have_http_status(:ok)
+      expect(json.dig("order", "items").size).to eq(2)
+    end
+
+    it "forbids the customer from editing their own order's items" do
+      patch "/api/v1/orders/#{order.id}/items",
+            params: { items: [{ item_id: extra_item.id, quantity: 2 }] },
+            headers: auth_headers(customer)
+
+      expect(response).to have_http_status(:forbidden)
+    end
+
+    it "403s for an unrelated vendor" do
+      other = create(:user, :vendor)
+      patch "/api/v1/orders/#{order.id}/items",
+            params: { items: [{ item_id: extra_item.id, quantity: 2 }] },
+            headers: auth_headers(other)
+
+      expect(response).to have_http_status(:forbidden)
+    end
+
+    it "422s once the order is out for the vendor's control (e.g. completed)" do
+      order.update!(status: "completed")
+      patch "/api/v1/orders/#{order.id}/items",
+            params: { items: [{ item_id: extra_item.id, quantity: 2 }] },
+            headers: auth_headers(vendor_user)
+
       expect(response).to have_http_status(:unprocessable_entity)
     end
   end

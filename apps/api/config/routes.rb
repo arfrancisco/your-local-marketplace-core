@@ -76,12 +76,16 @@ Rails.application.routes.draw do
       # namespace. List endpoints differ by role and stay separate (see
       # "orders" here for the customer's own orders vs. "vendor/orders"
       # below for a vendor's shop orders).
-      get  "orders",                    to: "orders#index"
-      get  "orders/:id",                to: "orders#show"
-      post "orders/:id/transitions",    to: "orders#transition"
-      post "orders/:id/mark_paid",      to: "orders#mark_paid"
-      get  "orders/:id/conversation",   to: "conversations#show"
-      post "orders/:id/messages",       to: "conversations#create_message"
+      get   "orders",                    to: "orders#index"
+      get   "orders/:id",                to: "orders#show"
+      post  "orders/:id/transitions",    to: "orders#transition"
+      post  "orders/:id/mark_paid",      to: "orders#mark_paid"
+      # Vendor edits an in-progress order's line items (swap a sold-out
+      # item, adjust quantity) after telling the customer via chat first —
+      # no formal approval gate (see Orders::EditItems).
+      patch "orders/:id/items",         to: "orders#update_items"
+      get   "orders/:id/conversation",   to: "conversations#show"
+      post  "orders/:id/messages",       to: "conversations#create_message"
 
       # Ratings (M4) — customer rates the shop once an order is completed,
       # once per completed order (see Ratings::Create for the actual gate).

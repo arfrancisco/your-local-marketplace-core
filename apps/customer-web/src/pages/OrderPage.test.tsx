@@ -127,3 +127,56 @@ describe('OrderPage rating card', () => {
     expect(screen.queryByText('Your rating')).not.toBeInTheDocument()
   })
 })
+
+describe('OrderPage cancellation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    setToken('test-token')
+    vi.mocked(api.me).mockResolvedValue({ user } as never)
+    vi.mocked(api.getOrder).mockResolvedValue({
+      order: { ...baseOrder, status: 'placed', can_transition_to: ['cancelled'] },
+    } as never)
+  })
+
+  it('blocks submit until a reason is selected', async () => {
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancel order' }))
+    const submit = screen.getAllByRole('button', { name: /cancel order/i })[1]
+    expect(submit).toBeDisabled()
+  })
+
+  it('requires free text only when "Other" is selected', async () => {
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancel order' }))
+    const select = screen.getByLabelText('Reason')
+    const submit = screen.getAllByRole('button', { name: /cancel order/i })[1]
+
+    await userEvent.selectOptions(select, 'changed_mind')
+    expect(submit).not.toBeDisabled()
+
+    await userEvent.selectOptions(select, 'other')
+    expect(submit).toBeDisabled()
+    expect(screen.getByLabelText('Tell us more')).toBeInTheDocument()
+
+    await userEvent.type(screen.getByLabelText('Tell us more'), 'Ordering somewhere else instead')
+    expect(submit).not.toBeDisabled()
+  })
+
+  it('submits the reason and closes the modal on success', async () => {
+    vi.mocked(api.cancelOrder).mockResolvedValue({
+      order: { ...baseOrder, status: 'cancelled', can_transition_to: [] },
+    } as never)
+
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancel order' }))
+    await userEvent.selectOptions(screen.getByLabelText('Reason'), 'changed_mind')
+    await userEvent.click(screen.getAllByRole('button', { name: /cancel order/i })[1])
+
+    expect(api.cancelOrder).toHaveBeenCalledWith(7, { reason_code: 'changed_mind', reason: undefined })
+    expect(await screen.findByText('cancelled')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Reason')).not.toBeInTheDocument()
+  })
+})

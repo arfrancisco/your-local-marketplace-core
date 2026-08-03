@@ -4,6 +4,7 @@ import { api, ApiError } from '../api/client'
 import { useAuth } from '../auth'
 import { OrderChat } from '../OrderChat'
 import { Stars } from '../components/Ratings'
+import { CancelOrderModal } from '../components/CancelOrderModal'
 import type { Order, Photo } from '../api/types'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
@@ -108,26 +109,12 @@ export function OrderPage() {
 
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [cancelling, setCancelling] = useState(false)
   const [viewingPhoto, setViewingPhoto] = useState<Photo | null>(null)
+  const [showCancelModal, setShowCancelModal] = useState(false)
 
   useEffect(() => {
     api.getOrder(orderId).then((res) => setOrder(res.order)).finally(() => setLoading(false))
   }, [orderId])
-
-  async function onCancel() {
-    setError(null)
-    setCancelling(true)
-    try {
-      const res = await api.cancelOrder(orderId)
-      setOrder(res.order)
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not cancel order')
-    } finally {
-      setCancelling(false)
-    }
-  }
 
   if (loading) return <p>Loading order…</p>
   if (!order || !user) return <p>Order not found.</p>
@@ -154,11 +141,8 @@ export function OrderPage() {
         <p className="muted">Fulfillment: {order.fulfillment_method}</p>
 
         {canCancel && (
-          <button onClick={onCancel} disabled={cancelling}>
-            {cancelling ? 'Cancelling…' : 'Cancel order'}
-          </button>
+          <button onClick={() => setShowCancelModal(true)}>Cancel order</button>
         )}
-        {error && <p role="alert" className="error">{error}</p>}
       </div>
 
       {(order.opening_message || order.opening_message_photos.length > 0) && (
@@ -182,6 +166,17 @@ export function OrderPage() {
       <OrderChat orderId={order.id} currentUserId={user.id} />
 
       <PhotoLightbox photo={viewingPhoto} onClose={() => setViewingPhoto(null)} />
+
+      {showCancelModal && (
+        <CancelOrderModal
+          orderId={order.id}
+          onClose={() => setShowCancelModal(false)}
+          onCancelled={(updated) => {
+            setOrder(updated)
+            setShowCancelModal(false)
+          }}
+        />
+      )}
     </div>
   )
 }

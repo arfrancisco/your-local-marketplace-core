@@ -11,6 +11,29 @@ class Order < ApplicationRecord
   STATUSES = %w[placed accepted preparing ready_for_pickup out_for_delivery completed rejected cancelled].freeze
   PAYMENT_STATUSES = %w[unpaid marked_paid].freeze
 
+  # Predefined cancellation reasons, shown as a required picker before a
+  # cancellation is allowed to go through (Orders::TransitionStatus) — real
+  # data on why cancellations happen, instead of none at all. Customer and
+  # vendor get different lists since their reasons differ in kind. "other"
+  # is the escape hatch that requires the free-text `reason` column instead
+  # of just a code. Labels are plain constants, not a migration — safe to
+  # reword any time.
+  CUSTOMER_CANCELLATION_REASONS = {
+    "changed_mind" => "I changed my mind",
+    "found_elsewhere" => "Found a better price or option elsewhere",
+    "taking_too_long" => "It's taking too long",
+    "ordered_by_mistake" => "I ordered by mistake",
+    "other" => "Other"
+  }.freeze
+
+  VENDOR_CANCELLATION_REASONS = {
+    "item_unavailable" => "Item(s) no longer available",
+    "unable_to_fulfill" => "Unable to fulfill in time",
+    "customer_unreachable" => "Customer unreachable",
+    "emergency_closure" => "Shop closing early / emergency",
+    "other" => "Other"
+  }.freeze
+
   # Legal status transitions (ADR 0003). Enforced by Orders::TransitionStatus,
   # never inferred from anything else (e.g. chat content — see ADR 0009).
   TRANSITIONS = {

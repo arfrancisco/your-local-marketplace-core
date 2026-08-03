@@ -1,4 +1,4 @@
-import type { Item, Message, Order, Rating, Shop, User, VendorCustomerNote } from './types'
+import type { CancellationReasonCode, Item, Message, Order, Rating, Shop, User, VendorCustomerNote } from './types'
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1'
 // Shared with customer-web's key — both apps are same-origin now (customer
@@ -120,8 +120,16 @@ export const api = {
   listVendorOrders: (shopId?: number) =>
     request<{ orders: Order[] }>(`/vendor/orders${shopId ? `?shop_id=${shopId}` : ''}`),
   getOrder: (id: number) => request<{ order: Order }>(`/orders/${id}`),
-  transitionOrder: (id: number, to_status: string, reason?: string) =>
-    request<{ order: Order }>(`/orders/${id}/transitions`, 'POST', { to_status, reason }),
+  transitionOrder: (
+    id: number,
+    to_status: string,
+    params?: { reason?: string; reason_code?: CancellationReasonCode | string }
+  ) => request<{ order: Order }>(`/orders/${id}/transitions`, 'POST', { to_status, ...params }),
+  // Vendor-only edit to an in-progress order's line items — see
+  // Orders::EditItems on the API. quantity: 0 removes a line; an item_id
+  // not already on the order adds it.
+  updateOrderItems: (id: number, items: { item_id: number; quantity: number }[]) =>
+    request<{ order: Order }>(`/orders/${id}/items`, 'PATCH', { items }),
   markOrderPaid: (id: number) => request<{ order: Order }>(`/orders/${id}/mark_paid`, 'POST'),
 
   getConversation: (orderId: number) =>

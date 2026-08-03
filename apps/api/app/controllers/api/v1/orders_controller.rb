@@ -4,7 +4,7 @@ module Api
     # (OrderPolicy unifies ownership for both sides) — see config/routes.rb
     # for why this isn't split into a vendor namespace like Shop/Item are.
     class OrdersController < BaseController
-      before_action :set_order, only: %i[show transition mark_paid]
+      before_action :set_order, only: %i[show transition mark_paid update_items]
 
       # GET /api/v1/orders — the current customer's own orders
       def index
@@ -19,10 +19,12 @@ module Api
         render json: { order: OrderSerializer.call(@order) }
       end
 
-      # POST /api/v1/orders/:id/transitions (to_status, reason)
+      # POST /api/v1/orders/:id/transitions (to_status, reason, reason_code)
       # Status changes are explicit button-driven actions only (ADR 0009) —
       # never inferred from chat. A customer may only request "cancelled";
-      # every other transition is vendor-only.
+      # every other transition is vendor-only. reason/reason_code are only
+      # required (and validated) by Orders::TransitionStatus when
+      # to_status is "cancelled".
       def transition
         to_status = params.require(:to_status)
         if customer_actor? && to_status != "cancelled"
@@ -30,7 +32,8 @@ module Api
         end
 
         order = Orders::TransitionStatus.new(
-          order: @order, to_status: to_status, actor_user: current_user, reason: params[:reason]
+          order: @order, to_status: to_status, actor_user: current_user,
+          reason: params[:reason], reason_code: params[:reason_code]
         ).call
         render json: { order: OrderSerializer.call(order) }
       end
@@ -39,6 +42,15 @@ module Api
       # they've seen proof of payment (ADR 0009), not a verified transaction.
       def mark_paid
         order = Orders::MarkPaid.new(order: @order).call
+        render json: { order: OrderSerializer.call(order) }
+      end
+
+      # PATCH /api/v1/orders/:id/items (items: [{ item_id, quantity }]) —
+      # vendor-only (OrderPolicy#edit_items?); see Orders::EditItems for the
+      # editable-status gate and availability re-check.
+      def update_items
+        changes = params.require(:items).map { |c| c.permit(:item_id, :quantity).to_h }
+        order = Orders::EditItems.new(order: @order, changes: changes, actor_user: current_user).call
         render json: { order: OrderSerializer.call(order) }
       end
 

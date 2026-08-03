@@ -48,6 +48,14 @@ export interface Shop {
   updated_at: string
 }
 
+// Matches Order::VENDOR_CANCELLATION_REASONS on the backend.
+export type CancellationReasonCode =
+  | 'item_unavailable'
+  | 'unable_to_fulfill'
+  | 'customer_unreachable'
+  | 'emergency_closure'
+  | 'other'
+
 export type OrderStatus =
   | 'placed'
   | 'accepted'

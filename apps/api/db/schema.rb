@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_03_032930) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_03_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -226,6 +226,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_03_032930) do
     t.string "from_status"
     t.bigint "order_id", null: false
     t.text "reason"
+    t.string "reason_code"
     t.string "to_status", null: false
     t.index ["actor_user_id"], name: "index_order_status_events_on_actor_user_id"
     t.index ["order_id"], name: "index_order_status_events_on_order_id"

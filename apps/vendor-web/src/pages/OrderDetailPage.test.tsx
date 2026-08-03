@@ -16,6 +16,9 @@ vi.mock('../api/client', async (importOriginal) => {
       listCustomerNotes: vi.fn(),
       createCustomerNote: vi.fn(),
       deleteCustomerNote: vi.fn(),
+      transitionOrder: vi.fn(),
+      listItems: vi.fn(),
+      updateOrderItems: vi.fn(),
     },
   }
 })
@@ -115,5 +118,164 @@ describe('OrderDetailPage private customer notes', () => {
 
     expect(api.deleteCustomerNote).toHaveBeenCalledWith(3)
     expect(screen.queryByText(/No-showed for pickup/)).not.toBeInTheDocument()
+  })
+})
+
+describe('OrderDetailPage cancellation', () => {
+  beforeEach(() => {
+    vi.mocked(api.getOrder).mockResolvedValue({
+      order: { ...order, status: 'placed', can_transition_to: ['accepted', 'cancelled'] },
+    })
+    vi.mocked(api.listCustomerNotes).mockResolvedValue({ customer_notes: [] })
+  })
+
+  it('opens the reason modal instead of transitioning directly', async () => {
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancel order' }))
+
+    expect(screen.getByLabelText('Reason')).toBeInTheDocument()
+    expect(api.transitionOrder).not.toHaveBeenCalled()
+  })
+
+  it('requires free text only when "Other" is selected', async () => {
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancel order' }))
+    const select = screen.getByLabelText('Reason')
+    const submit = screen.getAllByRole('button', { name: /cancel order/i })[1]
+
+    await userEvent.selectOptions(select, 'item_unavailable')
+    expect(submit).not.toBeDisabled()
+
+    await userEvent.selectOptions(select, 'other')
+    expect(submit).toBeDisabled()
+
+    await userEvent.type(screen.getByLabelText('Tell us more'), 'Fridge broke down overnight')
+    expect(submit).not.toBeDisabled()
+  })
+
+  it('submits the reason via transitionOrder and closes the modal', async () => {
+    vi.mocked(api.transitionOrder).mockResolvedValue({
+      order: { ...order, status: 'cancelled', can_transition_to: [] },
+    })
+
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancel order' }))
+    await userEvent.selectOptions(screen.getByLabelText('Reason'), 'item_unavailable')
+    await userEvent.click(screen.getAllByRole('button', { name: /cancel order/i })[1])
+
+    expect(api.transitionOrder).toHaveBeenCalledWith(42, 'cancelled', { reason_code: 'item_unavailable', reason: undefined })
+    expect(await screen.findByText('cancelled')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Reason')).not.toBeInTheDocument()
+  })
+
+  it('leaves other transitions (e.g. accept) untouched by the modal', async () => {
+    vi.mocked(api.transitionOrder).mockResolvedValue({
+      order: { ...order, status: 'accepted', can_transition_to: [] },
+    })
+
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Accept' }))
+
+    expect(api.transitionOrder).toHaveBeenCalledWith(42, 'accepted')
+    expect(await screen.findByText('accepted')).toBeInTheDocument()
+  })
+})
+
+describe('OrderDetailPage item edits', () => {
+  const editableOrder: Order = {
+    ...order,
+    status: 'placed',
+    can_transition_to: ['accepted', 'cancelled'],
+    items: [
+      { id: 1, item_id: 10, name: 'Adobo Bowl', unit_price_cents: 15_000, quantity: 1, line_total_cents: 15_000 },
+    ],
+    subtotal_cents: 15_000,
+    total_cents: 15_000,
+  }
+
+  const catalog = [
+    { id: 10, shop_id: 5, name: 'Adobo Bowl', description: null, price_cents: 15_000, currency: 'PHP', enabled: true, stock_count: null, sold_out: false, position: 0, tags: [], photos: [] },
+    { id: 11, shop_id: 5, name: 'Halo-Halo', description: null, price_cents: 8_000, currency: 'PHP', enabled: true, stock_count: null, sold_out: false, position: 1, tags: [], photos: [] },
+  ]
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(api.getOrder).mockResolvedValue({ order: editableOrder })
+    vi.mocked(api.listCustomerNotes).mockResolvedValue({ customer_notes: [] })
+    vi.mocked(api.listItems).mockResolvedValue({ items: catalog })
+  })
+
+  it('offers an "Edit items" affordance while the order is still editable', async () => {
+    renderPage()
+    expect(await screen.findByRole('button', { name: 'Edit items' })).toBeInTheDocument()
+  })
+
+  it('hides the "Edit items" affordance once the order is out for delivery', async () => {
+    vi.mocked(api.getOrder).mockResolvedValue({
+      order: { ...editableOrder, status: 'out_for_delivery', can_transition_to: ['completed'] },
+    })
+    renderPage()
+    await screen.findByText('out for delivery')
+    expect(screen.queryByRole('button', { name: 'Edit items' })).not.toBeInTheDocument()
+  })
+
+  it('adds a new item, adjusts a quantity, and saves both changes in one call', async () => {
+    vi.mocked(api.updateOrderItems).mockResolvedValue({
+      order: {
+        ...editableOrder,
+        items: [
+          { id: 1, item_id: 10, name: 'Adobo Bowl', unit_price_cents: 15_000, quantity: 2, line_total_cents: 30_000 },
+          { id: 2, item_id: 11, name: 'Halo-Halo', unit_price_cents: 8_000, quantity: 1, line_total_cents: 8_000 },
+        ],
+        subtotal_cents: 38_000,
+        total_cents: 38_000,
+      },
+    })
+
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit items' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Increase quantity of Adobo Bowl' }))
+
+    await userEvent.selectOptions(screen.getByLabelText('Add an item from this shop'), '11')
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    expect(api.updateOrderItems).toHaveBeenCalledWith(42, [
+      { item_id: 10, quantity: 2 },
+      { item_id: 11, quantity: 1 },
+    ])
+    expect(await screen.findByText(/Halo-Halo/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument()
+  })
+
+  it('removes a line by decrementing its quantity to 0', async () => {
+    vi.mocked(api.updateOrderItems).mockResolvedValue({
+      order: { ...editableOrder, items: [], subtotal_cents: 0, total_cents: 0 },
+    })
+
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit items' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Decrease quantity of Adobo Bowl' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    expect(api.updateOrderItems).toHaveBeenCalledWith(42, [{ item_id: 10, quantity: 0 }])
+  })
+
+  it('cancels out of edit mode without saving', async () => {
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit items' }))
+    await screen.findByRole('button', { name: 'Save changes' })
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument()
+    expect(api.updateOrderItems).not.toHaveBeenCalled()
   })
 })

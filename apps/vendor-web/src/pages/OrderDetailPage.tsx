@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import { useAuth } from '../auth'
 import { OrderChat } from '../OrderChat'
+import { CancelOrderModal } from '../components/CancelOrderModal'
+import { EditItemsPanel } from '../components/EditItemsPanel'
 import type { Order, OrderStatus, Photo, VendorCustomerNote } from '../api/types'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
@@ -137,6 +139,11 @@ function CustomerNotes({ customerProfileId, orderId }: { customerProfileId: numb
   )
 }
 
+// Matches Orders::EditItems::EDITABLE_STATUSES on the API — once the vendor
+// has committed to a fulfillment path or the order is terminal, edits are
+// no longer allowed.
+const ITEM_EDITABLE_STATUSES: OrderStatus[] = ['placed', 'accepted', 'preparing']
+
 const TRANSITION_LABELS: Record<OrderStatus, string> = {
   placed: 'Placed',
   accepted: 'Accept',
@@ -161,12 +168,18 @@ export function OrderDetailPage() {
   const [transitioning, setTransitioning] = useState(false)
   const [markingPaid, setMarkingPaid] = useState(false)
   const [viewingPhoto, setViewingPhoto] = useState<Photo | null>(null)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [editingItems, setEditingItems] = useState(false)
 
   useEffect(() => {
     api.getOrder(orderId).then((res) => setOrder(res.order)).finally(() => setLoading(false))
   }, [orderId])
 
   async function onTransition(toStatus: OrderStatus) {
+    if (toStatus === 'cancelled') {
+      setShowCancelModal(true)
+      return
+    }
     setError(null)
     setTransitioning(true)
     try {
@@ -228,9 +241,23 @@ export function OrderDetailPage() {
               {TRANSITION_LABELS[status]}
             </button>
           ))}
+          {ITEM_EDITABLE_STATUSES.includes(order.status) && !editingItems && (
+            <button onClick={() => setEditingItems(true)}>Edit items</button>
+          )}
         </div>
         {error && <p role="alert" className="error">{error}</p>}
       </div>
+
+      {editingItems && (
+        <EditItemsPanel
+          order={order}
+          onClose={() => setEditingItems(false)}
+          onSaved={(updated) => {
+            setOrder(updated)
+            setEditingItems(false)
+          }}
+        />
+      )}
 
       {(order.opening_message || order.opening_message_photos.length > 0) && (
         <div className="card opening-message">
@@ -253,6 +280,17 @@ export function OrderDetailPage() {
       <OrderChat orderId={order.id} currentUserId={user.id} />
 
       <PhotoLightbox photo={viewingPhoto} onClose={() => setViewingPhoto(null)} />
+
+      {showCancelModal && (
+        <CancelOrderModal
+          orderId={order.id}
+          onClose={() => setShowCancelModal(false)}
+          onCancelled={(updated) => {
+            setOrder(updated)
+            setShowCancelModal(false)
+          }}
+        />
+      )}
     </div>
   )
 }
