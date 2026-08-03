@@ -103,6 +103,7 @@ DEMO_SHOPS = [
     owner: "Lola Remedios", email: "lolas.kitchen@example.com", slug: "kare-kare-oke",
     name: "Kare-Kare-oke", description: "Home-cooked Filipino meals, fresh daily.",
     address: "Tower A, Unit 3B", fulfillment: %w[pickup delivery], cover_photo: "adobo-candidate.jpg",
+    banner_photo: "banner-kare-kare-oke.jpg",
     items: [
       ["Chicken Adobo Bowl", "Classic pork-and-chicken adobo over garlic rice.", 18_000, ["Rice Meal", "Filipino", "Comfort Food"], "adobo-candidate.jpg"],
       ["Kare-Kare", "Oxtail and vegetables in peanut sauce, with bagoong.", 22_000, ["Filipino", "Ulam"], "oxtail-stew.jpg"],
@@ -113,6 +114,7 @@ DEMO_SHOPS = [
     owner: "Manong Ben", email: "corner.bakeshop@example.com", slug: "bread-pitt",
     name: "Bread Pitt", description: "Fresh bread and pastries baked every morning.",
     address: "Tower B, Ground Floor", fulfillment: %w[pickup], cover_photo: "bread-rolls.jpg",
+    banner_photo: "banner-bread-pitt.jpg",
     items: [
       ["Pandesal (6 pcs)", "Warm, soft classic pandesal.", 4_000, ["Bread", "Breakfast"], "bread-rolls.jpg"],
       ["Ensaymada", "Buttery brioche topped with cheese and sugar.", 5_500, ["Bread", "Merienda"], "sweet-cheese-roll.jpg"],
@@ -123,6 +125,7 @@ DEMO_SHOPS = [
     owner: "Ate Grace", email: "brew.and.co@example.com", slug: "brewhaha",
     name: "Brewhaha", description: "Small-batch coffee and cold drinks.",
     address: "Tower A, Unit 1F", fulfillment: %w[pickup delivery], cover_photo: "iced-latte.jpg",
+    banner_photo: "banner-brewhaha.jpg",
     items: [
       ["Iced Spanish Latte", "Espresso, milk, and a touch of condensed milk.", 13_000, ["Coffee", "Drinks"], "iced-latte.jpg"],
       ["Kapeng Barako", "Strong local brew, served hot.", 9_000, ["Coffee"], "kapeng-barako.jpg"],
@@ -133,6 +136,7 @@ DEMO_SHOPS = [
     owner: "Kuya Ram", email: "sizzle.house@example.com", slug: "lord-of-the-grills",
     name: "Lord of the Grills", description: "Grilled favorites and hearty ulam.",
     address: "Tower C, Unit 2A", fulfillment: %w[pickup delivery], cover_photo: "grill-skewers.jpg",
+    banner_photo: "banner-lord-of-the-grills.jpg",
     items: [
       ["Pork BBQ Skewers (3)", "Sweet-savory grilled pork skewers.", 12_000, ["Grill", "Savory"], "grill-skewers.jpg"],
       ["Chicken Inasal", "Bacolod-style grilled chicken with sinamak.", 17_000, ["Grill", "Filipino"], "chicken-skewer.jpg"],
@@ -143,6 +147,7 @@ DEMO_SHOPS = [
     owner: "Tita Baby", email: "sweet.tooth@example.com", slug: "ube-or-not-ube",
     name: "Ube or Not Ube", description: "Homemade desserts and merienda treats.",
     address: "Tower B, Unit 5C", fulfillment: %w[pickup], cover_photo: "ube-cake.png",
+    banner_photo: "banner-ube-or-not-ube.jpg",
     items: [
       ["Leche Flan", "Silky caramel custard.", 9_000, ["Dessert", "Sweet"], "leche-flan.jpg"],
       ["Halo-Halo", "Shaved ice with beans, fruit, leche flan, and ube.", 12_000, ["Dessert", "Merienda"], "halo-halo.jpg"],
@@ -153,6 +158,7 @@ DEMO_SHOPS = [
     owner: "Coach Mia", email: "green.bowl@example.com", slug: "lettuce-eat-healthy",
     name: "Lettuce Eat Healthy", description: "Fresh salads and healthy rice bowls.",
     address: "Tower A, Unit 8D", fulfillment: %w[pickup delivery], cover_photo: "buddha-bowl.jpg",
+    banner_photo: "banner-lettuce-eat-healthy.jpg",
     items: [
       ["Chicken Caesar Bowl", "Grilled chicken, romaine, parmesan, house Caesar.", 21_000, ["Healthy", "Salad"], "caesar-bowl.jpg"],
       ["Vegan Buddha Bowl", "Quinoa, chickpeas, roasted veg, tahini dressing.", 20_000, ["Healthy", "Vegan"], "buddha-bowl.jpg"],
@@ -163,6 +169,7 @@ DEMO_SHOPS = [
     owner: "Kuya Jun", email: "street.eats@example.com", slug: "i-saw-my-chance",
     name: "I Saw My Chance", description: "Filipino street food favorites, made fresh to order.",
     address: "Tower C, Ground Floor", fulfillment: %w[pickup], cover_photo: "isaw-manila-skewers.jpg",
+    banner_photo: "banner-i-saw-my-chance.jpg",
     items: [
       ["Fishball (10 pcs)", "Deep-fried fishball with sweet and spicy sauce.", 5_000, ["Street Food", "Snack"], "street-food-cart.jpg"],
       ["Kwek-Kwek (8 pcs)", "Orange-battered quail eggs, deep-fried.", 6_000, ["Street Food", "Snack"], "street-food-cart.jpg"],
@@ -173,6 +180,7 @@ DEMO_SHOPS = [
     owner: "Ate Len", email: "milky.way.tea@example.com", slug: "milky-way-tea",
     name: "Milky Way Tea", description: "Milk tea and fruit tea, made fresh per order.",
     address: "Tower B, Unit 2C", fulfillment: %w[pickup delivery], cover_photo: "milk-tea.jpg",
+    banner_photo: "banner-milky-way-tea.jpg",
     items: [
       ["Classic Milk Tea", "Black tea, fresh milk, brown sugar pearls.", 11_000, ["Tea", "Milk Tea", "Drinks"], "milk-tea.jpg"],
       ["Wintermelon Milk Tea", "Wintermelon-infused tea with milk.", 11_000, ["Tea", "Milk Tea", "Drinks"], "milk-tea.jpg"],
@@ -183,6 +191,7 @@ DEMO_SHOPS = [
     owner: "Manong Dado", email: "slice.corner@example.com", slug: "pizza-my-heart",
     name: "Pizza My Heart", description: "Pizza by the slice, baked fresh throughout the day.",
     address: "Tower A, Unit 6A", fulfillment: %w[pickup delivery], cover_photo: "pizza-pepperoni.jpg",
+    banner_photo: "banner-pizza-my-heart.jpg",
     items: [
       ["Pepperoni Slice", "Classic pepperoni with mozzarella.", 9_500, ["Pizza", "Savory"], "pizza-pepperoni.jpg"],
       ["Four Cheese Slice", "Mozzarella, cheddar, parmesan, and feta.", 10_000, ["Pizza", "Savory"], "four-cheese-pizza.jpg"],
@@ -193,6 +202,7 @@ DEMO_SHOPS = [
     owner: "Aling Nena", email: "sunny.side.diner@example.com", slug: "sunny-side-diner",
     name: "Sunny Side Diner", description: "All-day Filipino breakfast, silog meals a specialty.",
     address: "Tower C, Unit 4B", fulfillment: %w[pickup delivery], cover_photo: "tapsilog.jpg",
+    banner_photo: "banner-sunny-side-diner.jpg",
     items: [
       ["Tapsilog", "Beef tapa, garlic rice, and a fried egg.", 14_000, ["Breakfast", "Silog", "Filipino"], "tapsilog.jpg"],
       ["Longsilog", "Sweet longganisa, garlic rice, and a fried egg.", 12_500, ["Breakfast", "Silog", "Filipino"], "longsilog.jpg"],
@@ -203,6 +213,7 @@ DEMO_SHOPS = [
     owner: "Kuya Wesley", email: "wok.this.way@example.com", slug: "wok-this-way",
     name: "Wok This Way", description: "Chinese-Filipino comfort food: siomai, noodles, dimsum.",
     address: "Tower B, Unit 7A", fulfillment: %w[pickup delivery], cover_photo: "siomai.jpg",
+    banner_photo: "banner-wok-this-way.jpg",
     items: [
       ["Siomai (8 pcs)", "Steamed pork and shrimp siomai with soy-calamansi.", 9_000, ["Dimsum", "Chinese"], "siomai.jpg"],
       ["Beef Mami", "Beef noodle soup with scallions.", 13_000, ["Noodles", "Soup", "Chinese"], "beef-noodle.jpg"],
@@ -240,17 +251,27 @@ DEMO_SHOPS.each_with_index do |data, i|
   shop.save!
   shop.open! unless shop.open?
 
-  unless shop.cover_photo.attached?
+  unless shop.profile_photo.attached?
     if data[:cover_photo]
-      # No separate square logo-style assets sourced yet — the same photo
-      # stands in for both fields for now, real demo photos either way.
-      attach_seed_photo(shop, data[:cover_photo], attachment: :cover_photo)
       attach_seed_photo(shop, data[:cover_photo], attachment: :profile_photo)
     else
       rgb = hsl_to_rgb(hue_for(shop.name, 0), 0.55, 0.72)
-      shop.cover_photo.attach(io: StringIO.new(solid_color_png(480, 360, rgb)), filename: "#{shop.slug}-cover.png", content_type: "image/png")
       shop.profile_photo.attach(io: StringIO.new(solid_color_png(200, 200, rgb)), filename: "#{shop.slug}-profile.png", content_type: "image/png")
     end
+  end
+
+  # A distinct wide banner photo, not the same square-ish shot reused for
+  # both fields — replaces whatever's currently attached if it isn't already
+  # the intended banner file, so a shop seeded before this existed picks up
+  # the new photo on the next `db:seed` run instead of keeping the old one
+  # (which was really the profile photo file) forever.
+  current_cover_filename = shop.cover_photo.attached? ? shop.cover_photo.first.filename.to_s : nil
+  if data[:banner_photo] && current_cover_filename != data[:banner_photo]
+    shop.cover_photo.purge if shop.cover_photo.attached?
+    attach_seed_photo(shop, data[:banner_photo], attachment: :cover_photo)
+  elsif !shop.cover_photo.attached?
+    rgb = hsl_to_rgb(hue_for(shop.name, 0), 0.55, 0.72)
+    shop.cover_photo.attach(io: StringIO.new(solid_color_png(480, 360, rgb)), filename: "#{shop.slug}-cover.png", content_type: "image/png")
   end
 
   data[:items].each_with_index do |(name, description, price_cents, tags, photo), position|
@@ -266,6 +287,84 @@ DEMO_SHOPS.each_with_index do |data, i|
     next if item.photos.attached?
 
     photo ? attach_seed_photo(item, photo) : attach_placeholder_photos(item)
+  end
+end
+
+# --- Demo order history + ratings ---------------------------------------------
+# Populates the "price range / rating / completed orders" stat line on the
+# landing page — otherwise every seeded shop reads as brand-new (no orders,
+# no reviews) forever, which is a poor showcase of what that stat line is for.
+# Skipped entirely for a shop that already has a completed order, so this is
+# safe to run again after real orders start happening — it only ever
+# backfills history once, never adds more on top of real activity.
+
+DEMO_REVIEWERS = [
+  ["Marco Reyes", "marco.reviewer@example.com", "+639170020001"],
+  ["Fely Santos", "fely.reviewer@example.com", "+639170020002"],
+  ["Jun dela Cruz", "jun.reviewer@example.com", "+639170020003"],
+  ["Ligaya Torres", "ligaya.reviewer@example.com", "+639170020004"],
+  ["Ronnie Bautista", "ronnie.reviewer@example.com", "+639170020005"]
+].map do |display_name, email, mobile|
+  user = find_or_create_user!(email: email, password: "password123", mobile_number: mobile)
+  user.create_customer_profile!(display_name: display_name) unless user.customer_profile
+  user.customer_profile
+end.freeze
+
+DEMO_REVIEW_COMMENTS = [
+  "Order was ready right on time, would get again.",
+  "Generous portion for the price, neighbors approve.",
+  "Good food, easy pickup — no complaints.",
+  "Tasty and still warm when I got it.",
+  "Solid, consistent every time I've ordered.",
+  nil, # some ratings are just a score, no comment — matches real usage
+  nil
+].freeze
+
+# A per-shop order count, deterministic so re-seeding a fresh DB looks the
+# same rather than random each time — varied enough that shops don't all
+# look identically popular.
+DEMO_ORDER_COUNTS = [12, 47, 8, 23, 61, 15, 34, 9, 52, 19, 27].freeze
+
+Shop.find_each.with_index do |shop, i|
+  next if shop.orders.where(status: "completed").exists?
+
+  items = shop.items.to_a
+  next if items.empty?
+
+  rng = Random.new(shop.id)
+  order_count = DEMO_ORDER_COUNTS[i % DEMO_ORDER_COUNTS.length]
+
+  order_count.times do |n|
+    item = items.sample(random: rng)
+    reviewer = DEMO_REVIEWERS.sample(random: rng)
+    completed_at = rng.rand(1..90).days.ago
+
+    order = Order.create!(
+      customer_profile: reviewer,
+      shop: shop,
+      fulfillment_method: shop.fulfillment_methods.sample(random: rng),
+      status: "completed",
+      subtotal_cents: item.price_cents,
+      total_cents: item.price_cents,
+      currency: item.currency,
+      placed_at: completed_at - 20.minutes,
+      completed_at: completed_at
+    )
+    order.order_items.create!(
+      item: item, item_name: item.name, unit_price_cents: item.price_cents,
+      quantity: 1, line_total_cents: item.price_cents
+    )
+    Conversation.create!(order: order)
+
+    # Roughly 6 in 10 completed orders end up rated — not every customer
+    # leaves a review, same as real life.
+    next unless rng.rand(10) < 6
+
+    Rating.create!(
+      order: order, reviewer_user: reviewer.user, reviewee: shop,
+      score: [3, 4, 4, 5, 5, 5].sample(random: rng),
+      comment: DEMO_REVIEW_COMMENTS.sample(random: rng)
+    )
   end
 end
 

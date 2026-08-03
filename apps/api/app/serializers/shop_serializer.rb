@@ -32,9 +32,23 @@ module ShopSerializer
       # *string* ("4.3"), not a number.
       average_rating: shop.ratings.average(:score)&.round(1)&.to_f,
       ratings_count: shop.ratings.count,
+      # nil (not [0, 0]) when the shop has no enabled items to price, same
+      # "absence over a misleading zero" convention as average_rating above.
+      price_range_cents: price_range_cents(shop),
+      # Completed only (not placed/cancelled/rejected) — a popularity signal,
+      # not a raw order count, so an order that never actually happened
+      # shouldn't count toward it.
+      completed_orders_count: shop.orders.where(status: "completed").count,
       created_at: shop.created_at,
       updated_at: shop.updated_at
     }.merge(include_payment_info ? payment_info(shop) : {})
+  end
+
+  def price_range_cents(shop)
+    enabled = shop.items.enabled
+    return nil unless enabled.exists?
+
+    { min: enabled.minimum(:price_cents), max: enabled.maximum(:price_cents) }
   end
 
   def payment_info(shop)

@@ -27,6 +27,32 @@ RSpec.describe "Api::V1 Discovery", type: :request do
       expect(shop.address).to eq("Unit 12F") # sanity: the private detail still exists on the record
     end
 
+    it "reports the enabled-item price range, and completed orders only in the order count" do
+      shop = create(:shop, :open)
+      create(:item, shop: shop, price_cents: 12_000)
+      create(:item, shop: shop, price_cents: 28_000)
+      create(:item, shop: shop, price_cents: 99_000, enabled: false) # excluded: not shown to customers anyway
+
+      create(:order, :completed, shop: shop)
+      create(:order, :completed, shop: shop)
+      create(:order, shop: shop, status: "cancelled")
+
+      get "/api/v1/shops", headers: auth_headers(customer)
+
+      body = json["shops"].first
+      expect(body["price_range_cents"]).to eq({ "min" => 12_000, "max" => 28_000 })
+      expect(body["completed_orders_count"]).to eq(2)
+    end
+
+    it "has no price range for a shop with no enabled items" do
+      shop = create(:shop, :open)
+      create(:item, shop: shop, enabled: false)
+
+      get "/api/v1/shops", headers: auth_headers(customer)
+
+      expect(json["shops"].first["price_range_cents"]).to be_nil
+    end
+
     it "orders by the daily rotation service, not alphabetically" do
       # The non-alphabetical claim itself is proven deterministically (with
       # controlled ids) in spec/services/shop_rotation_spec.rb. This only
