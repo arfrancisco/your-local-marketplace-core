@@ -530,10 +530,19 @@ button.link {
 /* Flush against the card's own edges (no padding, no radius of its own) —
    .shop-row's overflow:hidden + border-radius clips it to match the card's
    rounded corners automatically, so the photo fills the space instead of
-   floating in it with a border of whitespace around a smaller square. */
+   floating in it with a border of whitespace around a smaller square. A
+   fixed square (not stretched to match the row) is what actually keeps
+   every card consistent — stretching to fit made each thumbnail's aspect
+   ratio depend on how much text that particular shop happened to have
+   (tagline length, whether the stats line was even present), so shops with
+   more text got squarer photos and shops with less got squished ones.
+   align-self: flex-start keeps it pinned to the top-left corner rather
+   than centered, so a row taller than 108px (more text) just leaves quiet
+   space below the photo instead of floating it awkwardly mid-row. */
 .shop-row-thumb {
   width: 108px;
-  align-self: stretch;
+  height: 108px;
+  align-self: flex-start;
   object-fit: cover;
   flex-shrink: 0;
 }
