@@ -9,6 +9,7 @@ import { ItemDetailModal } from '../components/ItemDetailModal'
 import { RatingList, RatingSummary } from '../components/Ratings'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
+const REVIEWS_PER_PAGE = 5
 
 function formatPrice(cents: number, currency: string) {
   return `${currency} ${(cents / 100).toFixed(2)}`
@@ -99,6 +100,11 @@ export function ShopDetailPage() {
   const [notFound, setNotFound] = useState(false)
   const [viewingItem, setViewingItem] = useState<Item | null>(null)
   const [ratings, setRatings] = useState<Rating[]>([])
+  // Collapsed by default — a shop with dozens of reviews shouldn't dump them
+  // all onto the page before anyone's asked to see them.
+  const [reviewsOpen, setReviewsOpen] = useState(false)
+  const [reviewsLoading, setReviewsLoading] = useState(false)
+  const [reviewsPage, setReviewsPage] = useState(0)
 
   useEffect(() => {
     if (!slug) return
@@ -117,15 +123,25 @@ export function ShopDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, user])
 
-  // Reviews are public and independent of the cart flow, so they load on their
-  // own — a failure here should leave the shop itself perfectly usable.
+  // Reviews are public and independent of the cart flow, so they load on
+  // their own — a failure here should leave the shop itself perfectly
+  // usable. Nothing fetches until the accordion is actually opened: the
+  // summary line above (average/count) rides on the Shop payload already,
+  // so there's no reason to pull the full list before anyone's asked for it.
   useEffect(() => {
-    if (!slug) return
-    api.listShopRatings(slug).then((res) => setRatings(res.ratings)).catch(() => setRatings([]))
-  }, [slug])
+    if (!slug || !reviewsOpen) return
+    setReviewsLoading(true)
+    api
+      .listShopRatings(slug, { limit: REVIEWS_PER_PAGE, offset: reviewsPage * REVIEWS_PER_PAGE })
+      .then((res) => setRatings(res.ratings))
+      .catch(() => setRatings([]))
+      .finally(() => setReviewsLoading(false))
+  }, [slug, reviewsOpen, reviewsPage])
 
   if (loading) return <p>Loading…</p>
   if (notFound || !shop) return <p>This shop is not available.</p>
+
+  const totalReviewPages = Math.max(1, Math.ceil(shop.ratings_count / REVIEWS_PER_PAGE))
 
   return (
     <div>
@@ -192,15 +208,51 @@ export function ShopDetailPage() {
         })}
       </ul>
 
-      <h2 className="section">Reviews</h2>
-      <p>
+      <div className="row spread reviews-header">
+        <h2 className="section">Reviews</h2>
         <RatingSummary
           averageRating={shop.average_rating}
           ratingsCount={shop.ratings_count}
           emptyLabel="No reviews yet."
         />
-      </p>
-      {ratings.length > 0 && <RatingList ratings={ratings} />}
+      </div>
+
+      {shop.ratings_count > 0 && (
+        <button
+          type="button"
+          className="reviews-toggle"
+          onClick={() => setReviewsOpen((open) => !open)}
+          aria-expanded={reviewsOpen}
+        >
+          {reviewsOpen ? 'Hide reviews' : `Show reviews (${shop.ratings_count})`}
+        </button>
+      )}
+
+      {reviewsOpen && (
+        <>
+          {reviewsLoading ? <p className="muted">Loading reviews…</p> : <RatingList ratings={ratings} />}
+
+          {/* Most-recent-first (the API's own default order) — paging further
+              back is "older", not "more". */}
+          {totalReviewPages > 1 && (
+            <div className="row spread reviews-pagination">
+              <button type="button" onClick={() => setReviewsPage((p) => p - 1)} disabled={reviewsPage === 0}>
+                ← Newer
+              </button>
+              <span className="muted small">
+                Page {reviewsPage + 1} of {totalReviewPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setReviewsPage((p) => p + 1)}
+                disabled={reviewsPage >= totalReviewPages - 1}
+              >
+                Older →
+              </button>
+            </div>
+          )}
+        </>
+      )}
 
       <ItemDetailModal
         item={viewingItem}

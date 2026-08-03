@@ -7,11 +7,12 @@ import { AuthProvider } from '../auth'
 import { CartProvider } from '../CartContext'
 import { CartButton } from '../components/CartButton'
 import { api, ApiError, setToken } from '../api/client'
+import type { Shop } from '../api/types'
 
 const { shop, item, user } = vi.hoisted(() => ({
   shop: {
     id: 1, name: "Lola's Kitchen", slug: 'lolas-kitchen', description: null,
-    contact_number: null, building: null, fulfillment_methods: ['pickup'], open: true,
+    contact_number: null, building: null, fulfillment_methods: ['pickup'] as Shop['fulfillment_methods'], open: true,
     profile_photo: null, cover_photo: null,
     average_rating: null, ratings_count: 0,
     price_range_cents: null, completed_orders_count: 0,
@@ -290,5 +291,63 @@ describe('ShopDetailPage hero', () => {
 
     await userEvent.click(back)
     expect(await screen.findByText('All shops page')).toBeInTheDocument()
+  })
+})
+
+describe('ShopDetailPage reviews', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(api.listItems).mockResolvedValue({ items: [item] })
+    vi.mocked(api.getCart).mockResolvedValue({ cart: null })
+  })
+
+  it('collapses the review list behind a toggle, and does not fetch it until opened', async () => {
+    vi.mocked(api.getShop).mockResolvedValue({ shop: { ...shop, average_rating: 4.2, ratings_count: 7 } })
+    vi.mocked(api.listShopRatings).mockResolvedValue({ ratings: [] })
+
+    renderPage()
+    // The shop hero has its own rating summary too, so anchor on the toggle
+    // itself (unique) rather than the "★ 4.2" text (which appears twice).
+    await screen.findByRole('button', { name: /show reviews \(7\)/i })
+
+    expect(api.listShopRatings).not.toHaveBeenCalled()
+
+    await userEvent.click(screen.getByRole('button', { name: /show reviews/i }))
+
+    expect(api.listShopRatings).toHaveBeenCalledWith('lolas-kitchen', { limit: 5, offset: 0 })
+    expect(await screen.findByRole('button', { name: /hide reviews/i })).toBeInTheDocument()
+  })
+
+  it('paginates 5 at a time, most-recent-first, with Newer/Older controls', async () => {
+    vi.mocked(api.getShop).mockResolvedValue({ shop: { ...shop, average_rating: 4.5, ratings_count: 12 } })
+    vi.mocked(api.listShopRatings).mockResolvedValue({
+      ratings: [
+        { id: 1, reviewer_display_name: 'Marco', score: 5, comment: null, created_at: '2026-01-01T00:00:00Z' },
+      ],
+    })
+
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: /show reviews/i }))
+
+    await screen.findByText('Marco')
+    expect(screen.getByText('Page 1 of 3')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /newer/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /older/i })).toBeEnabled()
+
+    await userEvent.click(screen.getByRole('button', { name: /older/i }))
+
+    expect(api.listShopRatings).toHaveBeenLastCalledWith('lolas-kitchen', { limit: 5, offset: 5 })
+    expect(await screen.findByText('Page 2 of 3')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /newer/i })).toBeEnabled()
+  })
+
+  it('shows no toggle and no pagination for an unrated shop', async () => {
+    vi.mocked(api.getShop).mockResolvedValue({ shop: { ...shop, average_rating: null, ratings_count: 0 } })
+    vi.mocked(api.listShopRatings).mockResolvedValue({ ratings: [] })
+
+    renderPage()
+    await screen.findByText(/no reviews yet/i)
+
+    expect(screen.queryByRole('button', { name: /show reviews/i })).not.toBeInTheDocument()
   })
 })
