@@ -80,7 +80,7 @@ const MIN_QUERY_LENGTH = 2
 const CAROUSEL_SIZE = 8
 // One shop card fills the strip at a time; this is how long it sits before
 // auto-advancing to the next.
-const CAROUSEL_AUTO_ADVANCE_MS = 3000
+const CAROUSEL_AUTO_ADVANCE_MS = 5000
 
 // Square identity thumbnail, or the deterministic emoji/colour tile when the
 // vendor hasn't uploaded a profile photo. Same fallback treatment used for
