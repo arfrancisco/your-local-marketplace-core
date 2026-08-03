@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Shop } from '../api/types'
@@ -33,17 +33,37 @@ function compactRating(shop: Shop) {
   return `★ ${shop.average_rating.toFixed(1)}`
 }
 
-// Popularity signal, not a raw order count — and only once there's enough
-// of a track record for it to mean something (fewer than 5 completed
-// orders reads as more of an awkward confession than a selling point).
-const MIN_ORDERS_TO_SHOW = 5
+// Popularity signal, not a raw order count — rounded down to the nearest
+// ten ("23 completed orders" reads like a precise, checkable claim; "20+"
+// reads as an approximate signal, which is what this is actually for) and
+// only shown once there's a first tier to report at all.
+const ORDER_COUNT_TIER = 10
 
-function shopStats(shop: Shop): string[] {
-  return [
-    formatPriceRange(shop.price_range_cents),
-    compactRating(shop),
-    shop.completed_orders_count >= MIN_ORDERS_TO_SHOW ? `${shop.completed_orders_count} orders` : null,
-  ].filter((stat): stat is string => stat !== null)
+function formatOrderCount(count: number) {
+  if (count < ORDER_COUNT_TIER) return null
+  const tier = Math.floor(count / ORDER_COUNT_TIER) * ORDER_COUNT_TIER
+  return `${tier}+ orders`
+}
+
+function priceAndOrderStats(shop: Shop): string[] {
+  return [formatPriceRange(shop.price_range_cents), formatOrderCount(shop.completed_orders_count)].filter(
+    (stat): stat is string => stat !== null,
+  )
+}
+
+// Price/order count on one line, the star rating on its own line below —
+// split out so it can get its own gold color instead of blending into the
+// same muted-gray line as everything else.
+function ShopStatLines({ shop }: { shop: Shop }) {
+  const stats = priceAndOrderStats(shop)
+  const rating = compactRating(shop)
+  if (stats.length === 0 && !rating) return null
+  return (
+    <>
+      {stats.length > 0 && <p className="shop-row-stats">{stats.join(' · ')}</p>}
+      {rating && <p className="shop-rating-line">{rating}</p>}
+    </>
+  )
 }
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
@@ -58,6 +78,9 @@ const MIN_QUERY_LENGTH = 2
 // front of the same response is a fair "today's picks" without any
 // client-side shuffling of its own.
 const CAROUSEL_SIZE = 8
+// One shop card fills the strip at a time; this is how long it sits before
+// auto-advancing to the next.
+const CAROUSEL_AUTO_ADVANCE_MS = 3000
 
 // Square identity thumbnail, or the deterministic emoji/colour tile when the
 // vendor hasn't uploaded a profile photo. Same fallback treatment used for
@@ -72,6 +95,78 @@ function ShopThumb({ shop, className }: { shop: Shop; className: string }) {
     <div className={`${className} tile`} style={{ background: colorFor(shop.name) }} aria-hidden>
       {emojiFor(`${shop.name} ${shop.description ?? ''}`)}
     </div>
+  )
+}
+
+// Wide cover photo (not the square profile thumbnail) for the spotlight
+// carousel's big card, same fallback tile treatment as ShopThumb.
+function ShopCover({ shop, className }: { shop: Shop; className: string }) {
+  if (shop.cover_photo) {
+    return <img className={className} src={`${API_ORIGIN}${shop.cover_photo.url}`} alt="" />
+  }
+  return (
+    <div className={`${className} tile`} style={{ background: colorFor(shop.name) }} aria-hidden>
+      {emojiFor(`${shop.name} ${shop.description ?? ''}`)}
+    </div>
+  )
+}
+
+// One shop at a time, auto-advancing — a bigger, single-focus spotlight
+// rather than the old multi-card peek strip. Still plain CSS scroll-snap
+// underneath (no carousel library): auto-advance just scrolls the
+// container to the next snap point, and a manual swipe is tracked back
+// into the same index via onScroll.
+export function ShopSpotlightCarousel({ shops }: { shops: Shop[] }) {
+  const [index, setIndex] = useState(0)
+  const trackRef = useRef<HTMLUListElement>(null)
+  const scrollIdleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  useEffect(() => {
+    if (shops.length <= 1) return
+    const id = setInterval(() => setIndex((i) => (i + 1) % shops.length), CAROUSEL_AUTO_ADVANCE_MS)
+    return () => clearInterval(id)
+  }, [shops.length])
+
+  useEffect(() => {
+    const el = trackRef.current
+    // Not implemented at all in jsdom (only real browsers have it) —
+    // feature-detected rather than assumed.
+    if (!el || typeof el.scrollTo !== 'function') return
+    el.scrollTo({ left: index * el.clientWidth, behavior: 'smooth' })
+  }, [index])
+
+  useEffect(() => () => clearTimeout(scrollIdleTimer.current), [])
+
+  // A smooth-scroll (whether from auto-advance or a tap) fires a stream of
+  // scroll events at intermediate positions while it's still animating —
+  // reading the index straight off any one of those mid-flight events can
+  // round to the position it's animating *away from* and snap it right
+  // back. Only commit once the events have paused, i.e. the scroll has
+  // actually settled.
+  function onTrackScroll() {
+    const el = trackRef.current
+    if (!el || el.clientWidth === 0) return
+    clearTimeout(scrollIdleTimer.current)
+    scrollIdleTimer.current = setTimeout(() => {
+      setIndex(Math.round(el.scrollLeft / el.clientWidth))
+    }, 120)
+  }
+
+  return (
+    <ul className="shop-spotlight-track" aria-label="Today's picks" ref={trackRef} onScroll={onTrackScroll}>
+      {shops.map((shop) => (
+        <li key={shop.id} className="shop-spotlight-card">
+          <Link to={`/shops/${shop.slug}`} className="shop-spotlight-link">
+            <ShopCover shop={shop} className="shop-spotlight-cover" />
+            <div className="shop-spotlight-body">
+              <h3 className="shop-spotlight-name">{shop.name}</h3>
+              {shop.description && <p className="shop-spotlight-description">{shop.description}</p>}
+              <ShopStatLines shop={shop} />
+            </div>
+          </Link>
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -147,17 +242,7 @@ export function ShopsPage() {
       {carouselShops.length > 0 && (
         <section className="shop-section">
           <h2 className="shop-section-heading">Today's picks</h2>
-          {/* Swipe sideways. Plain CSS scroll-snap, no carousel library. */}
-          <ul className="shop-carousel" aria-label="Today's picks">
-            {carouselShops.map((shop) => (
-              <li key={shop.id} className="shop-carousel-card">
-                <Link to={`/shops/${shop.slug}`} className="shop-carousel-link">
-                  <ShopThumb shop={shop} className="shop-carousel-thumb" />
-                  <span className="shop-carousel-name">{shop.name}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <ShopSpotlightCarousel shops={carouselShops} />
         </section>
       )}
 
@@ -176,10 +261,8 @@ export function ShopsPage() {
                     </p>
                     {/* Any of the three can be absent (no priced items yet, no
                         ratings yet, too few completed orders) — only render
-                        the line at all once there's at least one to show. */}
-                    {shopStats(shop).length > 0 && (
-                      <p className="shop-row-stats">{shopStats(shop).join(' · ')}</p>
-                    )}
+                        a line at all once there's something to show on it. */}
+                    <ShopStatLines shop={shop} />
                   </div>
                 </Link>
               </li>

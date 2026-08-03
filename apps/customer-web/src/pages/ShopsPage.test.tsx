@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { ShopsPage } from './ShopsPage'
+import { ShopsPage, ShopSpotlightCarousel } from './ShopsPage'
 import { api } from '../api/client'
 import type { Shop } from '../api/types'
 
@@ -55,7 +55,7 @@ describe('ShopsPage', () => {
     expect(names.map((h) => h.textContent)).toEqual(['Charlie', 'Alpha'])
   })
 
-  it('shows the rating only for shops that have one', async () => {
+  it('shows the rating, on its own line, only for shops that have one', async () => {
     listShops.mockResolvedValue({
       shops: [shop(1, 'Alpha', { average_rating: 4.5, ratings_count: 2 }), shop(2, 'Bravo')],
     })
@@ -64,15 +64,16 @@ describe('ShopsPage', () => {
 
     const rows = await screen.findByRole('list', { name: 'All shops' })
     const [rated, unrated] = within(rows).getAllByRole('listitem')
-    expect(within(rated).getByText(/★ 4\.5/)).toBeTruthy()
+    const ratingLine = within(rated).getByText(/★ 4\.5/)
+    expect(ratingLine.className).toContain('shop-rating-line')
     expect(within(unrated).queryByText(/★/)).toBeNull()
   })
 
-  it('shows the price range and completed-order count only once there is enough of each to be worth showing', async () => {
+  it('shows the price range and completed-order count (rounded to a ten) only once there is enough to show', async () => {
     listShops.mockResolvedValue({
       shops: [
         shop(1, 'Alpha', { price_range_cents: { min: 12_000, max: 28_000 }, completed_orders_count: 42 }),
-        shop(2, 'Bravo', { price_range_cents: null, completed_orders_count: 2 }),
+        shop(2, 'Bravo', { price_range_cents: null, completed_orders_count: 8 }),
       ],
     })
 
@@ -81,7 +82,7 @@ describe('ShopsPage', () => {
     const rows = await screen.findByRole('list', { name: 'All shops' })
     const [withStats, withoutStats] = within(rows).getAllByRole('listitem')
     expect(within(withStats).getByText(/₱120–280/)).toBeTruthy()
-    expect(within(withStats).getByText(/42 orders/)).toBeTruthy()
+    expect(within(withStats).getByText(/40\+ orders/)).toBeTruthy()
     expect(within(withoutStats).queryByText(/₱/)).toBeNull()
     expect(within(withoutStats).queryByText(/orders/)).toBeNull()
   })
@@ -99,7 +100,7 @@ describe('ShopsPage', () => {
     // the aria-hidden emoji from the no-photo fallback tile.
     const carouselNames = within(carousel)
       .getAllByRole('listitem')
-      .map((li) => li.querySelector('.shop-carousel-name')?.textContent)
+      .map((li) => li.querySelector('.shop-spotlight-name')?.textContent)
     expect(carouselNames).toEqual(['Shop1', 'Shop2', 'Shop3', 'Shop4', 'Shop5', 'Shop6', 'Shop7', 'Shop8'])
 
     const rows = screen.getByRole('list', { name: 'All shops' })
@@ -107,6 +108,39 @@ describe('ShopsPage', () => {
 
     // One response feeds both surfaces (ADR 0007 rotation, sliced client-side).
     expect(listShops).toHaveBeenCalledTimes(1)
+  })
+
+  it('schedules a repeating auto-advance timer once there is more than one shop to show', () => {
+    // Rendered directly with static props (bypassing ShopsPage's own
+    // debounced fetch) since what's under test is purely "mounting the
+    // carousel registers a recurring timer" — asserting all the way through
+    // to a scrollTo call fights React's own effect-flush scheduling under
+    // fake timers for no real extra coverage.
+    vi.useFakeTimers()
+    try {
+      render(
+        <MemoryRouter>
+          <ShopSpotlightCarousel shops={[shop(1, 'Shop1'), shop(2, 'Shop2'), shop(3, 'Shop3')]} />
+        </MemoryRouter>,
+      )
+      expect(vi.getTimerCount()).toBeGreaterThan(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not schedule an auto-advance timer for a single shop', () => {
+    vi.useFakeTimers()
+    try {
+      render(
+        <MemoryRouter>
+          <ShopSpotlightCarousel shops={[shop(1, 'Shop1')]} />
+        </MemoryRouter>,
+      )
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('debounces search input and passes the query to the API', async () => {
