@@ -320,6 +320,12 @@ button:disabled { opacity: 0.6; cursor: default; }
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   cursor: grab;
+  user-select: none;
+  /* Pointer-events-based dragging (not native HTML5 drag-and-drop, which
+     never fires for touch input) handles the move itself, so the browser's
+     own touch-scroll gesture needs to be turned off on this handle or a
+     drag on a phone just scrolls the page instead. */
+  touch-action: none;
 }
 .drag-handle:active { cursor: grabbing; }
 .drag-handle:disabled { cursor: not-allowed; opacity: 0.5; }

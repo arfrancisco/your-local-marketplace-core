@@ -1,4 +1,4 @@
-import { useEffect, useState, type DragEvent, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useState, type FormEvent, type KeyboardEvent, type PointerEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { Item } from '../api/types'
@@ -77,29 +77,30 @@ export function ItemsPage() {
     }
   }
 
-  function onHandleDragStart(e: DragEvent<HTMLButtonElement>, index: number) {
+  // Pointer events (not native HTML5 drag-and-drop) so the same code path
+  // handles mouse, touch, and pen — native drag-and-drop never fires for
+  // touch input at all, which left this unusable on an actual phone despite
+  // working fine on desktop.
+  function onHandlePointerDown(e: PointerEvent<HTMLButtonElement>, index: number) {
+    if (moving) return
+    e.currentTarget.setPointerCapture(e.pointerId)
     setDraggedIndex(index)
-    e.dataTransfer.effectAllowed = 'move'
-    // The drag handle is a small grip icon, but the row itself is what
-    // should visually follow the pointer while dragging.
-    const row = e.currentTarget.closest('tr')
-    if (row) e.dataTransfer.setDragImage(row, 20, 20)
   }
 
-  function onRowDragOver(e: DragEvent<HTMLTableRowElement>, index: number) {
-    e.preventDefault()
-    if (draggedIndex === null || draggedIndex === index) return
-    setDragOverIndex(index)
+  function onHandlePointerMove(e: PointerEvent<HTMLButtonElement>) {
+    if (draggedIndex === null) return
+    // Pointer capture keeps events targeted at the handle regardless of
+    // where the finger/cursor actually is, so figure out what's visually
+    // underneath from the raw coordinates instead.
+    const row = document.elementFromPoint(e.clientX, e.clientY)?.closest('tr[data-item-index]')
+    if (!row) return
+    setDragOverIndex(Number(row.getAttribute('data-item-index')))
   }
 
-  function onRowDrop(e: DragEvent<HTMLTableRowElement>, index: number) {
-    e.preventDefault()
-    if (draggedIndex !== null && draggedIndex !== index) moveItemTo(draggedIndex, index)
-    setDraggedIndex(null)
-    setDragOverIndex(null)
-  }
-
-  function onHandleDragEnd() {
+  function onHandlePointerUp() {
+    if (draggedIndex !== null && dragOverIndex !== null && dragOverIndex !== draggedIndex) {
+      moveItemTo(draggedIndex, dragOverIndex)
+    }
     setDraggedIndex(null)
     setDragOverIndex(null)
   }
@@ -180,6 +181,7 @@ export function ItemsPage() {
             {items.map((item, index) => (
               <tr
                 key={item.id}
+                data-item-index={index}
                 className={[
                   item.enabled ? '' : 'dimmed',
                   draggedIndex === index ? 'dragging' : '',
@@ -187,16 +189,15 @@ export function ItemsPage() {
                 ]
                   .filter(Boolean)
                   .join(' ')}
-                onDragOver={(e) => onRowDragOver(e, index)}
-                onDrop={(e) => onRowDrop(e, index)}
               >
                 <td data-label="Order" className="reorder-cell">
                   <button
                     type="button"
                     className="drag-handle"
-                    draggable
-                    onDragStart={(e) => onHandleDragStart(e, index)}
-                    onDragEnd={onHandleDragEnd}
+                    onPointerDown={(e) => onHandlePointerDown(e, index)}
+                    onPointerMove={onHandlePointerMove}
+                    onPointerUp={onHandlePointerUp}
+                    onPointerCancel={onHandlePointerUp}
                     onKeyDown={(e) => onHandleKeyDown(e, index)}
                     disabled={moving}
                     aria-label={`Drag to reorder ${item.name}, or use arrow keys`}

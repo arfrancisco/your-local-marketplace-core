@@ -224,17 +224,18 @@ describe('ItemsPage', () => {
     renderAt('/shops/5/items')
     await screen.findByText('Lumpia')
 
-    const dataTransfer = {
-      effectAllowed: '',
-      setDragImage: vi.fn(),
-    } as unknown as DataTransfer
-
     const lumpiaHandle = screen.getByRole('button', { name: /drag to reorder Lumpia/i })
     const halohaloRow = screen.getByText('Halo-halo').closest('tr')!
 
-    fireEvent.dragStart(lumpiaHandle, { dataTransfer })
-    fireEvent.dragOver(halohaloRow, { dataTransfer })
-    fireEvent.drop(halohaloRow, { dataTransfer })
+    // jsdom implements neither pointer capture nor elementFromPoint; stub
+    // both so the pointer-events drag logic (which reads real screen
+    // coordinates in a browser) can be exercised here.
+    lumpiaHandle.setPointerCapture = vi.fn()
+    document.elementFromPoint = vi.fn().mockReturnValue(halohaloRow)
+
+    fireEvent.pointerDown(lumpiaHandle, { pointerId: 1 })
+    fireEvent.pointerMove(lumpiaHandle, { pointerId: 1, clientX: 10, clientY: 400 })
+    fireEvent.pointerUp(lumpiaHandle, { pointerId: 1 })
 
     // Dropping Lumpia (index 0) onto Halo-halo's row (index 2) shifts every
     // row in between, so all three get a position PATCH, not just the two
