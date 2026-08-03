@@ -19,8 +19,8 @@ import { OrdersPage } from './pages/OrdersPage'
 // The hamburger is the only thing left up here — position: fixed so it stays
 // pinned in the top right as the page scrolls under it; the top offset lines
 // it up with the top bar at scroll 0, below the beta banner. The cart moved
-// to a floating bottom-right button (BottomFabs, below) so it doesn't crowd
-// the header on narrow screens.
+// to the fixed bottom bar (BottomBar, below) so it doesn't crowd the header
+// on narrow screens.
 function HeaderActions() {
   return (
     <div className="header-actions">
@@ -53,8 +53,10 @@ const ACTIVE_ORDER_REFRESH_MS = 45_000
 
 // Global (not page-scoped) — a signed-in customer with an order in flight
 // should be able to jump back to it from anywhere, not just from /orders.
-// Bottom-right, keeping the top-right corner clear for the header's cart and
-// menu icons.
+// Lives in the bottom bar, growing to fill the space next to the cart icon
+// (flex: 1, in CSS) rather than floating as its own separate chip — a single
+// wide tap target is easier to hit accurately than two small ones stacked
+// close together.
 function ActiveOrderButton() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -109,15 +111,18 @@ function BetaBanner() {
   )
 }
 
-// Cart and "track your order" both float bottom-right, stacked in one fixed
-// wrapper rather than each managing its own fixed position — that way they
-// never land on top of each other regardless of which are present (cart
-// alone, both, or neither once ActiveOrderButton returns null).
-function BottomFabs() {
+// A single fixed bar across the bottom of the screen, not two separate
+// floating chips — two small buttons stacked close together (the previous
+// design) were easy to mispress with a thumb, and had no background of their
+// own, so they visually blended into (and covered) whatever page content
+// happened to scroll underneath. The bar's own opaque surface fixes both:
+// clear separation between the two actions, and content never hides behind
+// it (.container reserves matching bottom padding).
+function BottomBar() {
   return (
-    <div className="bottom-fabs">
-      <CartButton />
+    <div className="bottom-bar">
       <ActiveOrderButton />
+      <CartButton />
     </div>
   )
 }
@@ -144,7 +149,7 @@ export default function App() {
         </Routes>
       </main>
 
-      <BottomFabs />
+      <BottomBar />
     </>
   )
 }

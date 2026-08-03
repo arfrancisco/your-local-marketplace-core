@@ -6,8 +6,8 @@ function formatPrice(cents: number, currency: string) {
 
 // The cart used to be an inline card sitting in ShopDetailPage's document flow,
 // then a right-anchored drawer. It is a bottom sheet now, opened from the
-// floating cart icon (bottom-right, see .bottom-fabs) — anchoring the sheet
-// to the bottom keeps the qty steppers and "Place order" near where the
+// cart icon in the fixed bottom bar (App.tsx's BottomBar) — anchoring the
+// sheet to the bottom keeps the qty steppers and "Place order" near where the
 // thumb already is, instead of reaching up to a dialog floating mid-screen.
 // Shares the .modal-backdrop/.modal convention with every other overlay in
 // this app; .sheet is what pins it to the bottom edge instead of centering it.

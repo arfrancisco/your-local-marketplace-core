@@ -72,7 +72,10 @@ body::before {
   letter-spacing: 0.04em;
 }
 
-.container { max-width: 860px; margin: 1.5rem auto; padding: 0 1rem; }
+/* Bottom padding reserves room for the fixed .bottom-bar (cart + track-order)
+   below every page, so the last bit of content never ends up hidden behind
+   it — the bar is always present (the cart icon shows on every page). */
+.container { max-width: 860px; margin: 1.5rem auto; padding: 0 1rem 5rem; }
 
 /* Solid panel for hero text sitting on the photo background — the blurred
    photo behind the page is meant to be ambient texture, but plain text laid
@@ -280,24 +283,33 @@ button.link {
 .line-total { min-width: 80px; text-align: right; }
 .cart-total { margin: 0.5rem 0; padding-top: 0.5rem; border-top: 1px solid #ecdfcd; }
 
-/* Cart + "go to my active order" both float bottom-right, stacked in one
-   fixed wrapper (.bottom-fabs, App.tsx) instead of each positioning itself —
-   whichever of the two are actually present (cart always; the order button
-   only with an order in flight) just stack without landing on each other. */
-.bottom-fabs {
+/* Fixed action bar across the bottom of the screen (App.tsx's BottomBar) —
+   cart icon always on the right; "track your order" (when present) grows to
+   fill the space next to it via flex: 1, rather than the two floating as
+   separate stacked chips. A single opaque bar reads as one deliberate
+   control surface: two big, clearly separated tap targets instead of two
+   small ones close together, and its own background means it never visually
+   blends into (or covers) page content scrolling underneath — .container's
+   bottom padding, below, keeps content from ever landing behind it. */
+.bottom-bar {
   position: fixed;
-  bottom: 1.25rem;
-  right: 1rem;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 40;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.65rem;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  background: #fffdf9;
+  border-top: 1px solid #ecdfcd;
+  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
 }
 .active-order-fab {
+  flex: 1;
   border-radius: 999px;
   padding: 0.7rem 1.25rem;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
 }
 
 /* Modal */
@@ -335,9 +347,9 @@ button.link {
 .modal.wide { max-width: 480px; }
 
 /* Anchored to the bottom of the screen instead of centred — the cart uses
-   this so its contents (qty steppers, "Place order") land near the floating
-   cart icon that opens it (bottom-right, see .bottom-fabs), reachable by
-   thumb without the reach-and-recenter of a dialog floating mid-screen.
+   this so its contents (qty steppers, "Place order") land near the cart icon
+   that opens it (bottom bar, see .bottom-bar), reachable by thumb without
+   the reach-and-recenter of a dialog floating mid-screen.
    align-self: flex-end overrides .modal-backdrop's align-items: center on
    the cross axis only, the same trick .modal.drawer uses on the main axis. */
 .modal.sheet {
@@ -819,7 +831,7 @@ button.link {
 /* ------------------------------------------------------------------------ */
 
 @media (max-width: 640px) {
-  .container { padding: 0 0.75rem; }
+  .container { padding: 0 0.75rem 4.5rem; }
   .hero { padding: 1.15rem 1rem; }
 
   /* The centered brand block and the header-actions cluster both claim the
@@ -849,7 +861,7 @@ button.link {
   .icon-btn { width: 38px; height: 38px; font-size: 1.05rem; }
   .cart-badge { min-width: 17px; height: 17px; line-height: 17px; font-size: 0.65rem; }
 
-  .bottom-fabs { right: 0.75rem; bottom: 0.9rem; gap: 0.5rem; }
+  .bottom-bar { padding: 0.55rem 0.75rem; gap: 0.5rem; }
   .active-order-fab { font-size: 0.85rem; padding: 0.55rem 0.95rem; }
 
   /* Centered dialogs become full-width bottom sheets; the side drawer (nav,

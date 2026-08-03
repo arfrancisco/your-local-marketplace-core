@@ -3,7 +3,7 @@ import { useCart } from '../CartContext'
 
 const BUMP_MS = 300
 
-// Persistent cart icon. Floats bottom-right (App.tsx's .bottom-fabs wrapper,
+// Persistent cart icon. Lives in the fixed bottom bar (App.tsx's BottomBar,
 // alongside the active-order button) rather than sitting in the top header
 // cluster with the hamburger, so it stays reachable without crowding the
 // brand/tagline on narrow screens — on every page, not just the shop page.
