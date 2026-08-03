@@ -10,6 +10,7 @@ module ItemSerializer
       price_cents: item.price_cents,
       currency: item.currency,
       enabled: item.enabled,
+      archived: item.archived?,
       stock_count: item.stock_count,
       sold_out: item.sold_out?,
       position: item.position,

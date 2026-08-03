@@ -17,6 +17,8 @@ vi.mock('../api/client', async (importOriginal) => {
       enableItem: vi.fn(),
       disableItem: vi.fn(),
       updateItem: vi.fn(),
+      archiveItem: vi.fn(),
+      unarchiveItem: vi.fn(),
     },
   }
 })
@@ -29,6 +31,7 @@ const baseItem: Item = {
   price_cents: 15000,
   currency: 'PHP',
   enabled: true,
+  archived: false,
   stock_count: null,
   sold_out: false,
   position: 0,
@@ -205,6 +208,45 @@ describe('ItemsPage', () => {
     // Rows swap places: Turon now leads.
     const names = (await screen.findAllByRole('cell', { name: /Lumpia|Turon/ })).map((c) => c.textContent)
     expect(names).toEqual(['Turon', 'Lumpia'])
+  })
+
+  it('archives an item, dropping it out of the active list', async () => {
+    vi.mocked(api.listItems).mockResolvedValue({
+      items: [{ ...baseItem, id: 1, name: 'Lumpia' }],
+    })
+    vi.mocked(api.archiveItem).mockResolvedValue({ item: { ...baseItem, id: 1, name: 'Lumpia', archived: true } })
+
+    renderAt('/shops/5/items')
+    await screen.findByText('Lumpia')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Archive' }))
+
+    expect(api.archiveItem).toHaveBeenCalledWith(1)
+    await waitFor(() => expect(screen.queryByText('Lumpia')).not.toBeInTheDocument())
+  })
+
+  it('switches to the archived-items view and unarchives from there', async () => {
+    vi.mocked(api.listItems).mockImplementation(async (_shopId, archived) =>
+      archived
+        ? { items: [{ ...baseItem, id: 2, name: 'Old Item', archived: true }] }
+        : { items: [{ ...baseItem, id: 1, name: 'Lumpia' }] },
+    )
+    vi.mocked(api.unarchiveItem).mockResolvedValue({ item: { ...baseItem, id: 2, name: 'Old Item', archived: false } })
+
+    renderAt('/shops/5/items')
+    await screen.findByText('Lumpia')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Archived items' }))
+    await screen.findByText('Old Item')
+    expect(screen.queryByText('Lumpia')).not.toBeInTheDocument()
+    // No Edit/Hide affordances or reorder handle for archived items — the
+    // only meaningful action is bringing it back.
+    expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /drag to reorder/i })).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Unarchive' }))
+    expect(api.unarchiveItem).toHaveBeenCalledWith(2)
+    await waitFor(() => expect(screen.queryByText('Old Item')).not.toBeInTheDocument())
   })
 
   it('reorders items by dragging a row onto another row\'s drop target', async () => {

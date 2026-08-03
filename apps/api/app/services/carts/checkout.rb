@@ -25,9 +25,9 @@ module Carts
       end
 
       # Stock can drop to zero between adding to cart and checking out, same
-      # as an item being disabled — re-check both right before placing the
-      # order, not just at add-to-cart time.
-      unavailable = @cart.cart_items.includes(:item).reject { |ci| ci.item.enabled? && !ci.item.sold_out? }
+      # as an item being disabled or archived — re-check all three right
+      # before placing the order, not just at add-to-cart time.
+      unavailable = @cart.cart_items.includes(:item).reject { |ci| ci.item.enabled? && !ci.item.sold_out? && !ci.item.archived? }
       if unavailable.any?
         raise ApiError::UnprocessableEntity.new(
           "Some items are no longer available",

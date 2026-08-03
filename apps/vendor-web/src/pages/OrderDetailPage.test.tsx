@@ -198,8 +198,8 @@ describe('OrderDetailPage item edits', () => {
   }
 
   const catalog = [
-    { id: 10, shop_id: 5, name: 'Adobo Bowl', description: null, price_cents: 15_000, currency: 'PHP', enabled: true, stock_count: null, sold_out: false, position: 0, tags: [], photos: [] },
-    { id: 11, shop_id: 5, name: 'Halo-Halo', description: null, price_cents: 8_000, currency: 'PHP', enabled: true, stock_count: null, sold_out: false, position: 1, tags: [], photos: [] },
+    { id: 10, shop_id: 5, name: 'Adobo Bowl', description: null, price_cents: 15_000, currency: 'PHP', enabled: true, archived: false, stock_count: null, sold_out: false, position: 0, tags: [], photos: [] },
+    { id: 11, shop_id: 5, name: 'Halo-Halo', description: null, price_cents: 8_000, currency: 'PHP', enabled: true, archived: false, stock_count: null, sold_out: false, position: 1, tags: [], photos: [] },
   ]
 
   beforeEach(() => {

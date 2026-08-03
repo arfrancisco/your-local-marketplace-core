@@ -22,14 +22,29 @@ export function ItemsPage() {
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
 
   useEffect(() => {
-    api.listItems(shopId).then((res) => setItems(res.items)).finally(() => setLoading(false))
-  }, [shopId])
+    setLoading(true)
+    api.listItems(shopId, showArchived).then((res) => setItems(res.items)).finally(() => setLoading(false))
+  }, [shopId, showArchived])
 
   async function toggleEnabled(item: Item) {
     const res = item.enabled ? await api.disableItem(item.id) : await api.enableItem(item.id)
     setItems((prev) => prev.map((i) => (i.id === item.id ? res.item : i)))
+  }
+
+  // Archiving/unarchiving moves an item to the other view, so it no longer
+  // belongs in whichever list is currently shown — drop it locally rather
+  // than trying to update it in place.
+  async function archiveItem(item: Item) {
+    await api.archiveItem(item.id)
+    setItems((prev) => prev.filter((i) => i.id !== item.id))
+  }
+
+  async function unarchiveItem(item: Item) {
+    await api.unarchiveItem(item.id)
+    setItems((prev) => prev.filter((i) => i.id !== item.id))
   }
 
   const [moving, setMoving] = useState(false)
@@ -162,18 +177,25 @@ export function ItemsPage() {
         <Link to="/shops">Back to shops</Link>
       </div>
 
+      <div className="row gap">
+        <button type="button" onClick={() => setShowArchived(false)} disabled={!showArchived}>Active</button>
+        <button type="button" onClick={() => setShowArchived(true)} disabled={showArchived}>Archived items</button>
+      </div>
+
       {items.length === 0 ? (
-        <p className="muted">No items yet. Add your first one below.</p>
+        <p className="muted">
+          {showArchived ? 'No archived items.' : 'No items yet. Add your first one below.'}
+        </p>
       ) : (
         <table className="inventory-table">
           <thead>
             <tr>
-              <th scope="col" className="reorder-col">Order</th>
+              {!showArchived && <th scope="col" className="reorder-col">Order</th>}
               <th scope="col">Item</th>
               <th scope="col">Price</th>
               <th scope="col">Stock</th>
               <th scope="col">Tags</th>
-              <th scope="col">Status</th>
+              {!showArchived && <th scope="col">Status</th>}
               <th scope="col" className="actions-col">Actions</th>
             </tr>
           </thead>
@@ -190,21 +212,23 @@ export function ItemsPage() {
                   .filter(Boolean)
                   .join(' ')}
               >
-                <td data-label="Order" className="reorder-cell">
-                  <button
-                    type="button"
-                    className="drag-handle"
-                    onPointerDown={(e) => onHandlePointerDown(e, index)}
-                    onPointerMove={onHandlePointerMove}
-                    onPointerUp={onHandlePointerUp}
-                    onPointerCancel={onHandlePointerUp}
-                    onKeyDown={(e) => onHandleKeyDown(e, index)}
-                    disabled={moving}
-                    aria-label={`Drag to reorder ${item.name}, or use arrow keys`}
-                  >
-                    ⠿
-                  </button>
-                </td>
+                {!showArchived && (
+                  <td data-label="Order" className="reorder-cell">
+                    <button
+                      type="button"
+                      className="drag-handle"
+                      onPointerDown={(e) => onHandlePointerDown(e, index)}
+                      onPointerMove={onHandlePointerMove}
+                      onPointerUp={onHandlePointerUp}
+                      onPointerCancel={onHandlePointerUp}
+                      onKeyDown={(e) => onHandleKeyDown(e, index)}
+                      disabled={moving}
+                      aria-label={`Drag to reorder ${item.name}, or use arrow keys`}
+                    >
+                      ⠿
+                    </button>
+                  </td>
+                )}
                 <td data-label="Item" className="item-name">{item.name}</td>
                 <td data-label="Price">{formatPrice(item.price_cents, item.currency)}</td>
                 <td data-label="Stock">
@@ -217,20 +241,29 @@ export function ItemsPage() {
                 <td data-label="Tags">
                   {item.tags.length > 0 ? item.tags.map((t) => t.name).join(', ') : '—'}
                 </td>
-                <td data-label="Status">
-                  {/* The action button below says what tapping it will do; this
-                      says what's actually true right now — easy to conflate
-                      the two when they're both just "Show"/"Hide" text. */}
-                  <span className={`item-status ${item.enabled ? 'is-shown' : 'is-hidden'}`}>
-                    {item.enabled ? 'Shown in shop' : 'Hidden from shop'}
-                  </span>
-                </td>
+                {!showArchived && (
+                  <td data-label="Status">
+                    {/* The action button below says what tapping it will do; this
+                        says what's actually true right now — easy to conflate
+                        the two when they're both just "Show"/"Hide" text. */}
+                    <span className={`item-status ${item.enabled ? 'is-shown' : 'is-hidden'}`}>
+                      {item.enabled ? 'Shown in shop' : 'Hidden from shop'}
+                    </span>
+                  </td>
+                )}
                 <td className="actions">
                   <div className="inventory-actions">
-                    <Link className="button" to={`/shops/${shopId}/items/${item.id}/edit`}>Edit</Link>
-                    <button onClick={() => toggleEnabled(item)}>
-                      {item.enabled ? 'Hide' : 'Show'}
-                    </button>
+                    {showArchived ? (
+                      <button onClick={() => unarchiveItem(item)}>Unarchive</button>
+                    ) : (
+                      <>
+                        <Link className="button" to={`/shops/${shopId}/items/${item.id}/edit`}>Edit</Link>
+                        <button onClick={() => toggleEnabled(item)}>
+                          {item.enabled ? 'Hide' : 'Show'}
+                        </button>
+                        <button onClick={() => archiveItem(item)}>Archive</button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -239,7 +272,7 @@ export function ItemsPage() {
         </table>
       )}
 
-      {!addOpen && (
+      {!showArchived && !addOpen && (
         <button
           type="button"
           className="add-item-fab"

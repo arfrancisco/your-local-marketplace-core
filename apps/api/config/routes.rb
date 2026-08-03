@@ -120,6 +120,8 @@ Rails.application.routes.draw do
         patch  "items/:id",                   to: "items#update"
         post   "items/:id/enable",            to: "items#enable"
         post   "items/:id/disable",           to: "items#disable"
+        post   "items/:id/archive",           to: "items#archive"
+        post   "items/:id/unarchive",         to: "items#unarchive"
         delete "items/:id/photos/:photo_id",  to: "items#destroy_photo"
 
         # Private notes a vendor keeps about a specific customer — never

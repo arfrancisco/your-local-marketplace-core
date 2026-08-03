@@ -47,6 +47,7 @@ function item(overrides: Partial<Item> = {}): Item {
     price_cents: 18_000,
     currency: 'PHP',
     enabled: true,
+    archived: false,
     stock_count: null,
     sold_out: false,
     position: 0,

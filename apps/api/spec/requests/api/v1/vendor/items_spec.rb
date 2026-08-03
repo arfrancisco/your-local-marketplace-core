@@ -71,6 +71,43 @@ RSpec.describe "Api::V1::Vendor Items", type: :request do
     end
   end
 
+  describe "archive/unarchive" do
+    let!(:item) { create(:item, shop: shop) }
+
+    it "archives and unarchives an item" do
+      post "/api/v1/vendor/items/#{item.id}/archive", headers: auth_headers(vendor_user)
+      expect(json.dig("item", "archived")).to be(true)
+
+      post "/api/v1/vendor/items/#{item.id}/unarchive", headers: auth_headers(vendor_user)
+      expect(json.dig("item", "archived")).to be(false)
+    end
+
+    it "forbids archiving another vendor's item" do
+      others_item = create(:item)
+      post "/api/v1/vendor/items/#{others_item.id}/archive", headers: auth_headers(vendor_user)
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
+  describe "GET /api/v1/vendor/shops/:shop_id/items with ?archived" do
+    let!(:active_item) { create(:item, shop: shop, name: "Active Item") }
+    let!(:archived_item) { create(:item, shop: shop, name: "Archived Item", archived_at: Time.current) }
+
+    it "defaults to active items only" do
+      get "/api/v1/vendor/shops/#{shop.id}/items", headers: auth_headers(vendor_user)
+      names = json["items"].map { |i| i["name"] }
+      expect(names).to include("Active Item")
+      expect(names).not_to include("Archived Item")
+    end
+
+    it "returns only archived items when ?archived=true" do
+      get "/api/v1/vendor/shops/#{shop.id}/items?archived=true", headers: auth_headers(vendor_user)
+      names = json["items"].map { |i| i["name"] }
+      expect(names).to include("Archived Item")
+      expect(names).not_to include("Active Item")
+    end
+  end
+
   describe "end-to-end M1 acceptance" do
     it "a vendor creates an open shop with one orderable item" do
       post "/api/v1/vendor/shops",

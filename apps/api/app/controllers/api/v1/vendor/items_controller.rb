@@ -3,11 +3,13 @@ module Api
     module Vendor
       class ItemsController < BaseController
         before_action :set_shop, only: %i[index create]
-        before_action :set_item, only: %i[update enable disable destroy_photo]
+        before_action :set_item, only: %i[update enable disable archive unarchive destroy_photo]
 
-        # GET /api/v1/vendor/shops/:shop_id/items
+        # GET /api/v1/vendor/shops/:shop_id/items (?archived=true for the
+        # archived-items view instead of the default active list)
         def index
-          items = @shop.items.order(:position, :created_at)
+          scope = ActiveModel::Type::Boolean.new.cast(params[:archived]) ? @shop.items.where.not(archived_at: nil) : @shop.items.active
+          items = scope.order(:position, :created_at)
           render json: { items: items.map { |item| ItemSerializer.call(item) } }
         end
 
@@ -38,6 +40,18 @@ module Api
         # POST /api/v1/vendor/items/:id/disable
         def disable
           @item.disable!
+          render json: { item: ItemSerializer.call(@item) }
+        end
+
+        # POST /api/v1/vendor/items/:id/archive
+        def archive
+          @item.archive!
+          render json: { item: ItemSerializer.call(@item) }
+        end
+
+        # POST /api/v1/vendor/items/:id/unarchive
+        def unarchive
+          @item.unarchive!
           render json: { item: ItemSerializer.call(@item) }
         end
 

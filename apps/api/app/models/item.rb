@@ -11,7 +11,14 @@ class Item < ApplicationRecord
   validates :currency, presence: true
   validates :stock_count, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
 
-  scope :enabled, -> { where(enabled: true) }
+  # `enabled` (customer-visibility toggle, "might come back soon") vs.
+  # `archived_at` (vendor's own "done with this, out of my active list,"
+  # see AddArchivedAtToItems) are orthogonal, but every customer-facing
+  # scope needs both checked — bake the archived exclusion into `enabled`
+  # itself so every existing call site (ShopSerializer, ShopsController)
+  # gets it for free with no change on their end.
+  scope :enabled, -> { where(enabled: true, archived_at: nil) }
+  scope :active, -> { where(archived_at: nil) }
 
   # A disabled item cannot be ordered but stays intact for historical orders.
   def enable!
@@ -20,6 +27,18 @@ class Item < ApplicationRecord
 
   def disable!
     update!(enabled: false)
+  end
+
+  def archived?
+    archived_at.present?
+  end
+
+  def archive!
+    update!(archived_at: Time.current)
+  end
+
+  def unarchive!
+    update!(archived_at: nil)
   end
 
   # Additive to `enabled`, not a replacement: `enabled` is the vendor's

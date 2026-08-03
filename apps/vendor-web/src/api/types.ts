@@ -131,6 +131,11 @@ export interface Item {
   price_cents: number
   currency: string
   enabled: boolean
+  // Archiving (separate from `enabled`) retires an item from the vendor's
+  // own active inventory list, hiding it from customers regardless of
+  // `enabled` — non-destructive, reversible via unarchive. `enabled` alone
+  // is a temporary customer-visibility toggle, not a "done with this" signal.
+  archived: boolean
   // null = not tracked (default/existing behavior for every item). A number
   // is the vendor-entered stock on hand; sold_out is computed server-side
   // from it (present and <= 0). Independent of `enabled`: enabled is the
@@ -141,6 +146,16 @@ export interface Item {
   position: number
   tags: Tag[]
   photos: Photo[]
+}
+
+// One turn in the vendor's chat with the inventory assistant. No `image`/
+// `system` variant here — just the vendor's own messages and the
+// assistant's narrated replies (see Assistant::HandleMessage on the API).
+export interface AssistantMessage {
+  id: number
+  role: 'user' | 'assistant'
+  body: string
+  created_at: string
 }
 
 // A vendor's private note about a customer. Only ever readable by the vendor

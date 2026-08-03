@@ -46,4 +46,11 @@ RSpec.describe Carts::Checkout do
     expect { described_class.new(cart: cart, fulfillment_method: "pickup").call }
       .to raise_error(ApiError::UnprocessableEntity, /no longer available/i)
   end
+
+  it "rejects checkout when an item has been archived since it was added to the cart" do
+    cart # force creation while the item is still active
+    item.archive!
+    expect { described_class.new(cart: cart, fulfillment_method: "pickup").call }
+      .to raise_error(ApiError::UnprocessableEntity, /no longer available/i)
+  end
 end

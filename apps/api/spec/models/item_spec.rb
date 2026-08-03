@@ -43,6 +43,33 @@ RSpec.describe Item, type: :model do
     end
   end
 
+  describe "archiving" do
+    it "archives and unarchives, independent of enabled" do
+      item = create(:item)
+      item.archive!
+      expect(item.archived?).to be(true)
+      expect(item.enabled).to be(true) # archiving never touches enabled
+
+      item.unarchive!
+      expect(item.archived?).to be(false)
+    end
+
+    it "excludes archived items from the enabled scope, even if still enabled" do
+      item = create(:item, enabled: true)
+      item.archive!
+      expect(Item.enabled).not_to include(item)
+    end
+
+    it "the active scope excludes archived items but includes disabled ones" do
+      active = create(:item)
+      archived = create(:item, archived_at: Time.current)
+      disabled = create(:item, enabled: false)
+
+      expect(Item.active).to include(active, disabled)
+      expect(Item.active).not_to include(archived)
+    end
+  end
+
   describe "tags" do
     it "attaches resolved tags without duplicating existing ones" do
       create(:tag, name: "Vegan")

@@ -1,4 +1,4 @@
-import type { CancellationReasonCode, Item, Message, Order, Rating, Shop, User, VendorCustomerNote } from './types'
+import type { AssistantMessage, CancellationReasonCode, Item, Message, Order, Rating, Shop, User, VendorCustomerNote } from './types'
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1'
 // Shared with customer-web's key — both apps are same-origin now (customer
@@ -110,12 +110,15 @@ export const api = {
     return request<{ ratings: Rating[] }>(`/shops/${slug}/ratings${suffix}`)
   },
 
-  listItems: (shopId: number) => request<{ items: Item[] }>(`/vendor/shops/${shopId}/items`),
+  listItems: (shopId: number, archived?: boolean) =>
+    request<{ items: Item[] }>(`/vendor/shops/${shopId}/items${archived ? '?archived=true' : ''}`),
   createItem: (shopId: number, form: FormData) =>
     request<{ item: Item }>(`/vendor/shops/${shopId}/items`, 'POST', form),
   updateItem: (id: number, form: FormData) => request<{ item: Item }>(`/vendor/items/${id}`, 'PATCH', form),
   enableItem: (id: number) => request<{ item: Item }>(`/vendor/items/${id}/enable`, 'POST'),
   disableItem: (id: number) => request<{ item: Item }>(`/vendor/items/${id}/disable`, 'POST'),
+  archiveItem: (id: number) => request<{ item: Item }>(`/vendor/items/${id}/archive`, 'POST'),
+  unarchiveItem: (id: number) => request<{ item: Item }>(`/vendor/items/${id}/unarchive`, 'POST'),
 
   listVendorOrders: (shopId?: number) =>
     request<{ orders: Order[] }>(`/vendor/orders${shopId ? `?shop_id=${shopId}` : ''}`),
@@ -165,4 +168,8 @@ export const api = {
       flagged: flagged ?? false,
     }),
   deleteCustomerNote: (id: number) => request<null>(`/vendor/customer_notes/${id}`, 'DELETE'),
+
+  getAssistantMessages: () => request<{ messages: AssistantMessage[] }>('/vendor/assistant/messages'),
+  sendAssistantMessage: (body: string) =>
+    request<{ messages: AssistantMessage[] }>('/vendor/assistant/messages', 'POST', { message: { body } }),
 }

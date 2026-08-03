@@ -4,6 +4,8 @@ class ItemPolicy < ApplicationPolicy
   def update?   = owner?
   def enable?   = owner?
   def disable?  = owner?
+  def archive?   = owner?
+  def unarchive? = owner?
 
   private
 

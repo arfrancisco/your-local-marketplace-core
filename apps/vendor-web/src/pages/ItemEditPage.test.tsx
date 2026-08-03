@@ -26,6 +26,7 @@ const existingItem: Item = {
   price_cents: 15000,
   currency: 'PHP',
   enabled: true,
+  archived: false,
   stock_count: 8,
   sold_out: false,
   position: 0,
