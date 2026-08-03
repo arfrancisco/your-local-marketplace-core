@@ -6,6 +6,7 @@ import { HamburgerMenu } from './components/HamburgerMenu'
 import { LoginPage } from './pages/LoginPage'
 import { ShopDashboardPage } from './pages/ShopDashboardPage'
 import { ShopFormPage } from './pages/ShopFormPage'
+import { ShopPreviewPage } from './pages/ShopPreviewPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { ItemsPage } from './pages/ItemsPage'
 import { ItemEditPage } from './pages/ItemEditPage'
@@ -88,6 +89,7 @@ export default function App() {
           <Route path="/shops" element={<RequireAuth><ShopDashboardPage /></RequireAuth>} />
           <Route path="/shops/new" element={<RequireAuth><ShopFormPage /></RequireAuth>} />
           <Route path="/shops/:id/edit" element={<RequireAuth><ShopFormPage /></RequireAuth>} />
+          <Route path="/shops/:id/preview" element={<RequireAuth><ShopPreviewPage /></RequireAuth>} />
           <Route path="/shops/:id/items" element={<RequireAuth><ItemsPage /></RequireAuth>} />
           <Route path="/shops/:id/items/:itemId/edit" element={<RequireAuth><ItemEditPage /></RequireAuth>} />
           <Route path="/orders" element={<RequireAuth><OrdersPage /></RequireAuth>} />
