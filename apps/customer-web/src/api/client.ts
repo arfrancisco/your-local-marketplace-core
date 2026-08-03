@@ -179,6 +179,11 @@ export const api = {
     request<{ cart: Cart }>(`/cart/items/${cartItemId}`, 'PATCH', { quantity }),
   removeCartItem: (cartItemId: number) => request<{ cart: Cart }>(`/cart/items/${cartItemId}`, 'DELETE'),
 
+  // Clears a whole shop's cart in one call — used by the one-shop-at-a-time
+  // cart policy (CartContext) when the customer confirms replacing their
+  // current cart with a different shop's.
+  clearCart: (shopId: number) => request<null>(`/cart?shop_id=${shopId}`, 'DELETE'),
+
   // Checkout converts the cart into a real order (rest of M3, ADR 0009) —
   // requires the lightweight real account cart already requires.
   checkout: (shopId: number, fulfillmentMethod: FulfillmentMethod, customerNote?: string) =>

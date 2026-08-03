@@ -176,7 +176,7 @@ export function ShopDetailPage() {
                 ) : quantity === 0 ? (
                   <button
                     className="qty-btn"
-                    onClick={() => addToCart(item)}
+                    onClick={() => addToCart(shop, item)}
                     aria-label={`Add ${item.name} to cart`}
                   >
                     +
@@ -195,7 +195,7 @@ export function ShopDetailPage() {
                     <span className="item-qty">{quantity}</span>
                     <button
                       className="qty-btn"
-                      onClick={() => addToCart(item)}
+                      onClick={() => addToCart(shop, item)}
                       aria-label={`Add ${item.name} to cart`}
                     >
                       +
@@ -257,7 +257,7 @@ export function ShopDetailPage() {
       <ItemDetailModal
         item={viewingItem}
         onClose={() => setViewingItem(null)}
-        onAddToCart={addToCart}
+        onAddToCart={(item) => addToCart(shop, item)}
         onDecrement={(item) => changeQuantity(item.id, quantityOf(item.id) - 1)}
         quantity={viewingItem ? quantityOf(viewingItem.id) : 0}
       />
