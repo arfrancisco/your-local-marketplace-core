@@ -28,13 +28,15 @@ RSpec.describe SocialPreviews::BuildShopMeta do
     )
   end
 
-  it "uses the shop's cover photo when attached" do
+  it "uses the shop's cover photo, resized to Facebook's recommended 1200x630 crop" do
     shop = create(:shop, :open)
     shop.cover_photo.attach(png)
 
     meta = described_class.new(shop: shop, base_url: base_url).call
 
     expect(meta[:image_url]).to start_with("https://prisma.kapitmarket.ph/rails/active_storage/")
+    expect(meta[:image_width]).to eq(1200)
+    expect(meta[:image_height]).to eq(630)
   end
 
   it "falls back to the profile photo when there is no cover photo" do
@@ -44,13 +46,17 @@ RSpec.describe SocialPreviews::BuildShopMeta do
     meta = described_class.new(shop: shop, base_url: base_url).call
 
     expect(meta[:image_url]).to start_with("https://prisma.kapitmarket.ph/rails/active_storage/")
+    expect(meta[:image_width]).to eq(1200)
+    expect(meta[:image_height]).to eq(630)
   end
 
-  it "falls back to the site-wide default image when the shop has neither photo" do
+  it "falls back to the site-wide default image (at its own real size) when the shop has neither photo" do
     shop = create(:shop, :open)
 
     meta = described_class.new(shop: shop, base_url: base_url).call
 
     expect(meta[:image_url]).to eq("https://prisma.kapitmarket.ph/bazaar.jpg")
+    expect(meta[:image_width]).to eq(1920)
+    expect(meta[:image_height]).to eq(1280)
   end
 end

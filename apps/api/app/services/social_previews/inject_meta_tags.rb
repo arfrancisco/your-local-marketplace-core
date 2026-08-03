@@ -26,10 +26,13 @@ module SocialPreviews
       html = replace_meta(html, name: "twitter:title", value: @meta[:title])
       html = replace_meta(html, name: "twitter:description", value: @meta[:description])
       html = replace_meta(html, name: "twitter:image", value: @meta[:image_url])
-      # A shop's own photo isn't guaranteed to be the default bazaar.jpg's
-      # 1920x1280 — drop the now-inaccurate explicit dimensions rather than
-      # mislead crawlers that don't refetch the image to verify them.
-      html.gsub(%r{\s*<meta property="og:image:(?:width|height)" content="\d+"\s*/>\n?}, "")
+      # BuildShopMeta always knows the real dimensions of whatever image_url
+      # points to — the shop's cover/profile photo is served through a
+      # resize_to_fill variant at a known fixed size, and the default
+      # bazaar.jpg fallback's own size is hardcoded there too. So these get
+      # set to the actual value rather than stripped.
+      html = replace_meta(html, property: "og:image:width", value: @meta[:image_width].to_s)
+      replace_meta(html, property: "og:image:height", value: @meta[:image_height].to_s)
     end
 
     private
