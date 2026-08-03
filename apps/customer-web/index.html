@@ -10,12 +10,15 @@
     <!-- Open Graph / Twitter Card defaults for the landing page and as a
          fallback for any page a crawler fetches directly. Shop pages get
          their own shop-specific values instead — see StaticController and
-         SocialPreviews:: services in apps/api, which serve social-media
-         crawlers (Facebook/Instagram, Twitter/X, LinkedIn, Slack, Discord,
-         WhatsApp, Telegram, etc.) a version of this shell with these tags
-         swapped for the shop being shared, since those crawlers fetch the
-         URL once without running JavaScript and would otherwise only ever
-         see these same defaults regardless of which shop was linked.
+         SocialPreviews:: services in apps/api, which recognize Facebook and
+         Instagram's crawler (same crawler infrastructure for both — scope
+         deliberately limited to those two for now) on /shops/:slug and serve
+         a version of this shell with these tags swapped for the shop being
+         shared, since that crawler fetches the URL once without running
+         JavaScript and would otherwise only ever see these same defaults
+         regardless of which shop was linked. The twitter: tags below are
+         left in as inert defaults (Twitter/X falls back to the og: tags
+         regardless) — no dynamic per-shop support for it yet.
          Absolute URLs are required by the Open Graph spec — hardcoded to
          the production domain since this file is static at build time. -->
     <meta property="og:type" content="website" />

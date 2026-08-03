@@ -2,24 +2,22 @@ require "rails_helper"
 
 RSpec.describe SocialPreviews::DetectCrawler do
   describe ".bot?" do
-    it "recognizes Facebook's crawler (also covers Instagram unfurls)" do
+    it "recognizes Facebook's crawler (also covers Instagram unfurls — same crawler infra)" do
       expect(described_class.bot?("facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)")).to be true
     end
 
-    it "recognizes Twitter/X's crawler" do
-      expect(described_class.bot?("Twitterbot/1.0")).to be true
-    end
-
-    it "recognizes LinkedIn, Slack, Discord, WhatsApp, and Telegram crawlers" do
-      expect(described_class.bot?("LinkedInBot/1.0")).to be true
-      expect(described_class.bot?("Slackbot-LinkExpanding 1.0")).to be true
-      expect(described_class.bot?("Mozilla/2.0 (compatible; Discordbot/2.0; +https://discordapp.com)")).to be true
-      expect(described_class.bot?("WhatsApp/2.23.0")).to be true
-      expect(described_class.bot?("TelegramBot (like TwitterBot)")).to be true
+    it "recognizes Facebook's alternate Facebot user agent" do
+      expect(described_class.bot?("Facebot")).to be true
     end
 
     it "is case-insensitive" do
-      expect(described_class.bot?("TWITTERBOT/1.0")).to be true
+      expect(described_class.bot?("FACEBOOKEXTERNALHIT/1.1")).to be true
+    end
+
+    it "does not flag other platforms' crawlers — scope is Facebook/Instagram only for now" do
+      expect(described_class.bot?("Twitterbot/1.0")).to be false
+      expect(described_class.bot?("LinkedInBot/1.0")).to be false
+      expect(described_class.bot?("Slackbot-LinkExpanding 1.0")).to be false
     end
 
     it "does not flag an ordinary browser" do
