@@ -7,6 +7,12 @@ import { LegalModal } from '../components/LegalModal'
 import { VerifyMobilePage } from './VerifyMobilePage'
 import { CompleteProfilePage } from './CompleteProfilePage'
 
+// Beta-launch toggle: verification delivery isn't reliable yet (Semaphore
+// SMS sender-name approval pending), so mobile verification is temporarily
+// skipped during registration to remove friction for beta signups. Flip
+// VITE_SKIP_VERIFICATION off (or unset it) to restore screen 2.
+const SKIP_VERIFICATION = import.meta.env.VITE_SKIP_VERIFICATION === 'true'
+
 // Browsing stays fully public — this page only exists for the moment
 // someone wants a real cart, which needs a real account (see auth.tsx).
 export function LoginPage() {
@@ -84,7 +90,7 @@ export function LoginPage() {
         email_marketing_opt_in: emailMarketingOptIn,
         sms_marketing_opt_in: smsMarketingOptIn,
       })
-      setRegisterStep(2)
+      setRegisterStep(SKIP_VERIFICATION ? 3 : 2)
     } catch (err) {
       if (err instanceof ApiError && err.code === 'email_taken') {
         setEmailTaken(true)

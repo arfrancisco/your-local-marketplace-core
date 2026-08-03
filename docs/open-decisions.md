@@ -49,12 +49,19 @@ make before going live to real neighbors.
     hosts image storage (see ADR 0006). Live in production at
     prisma.kapitmarket.ph.
 
-12. **Verification delivery (resolved, one operational step pending).** SMS
+12. **Verification delivery (resolved, temporarily disabled for beta).** SMS
     verification uses Semaphore; email verification uses Cloudflare Email
     Service. Both are implemented and wired in (not stubbed/logged only).
     Semaphore requires a custom Sender Name to be approved before production
     SMS can go out under the app's own name; their stated turnaround is up to
     5 business days with no official expedited option (checked directly with
-    their FAQ). Confirm this has actually cleared, and whether any shared/
-    default sender ID still works for OTP delivery in the meantime, before
-    relying on SMS verification for real users.
+    their FAQ), and there's no confirmation yet that it has cleared.
+    Rather than block the beta on that, verification is currently switched
+    off end to end: `SKIP_VERIFICATION=true` (API, Railway env var, no
+    rebuild needed) removes the email-verified requirement to become a
+    vendor, and `VITE_SKIP_VERIFICATION=true` (customer-web, baked in at
+    build time via the Dockerfile) skips the mobile-verification screen
+    during registration. Both are meant to be temporary — flip them off (and
+    redeploy the frontend for the Vite one) once Semaphore's sender name is
+    confirmed approved and verification should be required again for real
+    users.

@@ -23,12 +23,21 @@ module Vendors
       reasons << "already_vendor" if @user.vendor_profile.present?
       reasons << "not_resident" unless resident?
       reasons << "not_willing_to_verify" if resident? && !willing_to_verify?
-      reasons << "email_not_verified" unless @user.email_verified?
+      reasons << "email_not_verified" if require_email_verification? && !@user.email_verified?
 
       Result.new(eligible: reasons.empty?, reasons: reasons)
     end
 
     private
+
+    # Beta-launch toggle: email/mobile verification delivery isn't reliable
+    # yet (Semaphore SMS sender-name approval pending, see
+    # docs/open-decisions.md), so this is temporarily off to let beta users
+    # sign up and become vendors with zero verification friction. Flip
+    # SKIP_VERIFICATION off (or unset it) to restore the requirement.
+    def require_email_verification?
+      ENV["SKIP_VERIFICATION"] != "true"
+    end
 
     def resident?
       @user.customer_profile&.is_resident == true

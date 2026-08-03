@@ -57,5 +57,19 @@ RSpec.describe "Api::V1 Vendor upgrade", type: :request do
       expect(response).to have_http_status(:forbidden)
       expect(json.dig("error", "details", "reasons")).to include("already_vendor")
     end
+
+    it "allows an unverified email when SKIP_VERIFICATION is set (beta launch toggle)" do
+      make_eligible!(user)
+      user.update_column(:email_verified_at, nil)
+
+      begin
+        ENV["SKIP_VERIFICATION"] = "true"
+        post "/api/v1/me/vendor_profile", headers: auth_headers(user)
+      ensure
+        ENV.delete("SKIP_VERIFICATION")
+      end
+
+      expect(response).to have_http_status(:created)
+    end
   end
 end
