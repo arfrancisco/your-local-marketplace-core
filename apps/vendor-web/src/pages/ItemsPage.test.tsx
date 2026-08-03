@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ItemsPage } from './ItemsPage'
@@ -64,6 +64,7 @@ describe('ItemsPage', () => {
     vi.mocked(api.createItem).mockResolvedValue({ item: { ...baseItem, id: 2 } })
 
     renderAt('/shops/5/items')
+    await userEvent.click(await screen.findByRole('button', { name: 'Add item' }))
     await screen.findByLabelText('Name')
 
     await userEvent.type(screen.getByLabelText('Name'), 'Turon')
@@ -80,6 +81,7 @@ describe('ItemsPage', () => {
     vi.mocked(api.createItem).mockResolvedValue({ item: { ...baseItem, id: 3, stock_count: 10 } })
 
     renderAt('/shops/5/items')
+    await userEvent.click(await screen.findByRole('button', { name: 'Add item' }))
     await screen.findByLabelText('Name')
 
     await userEvent.type(screen.getByLabelText('Name'), 'Turon')
@@ -174,7 +176,7 @@ describe('ItemsPage', () => {
     expect(screen.getByText('Hidden from shop')).toBeInTheDocument()
   })
 
-  it('reorders items by swapping positions with a neighbor', async () => {
+  it('reorders items via arrow keys on the drag handle, as a keyboard-accessible fallback', async () => {
     vi.mocked(api.listItems).mockResolvedValue({
       items: [
         { ...baseItem, id: 1, name: 'Lumpia', position: 0 },
@@ -190,21 +192,58 @@ describe('ItemsPage', () => {
     renderAt('/shops/5/items')
     await screen.findByText('Lumpia')
 
-    // The first row can't move up, the last row can't move down.
-    expect(screen.getByRole('button', { name: 'Move Lumpia up' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Move Turon down' })).toBeDisabled()
-
-    await userEvent.click(screen.getByRole('button', { name: 'Move Lumpia down' }))
+    const lumpiaHandle = screen.getByRole('button', { name: /drag to reorder Lumpia/i })
+    lumpiaHandle.focus()
+    await userEvent.keyboard('{ArrowDown}')
 
     expect(api.updateItem).toHaveBeenCalledTimes(2)
-    const [firstCall, secondCall] = vi.mocked(api.updateItem).mock.calls
-    expect(firstCall[0]).toBe(1)
-    expect((firstCall[1] as FormData).get('item[position]')).toBe('1')
-    expect(secondCall[0]).toBe(2)
-    expect((secondCall[1] as FormData).get('item[position]')).toBe('0')
+    const calls = vi.mocked(api.updateItem).mock.calls
+    const callFor = (id: number) => calls.find((c) => c[0] === id)!
+    expect((callFor(1)[1] as FormData).get('item[position]')).toBe('1')
+    expect((callFor(2)[1] as FormData).get('item[position]')).toBe('0')
 
     // Rows swap places: Turon now leads.
     const names = (await screen.findAllByRole('cell', { name: /Lumpia|Turon/ })).map((c) => c.textContent)
     expect(names).toEqual(['Turon', 'Lumpia'])
+  })
+
+  it('reorders items by dragging a row onto another row\'s drop target', async () => {
+    vi.mocked(api.listItems).mockResolvedValue({
+      items: [
+        { ...baseItem, id: 1, name: 'Lumpia', position: 0 },
+        { ...baseItem, id: 2, name: 'Turon', position: 1 },
+        { ...baseItem, id: 3, name: 'Halo-halo', position: 2 },
+      ],
+    })
+    vi.mocked(api.updateItem).mockImplementation(async (id, fd) => {
+      const position = Number((fd as FormData).get('item[position]'))
+      const name = { 1: 'Lumpia', 2: 'Turon', 3: 'Halo-halo' }[id as number]
+      return { item: { ...baseItem, id: id as number, name, position } }
+    })
+
+    renderAt('/shops/5/items')
+    await screen.findByText('Lumpia')
+
+    const dataTransfer = {
+      effectAllowed: '',
+      setDragImage: vi.fn(),
+    } as unknown as DataTransfer
+
+    const lumpiaHandle = screen.getByRole('button', { name: /drag to reorder Lumpia/i })
+    const halohaloRow = screen.getByText('Halo-halo').closest('tr')!
+
+    fireEvent.dragStart(lumpiaHandle, { dataTransfer })
+    fireEvent.dragOver(halohaloRow, { dataTransfer })
+    fireEvent.drop(halohaloRow, { dataTransfer })
+
+    // Dropping Lumpia (index 0) onto Halo-halo's row (index 2) shifts every
+    // row in between, so all three get a position PATCH, not just the two
+    // endpoints.
+    await waitFor(() => expect(api.updateItem).toHaveBeenCalledTimes(3))
+
+    const names = (await screen.findAllByRole('cell', { name: /Lumpia|Turon|Halo-halo/ })).map(
+      (c) => c.textContent,
+    )
+    expect(names).toEqual(['Turon', 'Halo-halo', 'Lumpia'])
   })
 })

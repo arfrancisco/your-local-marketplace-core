@@ -289,9 +289,14 @@ button:disabled { opacity: 0.6; cursor: default; }
   white-space: nowrap;
 }
 .inventory-table tbody tr:last-child td { border-bottom: none; }
-/* Same visual treatment as `.card.dimmed`, now that a hidden item is a row
-   rather than a card. */
-.inventory-table tr.dimmed { opacity: 0.55; }
+/* De-emphasizes a hidden item's info without touching the action button in
+   the same row — row-level `opacity` would fade the Show button along with
+   everything else (opacity composites the whole element as one unit, so no
+   child can "undo" it), making the one thing you're supposed to tap here
+   look disabled. Muting each informational cell's text color individually
+   avoids that; .actions and .reorder-cell are deliberately left out. */
+.inventory-table tr.dimmed { background: #f9fafb; }
+.inventory-table tr.dimmed td:not(.actions):not(.reorder-cell) { color: #9ca3af; }
 .inventory-table .item-name { font-weight: 600; }
 .inventory-table th.actions-col,
 .inventory-table td.actions { text-align: right; }
@@ -304,14 +309,24 @@ button:disabled { opacity: 0.6; cursor: default; }
 
 .inventory-table th.reorder-col,
 .inventory-table td.reorder-cell { width: 1%; white-space: nowrap; }
-.reorder-buttons { display: flex; flex-direction: column; gap: 0.2rem; }
-.reorder-buttons button {
-  width: 26px;
-  height: 22px;
+.drag-handle {
+  width: 32px;
+  height: 32px;
   padding: 0;
   line-height: 1;
-  font-size: 0.85rem;
+  font-size: 1.1rem;
+  color: #6b7280;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: grab;
 }
+.drag-handle:active { cursor: grabbing; }
+.drag-handle:disabled { cursor: not-allowed; opacity: 0.5; }
+/* The dragged row fades in place; the row currently under the pointer gets a
+   top-edge highlight showing where it'll land on drop. */
+.inventory-table tr.dragging { opacity: 0.4; }
+.inventory-table tr.drag-over { box-shadow: inset 0 2px 0 #2563eb; }
 
 /* States what's actually true right now, distinct from the action button
    next to it (which says what tapping it *will do* — easy to conflate the
@@ -372,15 +387,16 @@ button:disabled { opacity: 0.6; cursor: default; }
   }
   .inventory-table td.actions::before { content: none; }
 
-  /* Self-explanatory arrows, and the row itself already implies "this item";
-     right-aligned like the actions row rather than stacked with a label. */
+  /* The handle icon is self-explanatory, and the row itself already implies
+     "this item"; right-aligned like the actions row rather than stacked with
+     a label. Native HTML5 drag-and-drop has no touch support, so on mobile
+     this handle is really just the arrow-key entry point. */
   .inventory-table td.reorder-cell {
     justify-content: flex-end;
     padding-top: 0.55rem;
     padding-bottom: 0;
   }
   .inventory-table td.reorder-cell::before { content: none; }
-  .reorder-buttons { flex-direction: row; }
 }
 
 /* Hamburger menu drawer — the header's nav links live in here now
@@ -636,3 +652,26 @@ h2.section { margin-top: 1.5rem; }
   .shop-avatar { width: 50px; height: 50px; }
   .shop-identity-text h1 { font-size: 1.1rem; }
 }
+
+/* Floating "add item" button (ItemsPage) + the modal it opens, replacing the
+   old always-visible inline form at the bottom of the inventory page. */
+.add-item-fab {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1rem;
+  z-index: 40;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  font-size: 1.6rem;
+  line-height: 1;
+  padding: 0;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+.add-item-modal {
+  max-width: 460px;
+  max-height: 90vh;
+  overflow-y: auto;
+  text-align: left;
+}
+.add-item-modal h2 { text-align: center; }

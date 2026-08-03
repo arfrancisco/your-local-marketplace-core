@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type DragEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { Item } from '../api/types'
@@ -21,6 +21,7 @@ export function ItemsPage() {
   const [files, setFiles] = useState<FileList | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
 
   useEffect(() => {
     api.listItems(shopId).then((res) => setItems(res.items)).finally(() => setLoading(false))
@@ -31,10 +32,9 @@ export function ItemsPage() {
     setItems((prev) => prev.map((i) => (i.id === item.id ? res.item : i)))
   }
 
-  // Swaps this item's position with its neighbor's, rather than renumbering
-  // the whole list — position values don't need to be contiguous, just
-  // ordered, so a swap between the two affected rows is all a reorder needs.
   const [moving, setMoving] = useState(false)
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
   function positionFormData(position: number) {
     const fd = new FormData()
@@ -42,25 +42,77 @@ export function ItemsPage() {
     return fd
   }
 
-  async function moveItem(index: number, direction: -1 | 1) {
-    const targetIndex = index + direction
-    if (targetIndex < 0 || targetIndex >= items.length || moving) return
-    const current = items[index]
-    const target = items[targetIndex]
+  // Dropping onto an arbitrary row can shift every item between the old and
+  // new spot, not just one neighbor, so this renumbers the whole list
+  // sequentially and only PATCHes the rows whose position actually changed.
+  async function moveItemTo(fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex || moving) return
+    const previous = items
+    const reordered = [...items]
+    const [moved] = reordered.splice(fromIndex, 1)
+    reordered.splice(toIndex, 0, moved)
+
+    setItems(reordered)
     setMoving(true)
     try {
-      const [currentRes, targetRes] = await Promise.all([
-        api.updateItem(current.id, positionFormData(target.position)),
-        api.updateItem(target.id, positionFormData(current.position)),
-      ])
+      const changed = reordered
+        .map((item, index) => ({ item, index }))
+        .filter(({ item, index }) => previous.findIndex((p) => p.id === item.id) !== index)
+
+      const updated = await Promise.all(
+        changed.map(({ item, index }) => api.updateItem(item.id, positionFormData(index))),
+      )
       setItems((prev) => {
         const next = [...prev]
-        next[index] = targetRes.item
-        next[targetIndex] = currentRes.item
+        updated.forEach(({ item }) => {
+          const index = next.findIndex((i) => i.id === item.id)
+          if (index !== -1) next[index] = item
+        })
         return next
       })
+    } catch {
+      setItems(previous)
     } finally {
       setMoving(false)
+    }
+  }
+
+  function onHandleDragStart(e: DragEvent<HTMLButtonElement>, index: number) {
+    setDraggedIndex(index)
+    e.dataTransfer.effectAllowed = 'move'
+    // The drag handle is a small grip icon, but the row itself is what
+    // should visually follow the pointer while dragging.
+    const row = e.currentTarget.closest('tr')
+    if (row) e.dataTransfer.setDragImage(row, 20, 20)
+  }
+
+  function onRowDragOver(e: DragEvent<HTMLTableRowElement>, index: number) {
+    e.preventDefault()
+    if (draggedIndex === null || draggedIndex === index) return
+    setDragOverIndex(index)
+  }
+
+  function onRowDrop(e: DragEvent<HTMLTableRowElement>, index: number) {
+    e.preventDefault()
+    if (draggedIndex !== null && draggedIndex !== index) moveItemTo(draggedIndex, index)
+    setDraggedIndex(null)
+    setDragOverIndex(null)
+  }
+
+  function onHandleDragEnd() {
+    setDraggedIndex(null)
+    setDragOverIndex(null)
+  }
+
+  // Arrow keys on the handle keep reordering keyboard-operable now that
+  // dragging is the primary mechanism.
+  function onHandleKeyDown(e: KeyboardEvent<HTMLButtonElement>, index: number) {
+    if (e.key === 'ArrowUp' && index > 0) {
+      e.preventDefault()
+      moveItemTo(index, index - 1)
+    } else if (e.key === 'ArrowDown' && index < items.length - 1) {
+      e.preventDefault()
+      moveItemTo(index, index + 1)
     }
   }
 
@@ -92,6 +144,7 @@ export function ItemsPage() {
       setTags('')
       setStockCount('')
       setFiles(null)
+      setAddOpen(false)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not add item')
     } finally {
@@ -125,26 +178,31 @@ export function ItemsPage() {
           </thead>
           <tbody>
             {items.map((item, index) => (
-              <tr key={item.id} className={item.enabled ? '' : 'dimmed'}>
+              <tr
+                key={item.id}
+                className={[
+                  item.enabled ? '' : 'dimmed',
+                  draggedIndex === index ? 'dragging' : '',
+                  dragOverIndex === index && draggedIndex !== index ? 'drag-over' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                onDragOver={(e) => onRowDragOver(e, index)}
+                onDrop={(e) => onRowDrop(e, index)}
+              >
                 <td data-label="Order" className="reorder-cell">
-                  <div className="reorder-buttons">
-                    <button
-                      type="button"
-                      onClick={() => moveItem(index, -1)}
-                      disabled={index === 0 || moving}
-                      aria-label={`Move ${item.name} up`}
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moveItem(index, 1)}
-                      disabled={index === items.length - 1 || moving}
-                      aria-label={`Move ${item.name} down`}
-                    >
-                      ↓
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    className="drag-handle"
+                    draggable
+                    onDragStart={(e) => onHandleDragStart(e, index)}
+                    onDragEnd={onHandleDragEnd}
+                    onKeyDown={(e) => onHandleKeyDown(e, index)}
+                    disabled={moving}
+                    aria-label={`Drag to reorder ${item.name}, or use arrow keys`}
+                  >
+                    ⠿
+                  </button>
                 </td>
                 <td data-label="Item" className="item-name">{item.name}</td>
                 <td data-label="Price">{formatPrice(item.price_cents, item.currency)}</td>
@@ -180,41 +238,71 @@ export function ItemsPage() {
         </table>
       )}
 
-      <form className="card" onSubmit={onCreate}>
-        <h2>Add item</h2>
-        <label>
-          Name
-          <input value={name} onChange={(e) => setName(e.target.value)} required />
-        </label>
-        <label>
-          Description
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
-        </label>
-        <label>
-          Price
-          <input type="number" step="0.01" min="0.01" value={price} onChange={(e) => setPrice(e.target.value)} required />
-        </label>
-        <label>
-          Tags (comma separated)
-          <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="rice meal, savory" />
-        </label>
-        <label>
-          Stock count (optional — leave blank if you don't track stock)
-          <input
-            type="number"
-            step="1"
-            min="0"
-            value={stockCount}
-            onChange={(e) => setStockCount(e.target.value)}
-          />
-        </label>
-        <label>
-          Photos (up to 6)
-          <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => setFiles(e.target.files)} />
-        </label>
-        {error && <p role="alert" className="error">{error}</p>}
-        <button type="submit" disabled={saving}>{saving ? 'Adding…' : 'Add item'}</button>
-      </form>
+      {!addOpen && (
+        <button
+          type="button"
+          className="add-item-fab"
+          onClick={() => setAddOpen(true)}
+          aria-label="Add item"
+        >
+          +
+        </button>
+      )}
+
+      {addOpen && (
+        <div className="modal-backdrop" onClick={() => setAddOpen(false)}>
+          <div
+            className="modal add-item-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Add item"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="modal-close"
+              aria-label="Close"
+              onClick={() => setAddOpen(false)}
+            >
+              ×
+            </button>
+            <form onSubmit={onCreate}>
+              <h2>Add item</h2>
+              <label>
+                Name
+                <input value={name} onChange={(e) => setName(e.target.value)} required />
+              </label>
+              <label>
+                Description
+                <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+              </label>
+              <label>
+                Price
+                <input type="number" step="0.01" min="0.01" value={price} onChange={(e) => setPrice(e.target.value)} required />
+              </label>
+              <label>
+                Tags (comma separated)
+                <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="rice meal, savory" />
+              </label>
+              <label>
+                Stock count (optional — leave blank if you don't track stock)
+                <input
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={stockCount}
+                  onChange={(e) => setStockCount(e.target.value)}
+                />
+              </label>
+              <label>
+                Photos (up to 6)
+                <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => setFiles(e.target.files)} />
+              </label>
+              {error && <p role="alert" className="error">{error}</p>}
+              <button type="submit" disabled={saving}>{saving ? 'Adding…' : 'Add item'}</button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
