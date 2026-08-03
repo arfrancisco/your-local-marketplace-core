@@ -151,7 +151,6 @@ export function ShopDashboardPage({ onboardingMode = false, onTourDone }: ShopDa
 
       <div className="card shop-actions">
         <Link className="button" to={`/shops/${shop.id}/edit`}>Edit shop details</Link>
-        <Link className="button" to={`/shops/${shop.id}/preview`}>Preview shop</Link>
         <div className="tour-anchor">
           <Link className="button" to={`/shops/${shop.id}/items`}>Inventory</Link>
           {showTour && tourStep === 1 && (
