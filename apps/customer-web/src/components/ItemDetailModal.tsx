@@ -45,21 +45,19 @@ export function ItemDetailModal({ item, onClose, onAddToCart, onDecrement, quant
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-        {/* Back button replaces the old top-right "×" — same overlaid-circle
-            treatment as the shop hero's own back button, so "how do I leave
-            this view" reads the same way across the app. */}
-        <button className="shop-back" aria-label="Back" onClick={onClose}>
-          <BackArrowIcon />
-        </button>
-
-        {/* Gallery: main image + thumbnail strip when there is more than one. */}
-        {current ? (
-          <img className="gallery-main" src={`${API_ORIGIN}${current.url}`} alt={item.name} />
-        ) : (
-          <div className="gallery-main tile" style={{ background: colorFor(item.name) }} aria-hidden>
-            {emojiFor(`${item.name} ${item.tags.map((t) => t.name).join(' ')}`)}
-          </div>
-        )}
+        {/* Gallery: main image + thumbnail strip when there is more than one.
+            The main photo bleeds flush to the modal's own edges — nothing is
+            overlaid on it anymore (back button and add-to-cart both moved
+            below), so the padding that used to make room for them is gone. */}
+        <div className="item-modal-gallery">
+          {current ? (
+            <img className="gallery-main" src={`${API_ORIGIN}${current.url}`} alt={item.name} />
+          ) : (
+            <div className="gallery-main tile" style={{ background: colorFor(item.name) }} aria-hidden>
+              {emojiFor(`${item.name} ${item.tags.map((t) => t.name).join(' ')}`)}
+            </div>
+          )}
+        </div>
 
         {photos.length > 1 && (
           <div className="gallery-thumbs">
@@ -84,10 +82,14 @@ export function ItemDetailModal({ item, onClose, onAddToCart, onDecrement, quant
         {item.tags.length > 0 && <p className="muted small">{item.tags.map((t) => t.name).join(', ')}</p>}
         {item.sold_out && <p className="sold-out-label">Sold out</p>}
 
-        {/* Same +/− stepper as the item cards behind this modal, bottom-right
-            of the box — one control, one place to hold the count, whether
-            you're scanning the menu or looking at this detail view. */}
-        <div className="row end" style={{ marginTop: '0.5rem' }}>
+        {/* Back button bottom-left (not overlaid top-right on the photo like
+            the shop hero's) so it falls under a thumb on a one-handed phone
+            grip, opposite the +/− stepper the item cards already carry. */}
+        <div className="row spread" style={{ marginTop: '0.5rem' }}>
+          <button className="icon-btn" aria-label="Back" onClick={onClose}>
+            <BackArrowIcon />
+          </button>
+
           {item.sold_out ? (
             <button disabled>Sold out</button>
           ) : quantity === 0 ? (
