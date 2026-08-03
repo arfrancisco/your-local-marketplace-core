@@ -607,12 +607,17 @@ button.link {
 
 /* position: absolute relative to .topbar (not the viewport) — it's anchored
    inside the header itself and scrolls away with it, rather than staying
-   pinned in the corner as the page scrolls beneath it. */
+   pinned in the corner as the page scrolls beneath it. Vertically centered
+   via the top:0/bottom:0/margin:auto trick rather than a transform — a
+   transform here would make this element a containing block for its own
+   position:fixed descendants (the hamburger's drawer/backdrop), which broke
+   the drawer's positioning relative to the viewport. */
 .header-actions {
   position: absolute;
-  top: 50%;
+  top: 0;
+  bottom: 0;
   right: 1.25rem;
-  transform: translateY(-50%);
+  margin: auto 0;
   z-index: 2;
   display: flex;
   align-items: center;
