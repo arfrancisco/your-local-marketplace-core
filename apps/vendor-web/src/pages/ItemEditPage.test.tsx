@@ -76,7 +76,7 @@ describe('ItemEditPage', () => {
     renderAt('/shops/5/items/7/edit')
     await screen.findByDisplayValue('Lumpia')
 
-    const nameInput = screen.getByLabelText('Name')
+    const nameInput = screen.getByLabelText(/^Name/)
     await userEvent.clear(nameInput)
     await userEvent.type(nameInput, 'Lumpia Shanghai')
     await userEvent.click(screen.getByRole('button', { name: 'Save item' }))

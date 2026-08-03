@@ -269,11 +269,11 @@ export function ItemsPage() {
             <form onSubmit={onCreate}>
               <h2>Add item</h2>
               <label>
-                Name
+                Name (shown to customers, and matched when they search)
                 <input value={name} onChange={(e) => setName(e.target.value)} required />
               </label>
               <label>
-                Description
+                Description (shown on the item — not used for search)
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
               </label>
               <label>
@@ -281,7 +281,7 @@ export function ItemsPage() {
                 <input type="number" step="0.01" min="0.01" value={price} onChange={(e) => setPrice(e.target.value)} required />
               </label>
               <label>
-                Tags (comma separated)
+                Tags (comma separated — also matched when customers search, e.g. "vegan" or "spicy")
                 <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="rice meal, savory" />
               </label>
               <label>
@@ -295,7 +295,7 @@ export function ItemsPage() {
                 />
               </label>
               <label>
-                Photos (up to 6)
+                Photos (up to 3)
                 <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => setFiles(e.target.files)} />
               </label>
               {error && <p role="alert" className="error">{error}</p>}

@@ -65,9 +65,9 @@ describe('ItemsPage', () => {
 
     renderAt('/shops/5/items')
     await userEvent.click(await screen.findByRole('button', { name: 'Add item' }))
-    await screen.findByLabelText('Name')
+    await screen.findByLabelText(/^Name/)
 
-    await userEvent.type(screen.getByLabelText('Name'), 'Turon')
+    await userEvent.type(screen.getByLabelText(/^Name/), 'Turon')
     await userEvent.type(screen.getByLabelText('Price'), '50')
     await userEvent.click(screen.getByRole('button', { name: 'Add item' }))
 
@@ -82,9 +82,9 @@ describe('ItemsPage', () => {
 
     renderAt('/shops/5/items')
     await userEvent.click(await screen.findByRole('button', { name: 'Add item' }))
-    await screen.findByLabelText('Name')
+    await screen.findByLabelText(/^Name/)
 
-    await userEvent.type(screen.getByLabelText('Name'), 'Turon')
+    await userEvent.type(screen.getByLabelText(/^Name/), 'Turon')
     await userEvent.type(screen.getByLabelText('Price'), '50')
     await userEvent.type(screen.getByLabelText(/Stock count/), '10')
     await userEvent.click(screen.getByRole('button', { name: 'Add item' }))
