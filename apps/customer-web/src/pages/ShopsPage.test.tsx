@@ -26,6 +26,8 @@ function shop(id: number, name: string, overrides: Partial<Shop> = {}): Shop {
     cover_photo: null,
     average_rating: null,
     ratings_count: 0,
+    price_range_cents: null,
+    completed_orders_count: 0,
     ...overrides,
   }
 }
@@ -62,8 +64,26 @@ describe('ShopsPage', () => {
 
     const rows = await screen.findByRole('list', { name: 'All shops' })
     const [rated, unrated] = within(rows).getAllByRole('listitem')
-    expect(within(rated).getByText(/★ 4\.5 · 2 reviews/)).toBeTruthy()
+    expect(within(rated).getByText(/★ 4\.5/)).toBeTruthy()
     expect(within(unrated).queryByText(/★/)).toBeNull()
+  })
+
+  it('shows the price range and completed-order count only once there is enough of each to be worth showing', async () => {
+    listShops.mockResolvedValue({
+      shops: [
+        shop(1, 'Alpha', { price_range_cents: { min: 12_000, max: 28_000 }, completed_orders_count: 42 }),
+        shop(2, 'Bravo', { price_range_cents: null, completed_orders_count: 2 }),
+      ],
+    })
+
+    renderPage()
+
+    const rows = await screen.findByRole('list', { name: 'All shops' })
+    const [withStats, withoutStats] = within(rows).getAllByRole('listitem')
+    expect(within(withStats).getByText(/₱120–280/)).toBeTruthy()
+    expect(within(withStats).getByText(/42 orders/)).toBeTruthy()
+    expect(within(withoutStats).queryByText(/₱/)).toBeNull()
+    expect(within(withoutStats).queryByText(/orders/)).toBeNull()
   })
 
   it('fills the carousel with a subset of the same shops, without a second fetch', async () => {

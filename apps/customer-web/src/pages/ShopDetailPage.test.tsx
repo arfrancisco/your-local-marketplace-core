@@ -14,6 +14,7 @@ const { shop, item, user } = vi.hoisted(() => ({
     contact_number: null, building: null, fulfillment_methods: ['pickup'], open: true,
     profile_photo: null, cover_photo: null,
     average_rating: null, ratings_count: 0,
+    price_range_cents: null, completed_orders_count: 0,
   },
   item: {
     id: 10, shop_id: 1, name: 'Adobo Bowl', description: null, price_cents: 18000,

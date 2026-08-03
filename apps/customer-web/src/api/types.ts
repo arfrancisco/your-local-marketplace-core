@@ -34,6 +34,10 @@ export interface Shop {
   // null when the shop has no reviews yet — render "no reviews", never "0 stars".
   average_rating: number | null
   ratings_count: number
+  // null when the shop has no enabled items to price yet.
+  price_range_cents: { min: number; max: number } | null
+  // Completed orders only, not a raw order count (see ShopSerializer).
+  completed_orders_count: number
 }
 
 export interface Rating {

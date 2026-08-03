@@ -2,8 +2,49 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Shop } from '../api/types'
-import { RatingSummary } from '../components/Ratings'
 import { colorFor, emojiFor } from '../visuals'
+
+// Matches vendor-web's inventory icons in spirit: a plain stroked SVG, not
+// an icon-font/library, consistent with the rest of this app's zero-icon-
+// dependency approach.
+function SearchIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden className="search-icon">
+      <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+      <path d="M21 21l-4.3-4.3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+// A brand-new vendor's shop having no priced items yet is common enough
+// (before their first item is added) that this needs to be silent, not "₱0".
+function formatPriceRange(range: Shop['price_range_cents']) {
+  if (!range) return null
+  const min = Math.round(range.min / 100)
+  const max = Math.round(range.max / 100)
+  return min === max ? `₱${min}` : `₱${min}–${max}`
+}
+
+// Compact "★ 4.5" for the row's stat line — the fuller "★ 4.5 · 12 reviews"
+// treatment (RatingSummary, still used on the shop detail page) reads as too
+// busy sitting alongside price range and order count on one line here.
+function compactRating(shop: Shop) {
+  if (shop.ratings_count === 0 || shop.average_rating === null) return null
+  return `★ ${shop.average_rating.toFixed(1)}`
+}
+
+// Popularity signal, not a raw order count — and only once there's enough
+// of a track record for it to mean something (fewer than 5 completed
+// orders reads as more of an awkward confession than a selling point).
+const MIN_ORDERS_TO_SHOW = 5
+
+function shopStats(shop: Shop): string[] {
+  return [
+    formatPriceRange(shop.price_range_cents),
+    compactRating(shop),
+    shop.completed_orders_count >= MIN_ORDERS_TO_SHOW ? `${shop.completed_orders_count} orders` : null,
+  ].filter((stat): stat is string => stat !== null)
+}
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
 const SEARCH_DEBOUNCE_MS = 300
@@ -81,14 +122,17 @@ export function ShopsPage() {
         <p className="muted">Fresh from the people next door.</p>
       </div>
 
-      <input
-        type="search"
-        placeholder="What are you craving?"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        aria-label="Search shops"
-        className="search-box"
-      />
+      <div className="search-bar">
+        <SearchIcon />
+        <input
+          type="search"
+          placeholder="What are you craving?"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search shops"
+          className="search-box"
+        />
+      </div>
 
       {!queryTooShort && loading && <p className="muted">Searching…</p>}
 
@@ -130,8 +174,12 @@ export function ShopsPage() {
                     <p className="tagline shop-row-tagline">
                       {shop.fulfillment_methods.join(' · ') || 'pickup'}
                     </p>
-                    {/* Renders nothing at all for an unrated shop — never "0 stars". */}
-                    <RatingSummary averageRating={shop.average_rating} ratingsCount={shop.ratings_count} />
+                    {/* Any of the three can be absent (no priced items yet, no
+                        ratings yet, too few completed orders) — only render
+                        the line at all once there's at least one to show. */}
+                    {shopStats(shop).length > 0 && (
+                      <p className="shop-row-stats">{shopStats(shop).join(' · ')}</p>
+                    )}
                   </div>
                 </Link>
               </li>
