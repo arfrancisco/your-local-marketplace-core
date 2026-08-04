@@ -33,6 +33,7 @@ const { baseOrder, user } = vi.hoisted(() => ({
     completed_at: '2026-08-02T00:00:00Z',
     cancelled_at: null,
     conversation_id: 3,
+    has_unread_messages: false,
     rating: null,
   },
   user: {

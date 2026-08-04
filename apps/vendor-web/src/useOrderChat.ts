@@ -23,6 +23,7 @@ export function useOrderChat(orderId: number) {
       setConversationId(res.conversation.id)
       setMessages(res.messages)
       setLoading(false)
+      api.markConversationRead(orderId).catch(() => {})
     })
 
     return () => {
@@ -39,6 +40,7 @@ export function useOrderChat(orderId: number) {
       {
         received(data: Message) {
           setMessages((prev) => (prev.some((m) => m.id === data.id) ? prev : [...prev, data]))
+          api.markConversationRead(orderId).catch(() => {})
         },
       }
     )

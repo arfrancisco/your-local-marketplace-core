@@ -61,6 +61,7 @@ const order: Order = {
   completed_at: null,
   cancelled_at: null,
   conversation_id: null,
+  has_unread_messages: false,
   rating: null,
 }
 

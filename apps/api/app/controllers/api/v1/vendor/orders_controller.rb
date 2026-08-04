@@ -11,9 +11,10 @@ module Api
           shops = current_vendor_profile.shops
           shops = shops.where(id: params[:shop_id]) if params[:shop_id].present?
           orders = Order.where(shop: shops)
-                        .includes(:order_items, :shop, customer_profile: %i[user default_address])
+                        .includes(:order_items, :shop, :conversation, customer_profile: %i[user default_address])
                         .order(placed_at: :desc)
-          render json: { orders: orders.map { |order| OrderSerializer.call(order) } }
+          unread = Messaging::UnreadOrders.for(orders: orders, user: current_user)
+          render json: { orders: orders.map { |order| OrderSerializer.call(order, unread: unread.include?(order.id)) } }
         end
       end
     end

@@ -92,6 +92,7 @@ export function useOrderChat(orderId: number) {
       setConversationId(res.conversation.id)
       setMessages(res.messages)
       setLoading(false)
+      api.markConversationRead(orderId).catch(() => {})
     })
 
     return () => {
@@ -117,6 +118,7 @@ export function useOrderChat(orderId: number) {
           // over REST at mount is exempt — that's not "arriving" in any
           // sense a notification should fire for.
           if (added) notifyNewMessage(data)
+          api.markConversationRead(orderId).catch(() => {})
         },
       }
     )

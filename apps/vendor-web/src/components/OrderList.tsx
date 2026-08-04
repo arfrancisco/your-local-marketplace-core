@@ -94,7 +94,10 @@ export function OrderList({ shopId }: Props) {
             <li key={order.id} className={`card order-card ${statusBadgeClass(groupKey)}`}>
               <Link to={`/orders/${order.id}`} className="plain">
                 <div className="row spread">
-                  <h2>{order.public_reference}</h2>
+                  <h2>
+                    {order.public_reference}
+                    {order.has_unread_messages && <span className="unread-dot" aria-label="Unread update" />}
+                  </h2>
                   <div className="row gap">
                     <span className={`order-status-badge ${statusBadgeClass(groupKey)}`}>
                       {order.status.replace(/_/g, ' ')}

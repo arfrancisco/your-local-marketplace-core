@@ -32,6 +32,10 @@ export class ApiError extends Error {
   }
 }
 
+// The one endpoint request() itself must never report failures for — reporting
+// a failure of the failure-reporting endpoint would recurse.
+const CLIENT_ERROR_REPORT_PATH = '/client_errors'
+
 async function request<T>(path: string, method = 'GET', body?: Record<string, unknown> | FormData): Promise<T> {
   const headers: Record<string, string> = {}
   const token = getToken()
@@ -45,13 +49,45 @@ async function request<T>(path: string, method = 'GET', body?: Record<string, un
     payload = JSON.stringify(body)
   }
 
-  const res = await fetch(`${BASE}${path}`, { method, headers, body: payload })
+  let res: Response
+  try {
+    res = await fetch(`${BASE}${path}`, { method, headers, body: payload })
+  } catch (networkError) {
+    // fetch itself threw (offline, DNS, CORS, etc.) — no response at all. This
+    // is a bug-shaped failure the same as a 5xx, not a caught/expected one, so
+    // it is worth capturing; the throw below is unchanged from before this
+    // wrapper existed, so callers still see exactly what they saw previously.
+    if (path !== CLIENT_ERROR_REPORT_PATH) {
+      void reportClientError({
+        name: networkError instanceof Error ? networkError.name : 'NetworkError',
+        message: networkError instanceof Error ? networkError.message : String(networkError),
+      })
+    }
+    throw networkError
+  }
+
   if (res.status === 204) return null as T
 
   const data = await res.json().catch(() => null)
   if (!res.ok) {
     const err = data?.error ?? {}
-    throw new ApiError(res.status, err.code ?? 'error', err.message ?? 'Request failed', err.details)
+    // 5xx means something broke on our end, worth the same capture an
+    // uncaught render crash gets. A 4xx (validation, sold out, wrong
+    // password, ...) is expected business logic, not a bug, so it is
+    // deliberately left uncaptured here to keep error_logs meaningful.
+    if (res.status >= 500 && path !== CLIENT_ERROR_REPORT_PATH) {
+      void reportClientError({
+        name: err.code ?? 'ApiError',
+        message: `${method} ${path} -> ${res.status}: ${err.message ?? 'Request failed'}`,
+      })
+    }
+    // When the backend attaches an error_id (see error_handling.rb), fold it
+    // into the message so every existing "show err.message" call site gets a
+    // correlation token for free, without a change at each call site.
+    const message = err.details?.error_id
+      ? `${err.message ?? 'Request failed'} (Error ID: ${err.details.error_id} — mention this if you report the issue)`
+      : (err.message ?? 'Request failed')
+    throw new ApiError(res.status, err.code ?? 'error', message, err.details)
   }
   return data as T
 }
@@ -101,23 +137,26 @@ export interface ClientErrorReport {
 }
 
 // Fire-and-forget crash reporting to our own API — this is what stands in for
-// a third-party error-monitoring SDK. Deliberately returns void and swallows
-// every failure: it is called from an ErrorBoundary and from an
-// 'unhandledrejection' listener, i.e. when the app is *already* broken, so a
-// failed report must never surface a second error or reject an unhandled
-// promise (which would re-enter the listener and loop).
-export function reportClientError(report: ClientErrorReport): void {
+// a third-party error-monitoring SDK. Deliberately swallows every failure: it
+// is called from an ErrorBoundary, from request()'s own 5xx/network capture,
+// and from an 'unhandledrejection' listener, i.e. when the app is *already*
+// broken, so a failed report must never surface a second error or reject an
+// unhandled promise (which would re-enter the listener and loop). Callers
+// that don't need it can ignore the resolved value entirely (most just call
+// this without awaiting); ErrorBoundary uses it to show a correlation id.
+export async function reportClientError(report: ClientErrorReport): Promise<number | undefined> {
   try {
-    void request('/client_errors', 'POST', {
+    const data = await request<{ status: string; error_id?: number }>('/client_errors', 'POST', {
       name: report.name,
       message: report.message,
       stack: report.stack,
       source: 'customer-web',
       url: window.location.href,
       user_agent: navigator.userAgent,
-    }).catch(() => {})
+    })
+    return data?.error_id
   } catch {
-    // ignore
+    return undefined
   }
 }
 
@@ -213,4 +252,6 @@ export const api = {
     }
     return request<{ message: Message }>(`/orders/${orderId}/messages`, 'POST', { body })
   },
+  markConversationRead: (orderId: number) =>
+    request<null>(`/orders/${orderId}/conversation/mark_read`, 'POST'),
 }

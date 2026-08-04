@@ -176,6 +176,7 @@ export interface Order {
   completed_at: string | null
   cancelled_at: string | null
   conversation_id: number | null
+  has_unread_messages: boolean
   // At most one — only the customer rates, and only once (M4).
   rating: Rating | null
 }

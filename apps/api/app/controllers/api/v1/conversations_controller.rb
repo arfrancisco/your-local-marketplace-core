@@ -24,6 +24,15 @@ module Api
         render json: { message: MessageSerializer.call(message) }, status: :created
       end
 
+      # POST /api/v1/orders/:id/conversation/mark_read
+      def mark_read
+        read = ConversationRead.find_or_initialize_by(conversation: @conversation, user: current_user)
+        read.last_read_message_id = @conversation.messages.maximum(:id)
+        read.last_read_at = Time.current
+        read.save!
+        head :no_content
+      end
+
       private
 
       def set_conversation

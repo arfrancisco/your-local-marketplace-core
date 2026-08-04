@@ -49,6 +49,7 @@ function makeOrder(overrides: Partial<Order>): Order {
     completed_at: null,
     cancelled_at: null,
     conversation_id: null,
+    has_unread_messages: false,
     rating: null,
     ...overrides,
   }
@@ -188,5 +189,18 @@ describe('OrderList', () => {
     expect(card).toHaveClass('order-card', 'status-ready')
 
     expect(screen.getByText('ready for pickup')).toHaveClass('order-status-badge', 'status-ready')
+  })
+
+  it('shows the unread dot only for orders with has_unread_messages: true', async () => {
+    const unread = makeOrder({ id: 1, public_reference: 'ORD-UNREAD1', has_unread_messages: true })
+    const read = makeOrder({ id: 2, public_reference: 'ORD-READ0002', has_unread_messages: false })
+    vi.mocked(api.listVendorOrders).mockResolvedValue({ orders: [unread, read] })
+
+    renderList()
+    const unreadCard = (await screen.findByText('ORD-UNREAD1')).closest('li')
+    const readCard = (await screen.findByText('ORD-READ0002')).closest('li')
+
+    expect(unreadCard?.querySelector('.unread-dot')).toBeInTheDocument()
+    expect(readCard?.querySelector('.unread-dot')).not.toBeInTheDocument()
   })
 })

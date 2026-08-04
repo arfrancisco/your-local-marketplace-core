@@ -111,6 +111,7 @@ export interface Order {
   completed_at: string | null
   cancelled_at: string | null
   conversation_id: number | null
+  has_unread_messages: boolean
   // The customer's review of this order, once they leave one. Read-only for
   // vendors this phase — they can't review back yet.
   rating: Rating | null

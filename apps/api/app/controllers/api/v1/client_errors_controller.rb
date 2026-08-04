@@ -38,7 +38,10 @@ module Api
         )
 
         ErrorAlertJob.perform_later(log.id) if newly_created
-        render json: { status: "received" }, status: :created
+        # error_id lets the reporting client's own crash UI display a
+        # correlation token ("Error ID: 123") alongside the generic crash
+        # message, without leaking anything else about the row.
+        render json: { status: "received", error_id: log.id }, status: :created
       end
 
       private

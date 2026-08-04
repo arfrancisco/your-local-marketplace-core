@@ -59,5 +59,33 @@ RSpec.describe "Api::V1::Vendor Orders", type: :request do
       expect(json_order["customer_building"]).to be_nil
       expect(json_order["customer_unit"]).to be_nil
     end
+
+    it "flags has_unread_messages true for the vendor when the customer posted a message they haven't read" do
+      order_a = create(:order, :with_conversation, shop: shop_a, customer_profile: customer.customer_profile)
+      create(:message, conversation: order_a.conversation, sender_user: customer, body: "When will it be ready?")
+
+      get "/api/v1/vendor/orders", headers: auth_headers(vendor_user)
+      json_order = json["orders"].find { |o| o["id"] == order_a.id }
+      expect(json_order["has_unread_messages"]).to eq(true)
+    end
+
+    it "flags has_unread_messages false for the vendor's own message" do
+      order_a = create(:order, :with_conversation, shop: shop_a, customer_profile: customer.customer_profile)
+      create(:message, conversation: order_a.conversation, sender_user: vendor_user, body: "Accepted!")
+
+      get "/api/v1/vendor/orders", headers: auth_headers(vendor_user)
+      json_order = json["orders"].find { |o| o["id"] == order_a.id }
+      expect(json_order["has_unread_messages"]).to eq(false)
+    end
+
+    it "flags has_unread_messages false once the vendor marks the conversation read" do
+      order_a = create(:order, :with_conversation, shop: shop_a, customer_profile: customer.customer_profile)
+      create(:message, conversation: order_a.conversation, sender_user: customer, body: "When will it be ready?")
+      post "/api/v1/orders/#{order_a.id}/conversation/mark_read", headers: auth_headers(vendor_user)
+
+      get "/api/v1/vendor/orders", headers: auth_headers(vendor_user)
+      json_order = json["orders"].find { |o| o["id"] == order_a.id }
+      expect(json_order["has_unread_messages"]).to eq(false)
+    end
   end
 end

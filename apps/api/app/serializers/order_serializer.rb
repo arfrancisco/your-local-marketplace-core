@@ -1,7 +1,7 @@
 module OrderSerializer
   module_function
 
-  def call(order)
+  def call(order, unread: false)
     {
       id: order.id,
       public_reference: order.public_reference,
@@ -54,6 +54,7 @@ module OrderSerializer
       completed_at: order.completed_at,
       cancelled_at: order.cancelled_at,
       conversation_id: order.conversation&.id,
+      has_unread_messages: unread,
       # Only the customer may rate, and only once, so an order has at most one
       # rating this phase — .first is the whole set, not a shortcut.
       rating: order.ratings.first && RatingSerializer.call(order.ratings.first)

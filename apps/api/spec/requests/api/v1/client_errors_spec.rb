@@ -26,6 +26,11 @@ RSpec.describe "Api::V1 ClientErrors", type: :request do
       expect(log.request_path).to eq("https://kapitmarket.ph/shops")
     end
 
+    it "returns the error_logs row id so the client can display it" do
+      post "/api/v1/client_errors", params: payload
+      expect(json["error_id"]).to eq(ErrorLog.last.id)
+    end
+
     it "attributes the report to a signed-in user when a token is present" do
       customer = create(:user, :customer)
       post "/api/v1/client_errors", params: payload, headers: auth_headers(customer)

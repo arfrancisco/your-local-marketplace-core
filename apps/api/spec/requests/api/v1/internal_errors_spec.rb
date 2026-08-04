@@ -42,6 +42,12 @@ RSpec.describe "Api::V1 unhandled exceptions", type: :request do
     expect(log.user_id).to eq(customer.id)
   end
 
+  it "includes the error_logs row id in the response so it can be quoted back to us" do
+    get "/api/v1/orders", headers: auth_headers(customer)
+
+    expect(json.dig("error", "details", "error_id")).to eq(ErrorLog.last.id)
+  end
+
   it "alerts on the first occurrence only, and counts the repeat" do
     expect {
       get "/api/v1/orders", headers: auth_headers(customer)

@@ -872,6 +872,23 @@ h2.section { margin-top: 1.5rem; }
   font-weight: 700;
 }
 
+/* Orthogonal to the 5-bucket status palette (orderStatus.ts) — "something
+   here needs a look" is a different axis than "what stage is this order
+   at," so it's a small dot, not a 6th status hue, and never shares a
+   selector with the .status-, .order-status-badge, or .order-card rules.
+   Chained with its own class only (no shared-rule collision to defend
+   against), but keep the 2-class-chain habit if this ever needs an
+   override. */
+.unread-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 0.4rem;
+  border-radius: 50%;
+  background: #b91c1c; /* same red as customer-web's .cart-badge — shared "needs attention" red across both apps */
+  vertical-align: middle;
+}
+
 /* Order detail page's tags row — status + non-resident badge sit above the
    card instead of inside it, so more tags can be added here later without
    crowding the customer-info line. */

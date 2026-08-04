@@ -56,4 +56,9 @@ FactoryBot.define do
     message_type { "text" }
     body { "Hello!" }
   end
+
+  factory :conversation_read do
+    conversation
+    user
+  end
 end

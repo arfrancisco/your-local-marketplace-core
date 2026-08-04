@@ -888,6 +888,18 @@ button.link {
   text-align: center;
 }
 
+/* Same "needs attention" red as .cart-badge, different shape (a bare dot,
+   not a count-in-a-circle) — this is a per-order-row flag, not a counter. */
+.unread-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 0.4rem;
+  border-radius: 50%;
+  background: #b91c1c;
+  vertical-align: middle;
+}
+
 /* Fires whenever the cart's item count goes up — a short scale + colour flash
    so an add registers even though the cart itself stays closed. The class is
    removed after the same 300ms in CartButton, so it can re-trigger. */

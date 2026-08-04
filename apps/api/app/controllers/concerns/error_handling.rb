@@ -62,13 +62,20 @@ module ErrorHandling
   # first-occurrence email alert.
   def render_internal_error(error)
     Rails.logger.error("[InternalError] #{error.class}: #{error.message}\n#{Array(error.backtrace).first(20).join("\n")}")
-    record_error_log(error)
-    render_error(code: "internal_error", message: "Something went wrong on our end", status: :internal_server_error)
+    error_id = record_error_log(error)
+    render_error(
+      code: "internal_error",
+      message: "Something went wrong on our end",
+      status: :internal_server_error,
+      details: error_id ? { error_id: error_id } : nil
+    )
   end
 
   # Recording must never itself take down the response — if the database is the
   # thing that is broken, this write fails too, and the caller still deserves a
-  # well-formed envelope rather than a second exception.
+  # well-formed envelope rather than a second exception. Returns the recorded
+  # ErrorLog's id (or nil if recording itself failed) so callers can hand it
+  # back to the client as a correlation token for support/debugging.
   def record_error_log(error)
     log, newly_created = ErrorLog.record!(
       source: "backend",
@@ -77,7 +84,9 @@ module ErrorHandling
       user: (current_user rescue nil)
     )
     ErrorAlertJob.perform_later(log.id) if newly_created
+    log.id
   rescue StandardError => e
     Rails.logger.error("[InternalError] failed to record error_log: #{e.class}: #{e.message}")
+    nil
   end
 end

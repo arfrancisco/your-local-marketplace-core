@@ -14,14 +14,16 @@ module Api
         # so the preloadable association is the plural attachments, not a
         # singular "_attachment" one.
         orders = current_user.customer_profile.orders
-          .includes(:order_items, shop: { profile_photo_attachments: :blob })
+          .includes(:order_items, :conversation, shop: { profile_photo_attachments: :blob })
           .order(placed_at: :desc)
-        render json: { orders: orders.map { |order| OrderSerializer.call(order) } }
+        unread = Messaging::UnreadOrders.for(orders: orders, user: current_user)
+        render json: { orders: orders.map { |order| OrderSerializer.call(order, unread: unread.include?(order.id)) } }
       end
 
       # GET /api/v1/orders/:id
       def show
-        render json: { order: OrderSerializer.call(@order) }
+        unread = Messaging::UnreadOrders.for(orders: [@order], user: current_user)
+        render json: { order: OrderSerializer.call(@order, unread: unread.include?(@order.id)) }
       end
 
       # POST /api/v1/orders/:id/transitions (to_status, reason, reason_code)
@@ -40,14 +42,16 @@ module Api
           order: @order, to_status: to_status, actor_user: current_user,
           reason: params[:reason], reason_code: params[:reason_code]
         ).call
-        render json: { order: OrderSerializer.call(order) }
+        unread = Messaging::UnreadOrders.for(orders: [order], user: current_user)
+        render json: { order: OrderSerializer.call(order, unread: unread.include?(order.id)) }
       end
 
       # POST /api/v1/orders/:id/mark_paid — vendor's own assertion that
       # they've seen proof of payment (ADR 0009), not a verified transaction.
       def mark_paid
         order = Orders::MarkPaid.new(order: @order).call
-        render json: { order: OrderSerializer.call(order) }
+        unread = Messaging::UnreadOrders.for(orders: [order], user: current_user)
+        render json: { order: OrderSerializer.call(order, unread: unread.include?(order.id)) }
       end
 
       # PATCH /api/v1/orders/:id/items (items: [{ item_id, quantity }]) —
@@ -56,7 +60,8 @@ module Api
       def update_items
         changes = params.require(:items).map { |c| c.permit(:item_id, :quantity).to_h }
         order = Orders::EditItems.new(order: @order, changes: changes, actor_user: current_user).call
-        render json: { order: OrderSerializer.call(order) }
+        unread = Messaging::UnreadOrders.for(orders: [order], user: current_user)
+        render json: { order: OrderSerializer.call(order, unread: unread.include?(order.id)) }
       end
 
       private
