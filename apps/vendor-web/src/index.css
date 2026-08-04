@@ -42,11 +42,59 @@ body { margin: 0; }
 }
 .card.narrow { max-width: 420px; }
 .card.dimmed { opacity: 0.55; }
+/* Private customer notes — a warm yellow, distinct from the plain white
+   Chat card right above it, plus some top spacing so it doesn't sit flush
+   against Chat's bottom edge. */
+.card.customer-notes {
+  background: #fef3c7;
+  border-color: #fde68a;
+  margin-top: 1.5rem;
+}
+
+/* Edit-order panel — buttons trimmed to the same compact size used
+   elsewhere (order-actions-bar, order-detail-section), and a warm-amber
+   reminder box in place of a plain muted line so "tell the customer first"
+   actually gets read before a vendor starts changing line items. */
+.edit-items-panel button:not(.qty-btn) {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.9rem;
+}
+.edit-reminder {
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  color: #7c5700;
+  border-radius: 8px;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.9rem;
+  margin: 0.5rem 0 1rem;
+}
+/* Quantity stepper — small circular ghost buttons, same visual language as
+   this app's other compact icon buttons (kebab-btn) rather than full-size
+   default buttons. */
+.qty-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  line-height: 1;
+  font-size: 1rem;
+  color: #374151;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.qty-btn:disabled { opacity: 0.5; cursor: default; }
 
 h1 { font-size: 1.4rem; }
 h2 { font-size: 1.1rem; margin: 0 0 0.25rem; }
 
 .list { list-style: none; padding: 0; margin: 1rem 0; }
+
+/* Wraps an entire card in a Link (e.g. order-list cards) without it
+   reading as a giant underlined hyperlink — was referenced by OrderList.tsx
+   with no matching rule defined here (per ADR 0001 duplication, customer-web
+   having its own .plain doesn't help vendor-web). */
+.plain { text-decoration: none; color: inherit; display: block; }
 
 .row { display: flex; align-items: center; }
 .row.spread { justify-content: space-between; }
@@ -130,7 +178,9 @@ button:disabled { opacity: 0.6; cursor: default; }
 
 /* Per-order chat (M4, ADR 0009) */
 .order-chat { border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; padding: 0.75rem; }
-.message-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 360px; overflow-y: auto; margin-bottom: 0.75rem; }
+/* Fixed (not max-) height so a long conversation scrolls within its own box
+   instead of stretching the card — and, by extension, the whole page. */
+.message-list { display: flex; flex-direction: column; gap: 0.5rem; height: 360px; overflow-y: auto; margin-bottom: 0.75rem; }
 .message { align-self: flex-start; max-width: 80%; padding: 0.5rem 0.75rem; border-radius: 10px; background: #f3f4f6; }
 .message p { margin: 0; white-space: pre-wrap; }
 .message img { max-width: 100%; border-radius: 6px; margin-top: 0.35rem; }
@@ -434,6 +484,25 @@ button:disabled { opacity: 0.6; cursor: default; }
 }
 .button-danger:hover:not(:disabled) { background: #991414; }
 
+/* Mark as paid — a positive, done-with-this-step action, distinct from the
+   neutral default and the danger/warning buttons above. */
+.button-success {
+  background: #166534;
+  color: #fff;
+  border-color: #166534;
+}
+.button-success:hover:not(:disabled) { background: #14532d; }
+
+/* Start preparing — reuses the same blue as the "in progress" status
+   badge/pill, so the button that moves an order into that state visually
+   matches the state itself. */
+.button-progress {
+  background: #1e40af;
+  color: #fff;
+  border-color: #1e40af;
+}
+.button-progress:hover:not(:disabled) { background: #1e3a8a; }
+
 /* Hamburger menu drawer — the header's nav links live in here now
    (HamburgerMenu.tsx). Same .modal-backdrop/.modal markup as FeedbackModal,
    just pinned to the right edge and full height instead of centered, so
@@ -578,9 +647,10 @@ button:disabled { opacity: 0.6; cursor: default; }
 .photo-preview.square { width: 72px; height: 72px; }
 .photo-preview.wide { width: 180px; height: 60px; }
 
-.back-link { margin: 0 0 0.5rem; font-size: 0.9rem; }
-.back-link a { color: #6b7280; text-decoration: none; }
-.back-link a:hover { text-decoration: underline; }
+/* Back links are styled as real buttons (.button) everywhere now, not
+   plain text — easier to tap on mobile, which is primarily how this app
+   gets used. .back-link is just a spacing wrapper at this point. */
+.back-link { margin: 0 0 0.5rem; }
 
 /* ------------------------------------------------------------------------ */
 /* Mobile portrait (<=640px)                                                 */
@@ -650,15 +720,19 @@ h2.section { margin-top: 1.5rem; }
 .item-row .thumb.tile { font-size: 2.1rem; }
 .item-row .price-col { padding: 0.85rem 1.1rem 0.85rem 0; }
 
-/* Cover photo and identity panel read as one continuous card — a single
-   rounded/bordered/clipped container, photo on top, opaque identity panel
-   flush below it with no gap and no overlap. */
+/* Cover photo and identity panel read as one continuous card — photo on
+   top, opaque identity panel flush below it with no gap and no overlap.
+   The card itself no longer clips overflow (it used to, via
+   overflow: hidden) — the kebab menu now lives inside .shop-identity and
+   its dropdown needs to overflow the card's bottom edge. Only the photo
+   actually needs its own corners rounded (nothing else pokes past the
+   card's own border-radius), so that's done directly on .shop-cover
+   instead of relying on the parent to clip it. */
 .shop-hero {
   position: relative;
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
-  overflow: hidden;
   margin-bottom: 1rem;
 }
 .shop-cover {
@@ -667,6 +741,7 @@ h2.section { margin-top: 1.5rem; }
   height: 190px;
   object-fit: cover;
   font-size: 3.5rem;
+  border-radius: 10px 10px 0 0;
 }
 .shop-back {
   position: absolute;
@@ -692,6 +767,13 @@ h2.section { margin-top: 1.5rem; }
   gap: 0.85rem;
   padding: 0;
 }
+/* Kebab menu, top-right of the identity panel — align-self overrides the
+   row's own vertical centering so it reads as "top right of the card"
+   rather than centered against the avatar's full height. */
+.shop-identity-actions {
+  align-self: flex-start;
+  padding: 1rem 1.1rem 0 0;
+}
 .shop-avatar {
   width: 100px;
   height: 100px;
@@ -700,7 +782,10 @@ h2.section { margin-top: 1.5rem; }
   flex-shrink: 0;
   font-size: 2.3rem;
 }
-.shop-identity-text { min-width: 0; padding: 1rem 1.1rem 1rem 0; }
+/* flex: 1 so this box (not the surrounding row's justify-content) absorbs
+   the leftover space — text sits flush left, right next to the avatar,
+   with the kebab still pushed to the far right by this box's own width. */
+.shop-identity-text { flex: 1; min-width: 0; padding: 1rem 1.1rem 1rem 0; }
 .shop-identity-text h1 { margin: 0 0 0.15rem; font-size: 1.3rem; }
 .shop-description { margin: 0 0 0.25rem; }
 .shop-identity-text .tagline { margin: 0 0 0.2rem; }
@@ -711,6 +796,18 @@ h2.section { margin-top: 1.5rem; }
   .shop-avatar { width: 72px; height: 72px; }
   .shop-identity-text { padding: 0.85rem 1rem 0.85rem 0; }
   .shop-identity-text h1 { font-size: 1.1rem; }
+  .shop-identity-actions { padding: 0.85rem 1rem 0 0; }
+}
+
+/* ShopDashboardPage's top bar — only rendered during onboarding, for the
+   "Skip tour" link above the cover-photo hero. The kebab menu itself now
+   lives inside .shop-identity (see .shop-identity-actions above). */
+.dashboard-topbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 /* Floating "add item" button (ItemsPage) + the modal it opens, replacing the
@@ -735,3 +832,156 @@ h2.section { margin-top: 1.5rem; }
   text-align: left;
 }
 .add-item-modal h2 { text-align: center; }
+
+/* Status buckets shared by the orders list, filter pills, and detail page.
+   Bucket → color: placed = needs action (amber), accepted/preparing = in
+   progress (blue, reused from .preview-banner's text color), ready_for_pickup/
+   out_for_delivery = ready (teal, new hue), completed = done (green, matches
+   .item-status.is-shown), rejected/cancelled = terminal (gray, matches
+   .item-status.is-hidden). */
+.status-pill {
+  display: inline-block;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 2px solid transparent;
+  cursor: pointer;
+  background: #fff;
+}
+.status-pill.status-all { color: #1c2024; border-color: #e5e7eb; }
+.status-pill.status-needs-action { background: #fef3c7; color: #7c5700; }
+.status-pill.status-in-progress { background: #dbeafe; color: #1e40af; }
+.status-pill.status-ready { background: #ccfbf1; color: #0f766e; }
+.status-pill.status-done { background: #dcfce7; color: #166534; }
+.status-pill.status-terminal { background: #f3f4f6; color: #6b7280; }
+/* Active state uses currentColor, so one rule works for every hue above —
+   no per-status active variant needed, and no specificity conflict since
+   the color/background rules above never set border-color/box-shadow. */
+.status-pill.active { border-color: currentColor; box-shadow: 0 0 0 1px currentColor inset; }
+
+/* Bigger, more prominent status treatment than .item-status (used for
+   item show/hide state, a different concept) — same pill shape, larger,
+   though trimmed down from the first pass (padding/font-size), which read
+   as too chunky next to the rest of the page's text. */
+.order-status-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* Order detail page's tags row — status + non-resident badge sit above the
+   card instead of inside it, so more tags can be added here later without
+   crowding the customer-info line. */
+.order-tags { flex-wrap: wrap; margin-bottom: 0.6rem; }
+
+/* Order detail page's cards (customer / actions / order details, split into
+   three separate .card boxes rather than one long one) — rows inside each
+   sat flush against each other with no breathing room, each relying on
+   their own small margin (0.15-1rem, inconsistent). A flex column with one
+   consistent gap reads much less cramped; the child margins are zeroed out
+   (chained selectors, so they reliably beat the shared .list/.muted rules
+   regardless of file order) so gap is the only thing doing the spacing. */
+.order-detail-section {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.order-detail-section > p { margin: 0; }
+.order-detail-section > .list { margin: 0; }
+/* Kebab menu pinned to the card's top-right corner (order-details card
+   only, when the order's still editable) — same corner-pin approach as
+   yesterday's Inventory item cards. Chained with .card for specificity, so
+   it reliably beats .card's own shorthand padding regardless of file order. */
+.order-detail-section > .item-actions-menu {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+}
+.card.order-detail-section { padding-right: 2.75rem; }
+/* Order actions (Mark as paid, the status transitions) live in a fixed
+   bottom bar now, not a card in the normal flow — same reasoning as
+   customer-web's .bottom-bar (BottomBar in App.tsx): one deliberate control
+   surface, always reachable without scrolling, and it never gets buried
+   under a growing chat/notes section. .order-detail-page's bottom padding,
+   below, reserves the space so the bar never covers page content
+   scrolling underneath it. Buttons stay trimmed smaller than the app's
+   default size, same as before. */
+.order-detail-page { padding-bottom: 5rem; }
+.order-actions-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
+}
+.order-actions-bar button {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.9rem;
+}
+.order-status-badge.status-needs-action { background: #fef3c7; color: #7c5700; }
+.order-status-badge.status-in-progress { background: #dbeafe; color: #1e40af; }
+.order-status-badge.status-ready { background: #ccfbf1; color: #0f766e; }
+.order-status-badge.status-done { background: #dcfce7; color: #166534; }
+.order-status-badge.status-terminal { background: #f3f4f6; color: #6b7280; }
+
+/* Order cards pick up a left-edge accent in the same hue as their status
+   badge, so a vendor scanning the whole list gets the color signal without
+   reading each badge individually. Left border only (not a full-card tint)
+   to keep the customer-info text inside the card at normal contrast. */
+.order-card { border-left: 4px solid transparent; }
+.order-card.status-needs-action { border-left-color: #7c5700; }
+.order-card.status-in-progress { border-left-color: #1e40af; }
+.order-card.status-ready { border-left-color: #0f766e; }
+.order-card.status-done { border-left-color: #166534; }
+.order-card.status-terminal { border-left-color: #6b7280; }
+
+/* Obvious non-resident flag on an order card/detail page — a distinct red
+   tone, deliberately outside the 5-bucket status palette so it never reads
+   as a 6th status color. */
+.non-resident-badge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Payment status pill, alongside the order-status badge in .order-tags —
+   unpaid reuses the "needs action" amber (money not yet collected is still
+   something to act on); paid reuses the "done"/success green. */
+.payment-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.payment-badge.is-unpaid { background: #fef3c7; color: #7c5700; }
+.payment-badge.is-paid { background: #dcfce7; color: #166534; }
+
+/* Filter pill row wraps at narrow widths instead of overflowing/clipping —
+   confirmed via live screenshots, not just unit tests. */
+.order-filter-pills { flex-wrap: wrap; }
+
+/* Customer identity line on order cards/detail page. */
+.customer-summary { flex-wrap: wrap; margin: 0.3rem 0; }
+.customer-name { font-weight: 600; }
+/* A tad bigger than .muted's default 0.9rem — this is the customer's one
+   address on file, worth reading at a glance, not a footnote. */
+.customer-address { color: #6b7280; font-size: 1rem; margin: 0.15rem 0; }

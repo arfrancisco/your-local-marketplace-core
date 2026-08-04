@@ -44,6 +44,16 @@ body::before {
   border-bottom: 1px solid #fbe4a1;
 }
 
+.verify-banner {
+  background: #eff6ff;
+  border-bottom: 1px solid #bfdbfe;
+  color: #1e40af;
+  text-align: center;
+  font-size: 0.85rem;
+  padding: 0.4rem 1rem;
+}
+.verify-banner a { color: inherit; font-weight: 600; }
+
 .topbar {
   position: relative;
   display: grid;

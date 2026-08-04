@@ -44,7 +44,7 @@ export function ShopReviewsPage() {
   return (
     <div>
       <p className="back-link">
-        <Link to="/shops">← Back to dashboard</Link>
+        <Link className="button" to="/shops">← Back to dashboard</Link>
       </p>
 
       <div className="row spread reviews-header">

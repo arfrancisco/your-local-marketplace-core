@@ -10,7 +10,9 @@ module Api
         def index
           shops = current_vendor_profile.shops
           shops = shops.where(id: params[:shop_id]) if params[:shop_id].present?
-          orders = Order.where(shop: shops).order(placed_at: :desc)
+          orders = Order.where(shop: shops)
+                        .includes(:order_items, :shop, customer_profile: %i[user default_address])
+                        .order(placed_at: :desc)
           render json: { orders: orders.map { |order| OrderSerializer.call(order) } }
         end
       end

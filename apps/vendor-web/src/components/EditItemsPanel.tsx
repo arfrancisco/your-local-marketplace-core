@@ -67,9 +67,9 @@ export function EditItemsPanel({ order, onClose, onSaved }: Props) {
   )
 
   return (
-    <div className="card">
-      <h2>Edit items</h2>
-      <p className="muted">Let the customer know in chat first, then save your changes here.</p>
+    <div className="card edit-items-panel">
+      <h2>Edit order</h2>
+      <p className="edit-reminder">⚠ Let the customer know in chat first, then save your changes here.</p>
       <ul className="list">
         {lines.map((line) => (
           <li key={line.item_id} className="row spread">
@@ -77,6 +77,7 @@ export function EditItemsPanel({ order, onClose, onSaved }: Props) {
             <div className="row gap">
               <button
                 type="button"
+                className="qty-btn"
                 aria-label={`Decrease quantity of ${line.name}`}
                 onClick={() => updateQuantity(line.item_id, line.quantity - 1)}
                 disabled={line.quantity <= 0}
@@ -86,6 +87,7 @@ export function EditItemsPanel({ order, onClose, onSaved }: Props) {
               <span>{line.quantity}</span>
               <button
                 type="button"
+                className="qty-btn"
                 aria-label={`Increase quantity of ${line.name}`}
                 onClick={() => updateQuantity(line.item_id, line.quantity + 1)}
               >
@@ -111,7 +113,7 @@ export function EditItemsPanel({ order, onClose, onSaved }: Props) {
       {error && <p role="alert" className="error">{error}</p>}
 
       <div className="row gap">
-        <button type="button" onClick={onSave} disabled={saving}>
+        <button type="button" className="button-success" onClick={onSave} disabled={saving}>
           {saving ? 'Saving…' : 'Save changes'}
         </button>
         <button type="button" className="button" onClick={onClose}>Cancel</button>

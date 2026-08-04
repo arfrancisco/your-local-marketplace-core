@@ -82,7 +82,7 @@ export function ShopPreviewPage() {
   return (
     <div>
       <p className="back-link">
-        <Link to={`/shops/${id}/edit`}>← Back to editing</Link>
+        <Link className="button" to={`/shops/${id}/edit`}>← Back to editing</Link>
       </p>
       <div className="preview-banner">
         This is a preview of your shop's page — it's exactly what a customer

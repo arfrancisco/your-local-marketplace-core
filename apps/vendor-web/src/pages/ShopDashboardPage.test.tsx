@@ -15,6 +15,7 @@ vi.mock('../api/client', async (importOriginal) => {
       listShops: vi.fn(),
       openShop: vi.fn(),
       closeShop: vi.fn(),
+      listVendorOrders: vi.fn(),
     },
   }
 })
@@ -54,6 +55,10 @@ function renderAt(path: string) {
 describe('ShopDashboardPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Order management is now the dashboard's main content, so it always
+    // fetches orders on render — default to an empty list unless a test
+    // cares about the actual contents.
+    vi.mocked(api.listVendorOrders).mockResolvedValue({ orders: [] })
   })
 
   it('sends a vendor with no shop to onboarding instead of an empty dashboard', async () => {
@@ -64,20 +69,35 @@ describe('ShopDashboardPage', () => {
     expect(await screen.findByText('Onboarding page')).toBeInTheDocument()
   })
 
-  it('renders the single shop dashboard, without redirecting, for a vendor who has one', async () => {
+  it('renders the single shop dashboard, without redirecting, for a vendor who has one, with order management as the main content', async () => {
     vi.mocked(api.listShops).mockResolvedValue({ shops: [shopOpen] })
 
     renderAt('/shops')
 
     expect(await screen.findByRole('heading', { name: "Lola's Kitchen" })).toBeInTheDocument()
     expect(screen.queryByText('Onboarding page')).not.toBeInTheDocument()
-    // Direct links to the three things a vendor manages, no list wrapper.
-    expect(screen.getByRole('link', { name: /edit shop details/i })).toHaveAttribute(
+
+    // Order management is the dashboard's main content — shown directly,
+    // no menu or extra click needed.
+    expect(api.listVendorOrders).toHaveBeenCalledWith(1)
+    expect(await screen.findByText('No orders yet.')).toBeInTheDocument()
+
+    // Edit shop details / Inventory / Reviews move behind the kebab menu
+    // instead of being primary buttons — not visible until it's opened.
+    // (They're role="menuitem" once the menu is open, matching
+    // ItemActionsMenu's pattern, not the implicit "link" role.)
+    expect(screen.queryByRole('menuitem', { name: /edit shop details/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Inventory' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Reviews' })).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /shop actions menu/i }))
+
+    expect(screen.getByRole('menuitem', { name: /edit shop details/i })).toHaveAttribute(
       'href',
       '/shops/1/edit',
     )
-    expect(screen.getByRole('link', { name: 'Inventory' })).toHaveAttribute('href', '/shops/1/items')
-    expect(screen.getByRole('link', { name: 'Orders' })).toHaveAttribute('href', '/orders?shop_id=1')
+    expect(screen.getByRole('menuitem', { name: 'Inventory' })).toHaveAttribute('href', '/shops/1/items')
+    expect(screen.getByRole('menuitem', { name: 'Reviews' })).toHaveAttribute('href', '/shops/1/reviews')
   })
 
   it('offers no "New shop" link, since a vendor can only ever own one shop', async () => {
@@ -111,7 +131,7 @@ describe('ShopDashboardPage', () => {
     expect(await screen.findByRole('button', { name: /shop is closed/i })).toBeInTheDocument()
   })
 
-  it('opens with no confirmation, since reopening has no downside', async () => {
+  it('also confirms before opening, since the toggle now sits at the top of the page where a stray tap is likely', async () => {
     vi.mocked(api.listShops).mockResolvedValue({ shops: [shopClosed] })
     vi.mocked(api.openShop).mockResolvedValue({ shop: shopOpen })
 
@@ -119,7 +139,15 @@ describe('ShopDashboardPage', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: /shop is closed/i }))
 
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(api.openShop).not.toHaveBeenCalled()
+    expect(screen.getByRole('dialog', { name: /open your shop\?/i })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /^cancel$/i }))
+    expect(api.openShop).not.toHaveBeenCalled()
+
+    await userEvent.click(await screen.findByRole('button', { name: /shop is closed/i }))
+    await userEvent.click(screen.getByRole('button', { name: /^open shop$/i }))
+
     expect(api.openShop).toHaveBeenCalledWith(1)
     expect(await screen.findByRole('button', { name: /shop is open/i })).toBeInTheDocument()
   })

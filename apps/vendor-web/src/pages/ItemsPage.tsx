@@ -174,7 +174,7 @@ export function ItemsPage() {
   return (
     <div>
       <p className="back-link">
-        <Link to="/shops">← Back to dashboard</Link>
+        <Link className="button" to="/shops">← Back to dashboard</Link>
       </p>
       <h1>Inventory</h1>
 

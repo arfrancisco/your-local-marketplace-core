@@ -80,18 +80,40 @@ def find_or_create_user!(email:, password:, mobile_number:, verified: true)
   )
 end
 
+# Gives a demo customer a real Prisma Residences address (one of the three
+# towers, plus a unit) instead of leaving default_address blank — every
+# seeded customer previously had none at all, which made the vendor-side
+# order list's customer/address line read "No address on file" for every
+# single demo order. Marks the customer as a resident too, since Address
+# only requires a unit for residents (see Address#unit_required_for_residents)
+# — a real Tower/Unit address implies residency here. Idempotent: skipped if
+# the customer already has a default address, so re-running db:seed doesn't
+# pile up duplicate Address rows.
+def seed_resident_address!(user, display_name, building, unit)
+  profile = user.customer_profile
+  return if profile.default_address.present?
+
+  profile.update!(is_resident: true, willing_to_verify_residency: true)
+  address = user.addresses.create!(
+    recipient_name: display_name, building: building, unit: unit, mobile_number: user.mobile_number
+  )
+  profile.update!(default_address: address)
+end
+
 # --- Base test accounts (auth / capability model) -----------------------------
 
 customer = find_or_create_user!(
   email: "customer@example.com", password: "password123", mobile_number: "+639170000001"
 )
 customer.create_customer_profile!(display_name: "Sample Customer") unless customer.customer_profile
+seed_resident_address!(customer, "Sample Customer", "Astra", "1203")
 
 both = find_or_create_user!(
   email: "both@example.com", password: "password123", mobile_number: "+639170000003"
 )
 both.create_customer_profile!(display_name: "Both (customer)") unless both.customer_profile
 both.create_vendor_profile!(display_name: "Both (vendor)") unless both.vendor_profile
+seed_resident_address!(both, "Both (customer)", "Celeste", "807")
 
 # --- Demo shops ---------------------------------------------------------------
 # Each shop is owned by its own verified vendor and opened so it shows up in
@@ -298,6 +320,16 @@ end
 # safe to run again after real orders start happening — it only ever
 # backfills history once, never adds more on top of real activity.
 
+# Ronnie Bautista is deliberately left out — no address, not a resident —
+# so the "not a resident" badge and "no address on file" fallback stay
+# visible in the demo instead of every seeded customer looking identical.
+DEMO_REVIEWER_ADDRESSES = {
+  "marco.reviewer@example.com" => ["Kiran", "1502"],
+  "fely.reviewer@example.com" => ["Astra", "305"],
+  "jun.reviewer@example.com" => ["Celeste", "1108"],
+  "ligaya.reviewer@example.com" => ["Kiran", "604"]
+}.freeze
+
 DEMO_REVIEWERS = [
   ["Marco Reyes", "marco.reviewer@example.com", "+639170020001"],
   ["Fely Santos", "fely.reviewer@example.com", "+639170020002"],
@@ -307,6 +339,8 @@ DEMO_REVIEWERS = [
 ].map do |display_name, email, mobile|
   user = find_or_create_user!(email: email, password: "password123", mobile_number: mobile)
   user.create_customer_profile!(display_name: display_name) unless user.customer_profile
+  tower, unit = DEMO_REVIEWER_ADDRESSES[email]
+  seed_resident_address!(user, display_name, tower, unit) if tower
   user.customer_profile
 end.freeze
 

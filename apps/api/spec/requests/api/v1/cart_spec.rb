@@ -124,9 +124,10 @@ RSpec.describe "Api::V1 Cart", type: :request do
 
   describe "POST /api/v1/cart/checkout" do
     it "converts the cart into an order" do
-      post "/api/v1/cart/items", params: { shop_id: shop.id, item_id: item.id, quantity: 2 }, headers: auth_headers(customer)
+      verified_customer = create(:user, :customer, :email_verified)
+      post "/api/v1/cart/items", params: { shop_id: shop.id, item_id: item.id, quantity: 2 }, headers: auth_headers(verified_customer)
 
-      post "/api/v1/cart/checkout", params: { shop_id: shop.id, fulfillment_method: "pickup" }, headers: auth_headers(customer)
+      post "/api/v1/cart/checkout", params: { shop_id: shop.id, fulfillment_method: "pickup" }, headers: auth_headers(verified_customer)
       expect(response).to have_http_status(:created)
       expect(json.dig("order", "status")).to eq("placed")
       expect(json.dig("order", "items").first).to include("quantity" => 2)
@@ -135,6 +136,14 @@ RSpec.describe "Api::V1 Cart", type: :request do
     it "404s when there is no active cart for the shop" do
       post "/api/v1/cart/checkout", params: { shop_id: shop.id, fulfillment_method: "pickup" }, headers: auth_headers(customer)
       expect(response).to have_http_status(:not_found)
+    end
+
+    it "forbids checkout when the customer's email isn't verified" do
+      post "/api/v1/cart/items", params: { shop_id: shop.id, item_id: item.id, quantity: 1 }, headers: auth_headers(customer)
+
+      post "/api/v1/cart/checkout", params: { shop_id: shop.id, fulfillment_method: "pickup" }, headers: auth_headers(customer)
+      expect(response).to have_http_status(:forbidden)
+      expect(json.dig("error", "code")).to eq("email_not_verified")
     end
   end
 

@@ -35,5 +35,29 @@ RSpec.describe "Api::V1::Vendor Orders", type: :request do
       get "/api/v1/vendor/orders", params: { shop_id: other_shop.id }, headers: auth_headers(vendor_user)
       expect(json["orders"]).to eq([])
     end
+
+    it "includes the customer's current name, residency, and default address building/unit" do
+      address = create(:address, user: customer)
+      customer.customer_profile.update!(default_address: address, is_resident: true, willing_to_verify_residency: true)
+      order_a = create(:order, shop: shop_a, customer_profile: customer.customer_profile)
+
+      get "/api/v1/vendor/orders", headers: auth_headers(vendor_user)
+      json_order = json["orders"].find { |o| o["id"] == order_a.id }
+
+      expect(json_order["customer_name"]).to eq(customer.customer_profile.display_name)
+      expect(json_order["customer_is_resident"]).to eq(true)
+      expect(json_order["customer_building"]).to eq("Tower A")
+      expect(json_order["customer_unit"]).to eq("12F")
+    end
+
+    it "returns nil building/unit when the customer has no default address on file" do
+      order_a = create(:order, shop: shop_a, customer_profile: customer.customer_profile)
+
+      get "/api/v1/vendor/orders", headers: auth_headers(vendor_user)
+      json_order = json["orders"].find { |o| o["id"] == order_a.id }
+
+      expect(json_order["customer_building"]).to be_nil
+      expect(json_order["customer_unit"]).to be_nil
+    end
   end
 end

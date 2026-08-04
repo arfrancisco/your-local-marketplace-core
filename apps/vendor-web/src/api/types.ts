@@ -80,6 +80,13 @@ export interface Order {
   public_reference: string
   shop_id: number
   customer_profile_id: number
+  // Customer identity/logistics info, live-read from the profile rather than
+  // snapshotted — a customer has exactly one address record (editing it in
+  // place if they move), so there's nothing to snapshot in the first place.
+  customer_name: string
+  customer_is_resident: boolean
+  customer_building: string | null
+  customer_unit: string | null
   status: OrderStatus
   can_transition_to: OrderStatus[]
   fulfillment_method: FulfillmentMethod

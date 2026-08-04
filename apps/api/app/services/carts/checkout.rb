@@ -18,6 +18,13 @@ module Carts
     end
 
     def call
+      unless @cart.customer_profile.user.email_verified?
+        raise ApiError.new(
+          "Please verify your email before placing an order. Check your inbox for the code we sent when you registered, or verify from your Account page.",
+          code: "email_not_verified", status: :forbidden
+        )
+      end
+
       raise ApiError::UnprocessableEntity, "Cart is empty" if @cart.cart_items.empty?
       unless Shop::FULFILLMENT_METHODS.include?(@fulfillment_method) &&
              @cart.shop.fulfillment_methods.include?(@fulfillment_method)

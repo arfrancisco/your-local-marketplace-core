@@ -134,6 +134,17 @@ function BetaBanner() {
   )
 }
 
+function EmailVerificationBanner() {
+  const { user } = useAuth()
+  if (!user || user.email_verified) return null
+  return (
+    <div className="verify-banner">
+      Verify your email to place an order — check your inbox, or{' '}
+      <a href="/account#email-verify">verify now</a>.
+    </div>
+  )
+}
+
 // The bar's flex-1 slot shows one thing at a time: the cart summary whenever
 // there's something in the cart (the task at hand), falling back to the
 // track-your-order reminder only once the cart is empty. Showing both
@@ -164,6 +175,7 @@ export default function App() {
   return (
     <>
       <BetaBanner />
+      <EmailVerificationBanner />
       <Header />
 
       <main className="container">

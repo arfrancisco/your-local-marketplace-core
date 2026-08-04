@@ -39,6 +39,27 @@ RSpec.describe "Api::V1 Orders", type: :request do
       get "/api/v1/orders/#{order.id}", headers: auth_headers(other)
       expect(response).to have_http_status(:forbidden)
     end
+
+    it "includes the customer's current name, residency, and default address building/unit" do
+      address = create(:address, user: customer)
+      customer.customer_profile.update!(default_address: address, is_resident: true, willing_to_verify_residency: true)
+
+      get "/api/v1/orders/#{order.id}", headers: auth_headers(vendor_user)
+      json_order = json["order"]
+
+      expect(json_order["customer_name"]).to eq(customer.customer_profile.display_name)
+      expect(json_order["customer_is_resident"]).to eq(true)
+      expect(json_order["customer_building"]).to eq("Tower A")
+      expect(json_order["customer_unit"]).to eq("12F")
+    end
+
+    it "returns nil building/unit when the customer has no default address on file" do
+      get "/api/v1/orders/#{order.id}", headers: auth_headers(vendor_user)
+      json_order = json["order"]
+
+      expect(json_order["customer_building"]).to be_nil
+      expect(json_order["customer_unit"]).to be_nil
+    end
   end
 
   describe "POST /api/v1/orders/:id/transitions" do

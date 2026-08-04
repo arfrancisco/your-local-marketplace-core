@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Shop } from '../api/types'
 import { TourCallout } from '../components/TourCallout'
 import { RatingSummary } from '../components/Ratings'
+import { DashboardActionsMenu } from '../components/DashboardActionsMenu'
+import { OrderList } from '../components/OrderList'
+import { colorFor, emojiFor } from '../visuals'
+
+const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
 
 interface ShopDashboardPageProps {
   /** Onboarding step 3 (OnboardingPage) renders this same component with
@@ -17,18 +22,23 @@ interface ShopDashboardPageProps {
   onTourDone?: () => void
 }
 
-// Dashboard tour stops, in order: shop open/close control, Inventory link,
-// Orders link, then a closing "you're all set" message.
+// Dashboard tour stops, in order: shop open/close control, the shop actions
+// menu (edit/inventory/reviews), the order list, then a closing "you're all
+// set" message.
 const TOUR_STOPS = 4
 
 // A vendor owns exactly one shop (enforced on the API by a uniqueness
 // constraint on shops.vendor_profile_id), so there is nothing to list — this
-// is that one shop's dashboard, not an index. Route stays at /shops.
+// is that one shop's dashboard, not an index. Route stays at /shops. Order
+// management is the main thing a vendor needs day to day, so it's the
+// dashboard's primary content; the less-frequent actions (edit shop
+// details, inventory, reviews) live behind the kebab menu instead of as
+// primary buttons.
 export function ShopDashboardPage({ onboardingMode = false, onTourDone }: ShopDashboardPageProps = {}) {
   const [shop, setShop] = useState<Shop | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  const [confirmingClose, setConfirmingClose] = useState(false)
+  const [pendingStatusChange, setPendingStatusChange] = useState<'open' | 'close' | null>(null)
   const [tourStep, setTourStep] = useState(0)
   const navigate = useNavigate()
 
@@ -71,55 +81,25 @@ export function ShopDashboardPage({ onboardingMode = false, onTourDone }: ShopDa
       setShop(res.shop)
     } finally {
       setBusy(false)
-      setConfirmingClose(false)
+      setPendingStatusChange(null)
     }
   }
 
-  // Closing hides the shop from every customer, so it gets a confirmation.
-  // Opening has no downside and is trivially reversible, so it does not.
+  // The toggle now sits at the very top of the page, right where a stray tap
+  // is most likely (e.g. reaching for something else while the page is still
+  // loading) — both directions go through a confirmation, not just closing.
   function onStatusClick() {
     if (!shop) return
-    if (shop.open) setConfirmingClose(true)
-    else void setOpen(shop, true)
+    setPendingStatusChange(shop.open ? 'close' : 'open')
   }
 
   if (loading) return <p>Loading your shop…</p>
   if (!shop) return <p>No shop yet. Create your first one.</p>
 
+  const fallbackKey = `${shop.name} ${shop.description ?? ''}`
+
   return (
     <div>
-      <div className="tour-anchor">
-        <div className="row spread">
-          <div>
-            <h1>{shop.name}</h1>
-            <p className="muted">
-              {shop.fulfillment_methods.join(', ') || 'no fulfillment'}
-              {shop.status !== 'active' && ' · not published yet'}
-            </p>
-            <p className="muted">
-              <RatingSummary
-                averageRating={shop.average_rating}
-                ratingsCount={shop.ratings_count}
-                emptyLabel="No reviews yet"
-              />
-            </p>
-          </div>
-          {showTour && (
-            <button type="button" className="tour-skip" onClick={skipTour}>
-              Skip tour
-            </button>
-          )}
-        </div>
-        {showTour && tourStep === 3 && (
-          <TourCallout
-            message="You're all set! This is your dashboard from here on — come back anytime to manage your shop, items, and orders."
-            nextLabel="Done"
-            onNext={advanceTour}
-            onSkip={skipTour}
-          />
-        )}
-      </div>
-
       <div className="tour-anchor">
         <button
           type="button"
@@ -149,51 +129,104 @@ export function ShopDashboardPage({ onboardingMode = false, onTourDone }: ShopDa
         )}
       </div>
 
-      <div className="card shop-actions">
-        <Link className="button" to={`/shops/${shop.id}/edit`}>Edit shop details</Link>
-        <div className="tour-anchor">
-          <Link className="button" to={`/shops/${shop.id}/items`}>Inventory</Link>
-          {showTour && tourStep === 1 && (
-            <TourCallout
-              message="Add items here — photos, price, and stock for what you're selling."
-              onNext={advanceTour}
-              onSkip={skipTour}
-            />
+      <div className="tour-anchor">
+        {showTour && (
+          <div className="dashboard-topbar">
+            <button type="button" className="tour-skip" onClick={skipTour}>
+              Skip tour
+            </button>
+          </div>
+        )}
+
+        <div className="shop-hero">
+          {shop.cover_photo ? (
+            <img className="shop-cover" src={`${API_ORIGIN}${shop.cover_photo.url}`} alt="" />
+          ) : (
+            <div className="shop-cover tile" style={{ background: colorFor(shop.name) }} aria-hidden>
+              {emojiFor(fallbackKey)}
+            </div>
           )}
+          <div className="shop-identity">
+            {shop.profile_photo ? (
+              <img className="shop-avatar" src={`${API_ORIGIN}${shop.profile_photo.url}`} alt="" />
+            ) : (
+              <div className="shop-avatar tile" style={{ background: colorFor(shop.name) }} aria-hidden>
+                {emojiFor(fallbackKey)}
+              </div>
+            )}
+            <div className="shop-identity-text">
+              <h1>{shop.name}</h1>
+              <p className="muted">
+                {shop.fulfillment_methods.join(', ') || 'no fulfillment'}
+                {shop.status !== 'active' && ' · not published yet'}
+              </p>
+              <p className="muted">
+                <RatingSummary
+                  averageRating={shop.average_rating}
+                  ratingsCount={shop.ratings_count}
+                  emptyLabel="No reviews yet"
+                />
+              </p>
+            </div>
+            <div className="shop-identity-actions tour-anchor">
+              <DashboardActionsMenu shopId={shop.id} />
+              {showTour && tourStep === 1 && (
+                <TourCallout
+                  message="Edit your shop details, manage inventory, and see reviews from this menu."
+                  onNext={advanceTour}
+                  onSkip={skipTour}
+                />
+              )}
+            </div>
+          </div>
         </div>
-        <div className="tour-anchor">
-          <Link className="button" to={`/orders?shop_id=${shop.id}`}>Orders</Link>
-          {showTour && tourStep === 2 && (
-            <TourCallout
-              message="Incoming orders land here. You move each one forward yourself — accepted, preparing, ready — nothing changes automatically."
-              onNext={advanceTour}
-              onSkip={skipTour}
-            />
-          )}
-        </div>
-        <Link className="button" to={`/shops/${shop.id}/reviews`}>Reviews</Link>
+        {showTour && tourStep === 3 && (
+          <TourCallout
+            message="You're all set! This is your dashboard from here on — come back anytime to manage your shop, items, and orders."
+            nextLabel="Done"
+            onNext={advanceTour}
+            onSkip={skipTour}
+          />
+        )}
       </div>
 
-      {confirmingClose && (
-        <div className="modal-backdrop" onClick={() => setConfirmingClose(false)}>
+      <div className="tour-anchor">
+        <h2 className="section">Orders</h2>
+        <OrderList shopId={shop.id} />
+        {showTour && tourStep === 2 && (
+          <TourCallout
+            message="Incoming orders land here. You move each one forward yourself — accepted, preparing, ready — nothing changes automatically."
+            onNext={advanceTour}
+            onSkip={skipTour}
+          />
+        )}
+      </div>
+
+      {pendingStatusChange && (
+        <div className="modal-backdrop" onClick={() => setPendingStatusChange(null)}>
           <div
             className="modal"
             role="dialog"
             aria-modal="true"
-            aria-label="Close your shop?"
+            aria-label={pendingStatusChange === 'close' ? 'Close your shop?' : 'Open your shop?'}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2>Close your shop?</h2>
+            <h2>{pendingStatusChange === 'close' ? 'Close your shop?' : 'Open your shop?'}</h2>
             <p className="muted">
-              Customers won't be able to find or order from you until you reopen. Existing orders
-              stay accessible.
+              {pendingStatusChange === 'close'
+                ? "Customers won't be able to find or order from you until you reopen. Existing orders stay accessible."
+                : 'Customers will be able to find your shop and place orders right away.'}
             </p>
             <div className="row gap modal-actions">
-              <button type="button" className="button" onClick={() => setConfirmingClose(false)}>
+              <button type="button" className="button" onClick={() => setPendingStatusChange(null)}>
                 Cancel
               </button>
-              <button type="button" onClick={() => setOpen(shop, false)} disabled={busy}>
-                Close shop
+              <button
+                type="button"
+                onClick={() => setOpen(shop, pendingStatusChange === 'open')}
+                disabled={busy}
+              >
+                {pendingStatusChange === 'close' ? 'Close shop' : 'Open shop'}
               </button>
             </div>
           </div>

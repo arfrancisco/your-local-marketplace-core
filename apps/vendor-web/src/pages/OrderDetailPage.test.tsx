@@ -35,6 +35,10 @@ const order: Order = {
   public_reference: 'ORD-ABC12345',
   shop_id: 5,
   customer_profile_id: 77,
+  customer_name: 'Juan Dela Cruz',
+  customer_is_resident: true,
+  customer_building: 'Tower A',
+  customer_unit: '12F',
   status: 'placed',
   can_transition_to: [],
   fulfillment_method: 'pickup',
@@ -132,7 +136,8 @@ describe('OrderDetailPage cancellation', () => {
   it('opens the reason modal instead of transitioning directly', async () => {
     renderPage()
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Cancel order' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Order actions menu' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Cancel order' }))
 
     expect(screen.getByLabelText('Reason')).toBeInTheDocument()
     expect(api.transitionOrder).not.toHaveBeenCalled()
@@ -141,9 +146,10 @@ describe('OrderDetailPage cancellation', () => {
   it('requires free text only when "Other" is selected', async () => {
     renderPage()
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Cancel order' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Order actions menu' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Cancel order' }))
     const select = screen.getByLabelText('Reason')
-    const submit = screen.getAllByRole('button', { name: /cancel order/i })[1]
+    const submit = screen.getByRole('button', { name: /cancel order/i })
 
     await userEvent.selectOptions(select, 'item_unavailable')
     expect(submit).not.toBeDisabled()
@@ -162,9 +168,10 @@ describe('OrderDetailPage cancellation', () => {
 
     renderPage()
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Cancel order' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Order actions menu' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Cancel order' }))
     await userEvent.selectOptions(screen.getByLabelText('Reason'), 'item_unavailable')
-    await userEvent.click(screen.getAllByRole('button', { name: /cancel order/i })[1])
+    await userEvent.click(screen.getByRole('button', { name: /cancel order/i }))
 
     expect(api.transitionOrder).toHaveBeenCalledWith(42, 'cancelled', { reason_code: 'item_unavailable', reason: undefined })
     expect(await screen.findByText('cancelled')).toBeInTheDocument()
@@ -209,18 +216,19 @@ describe('OrderDetailPage item edits', () => {
     vi.mocked(api.listItems).mockResolvedValue({ items: catalog })
   })
 
-  it('offers an "Edit items" affordance while the order is still editable', async () => {
+  it('offers an "Edit order" affordance (behind the order-details kebab) while the order is still editable', async () => {
     renderPage()
-    expect(await screen.findByRole('button', { name: 'Edit items' })).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'Order actions menu' }))
+    expect(screen.getByRole('menuitem', { name: 'Edit order' })).toBeInTheDocument()
   })
 
-  it('hides the "Edit items" affordance once the order is out for delivery', async () => {
+  it('hides the order-details kebab entirely once the order is out for delivery', async () => {
     vi.mocked(api.getOrder).mockResolvedValue({
       order: { ...editableOrder, status: 'out_for_delivery', can_transition_to: ['completed'] },
     })
     renderPage()
     await screen.findByText('out for delivery')
-    expect(screen.queryByRole('button', { name: 'Edit items' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Order actions menu' })).not.toBeInTheDocument()
   })
 
   it('adds a new item, adjusts a quantity, and saves both changes in one call', async () => {
@@ -238,7 +246,8 @@ describe('OrderDetailPage item edits', () => {
 
     renderPage()
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Edit items' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Order actions menu' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Edit order' }))
     await userEvent.click(screen.getByRole('button', { name: 'Increase quantity of Adobo Bowl' }))
 
     await userEvent.selectOptions(screen.getByLabelText('Add an item from this shop'), '11')
@@ -261,7 +270,8 @@ describe('OrderDetailPage item edits', () => {
 
     renderPage()
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Edit items' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Order actions menu' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Edit order' }))
     await userEvent.click(screen.getByRole('button', { name: 'Decrease quantity of Adobo Bowl' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
@@ -271,7 +281,8 @@ describe('OrderDetailPage item edits', () => {
   it('cancels out of edit mode without saving', async () => {
     renderPage()
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Edit items' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Order actions menu' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Edit order' }))
     await screen.findByRole('button', { name: 'Save changes' })
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
 

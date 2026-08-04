@@ -85,7 +85,7 @@ export function ItemEditPage() {
     return (
       <div className="card narrow">
         <h1>Item not found</h1>
-        <Link to={`/shops/${shopId}/items`}>Back to inventory</Link>
+        <Link className="button" to={`/shops/${shopId}/items`}>Back to inventory</Link>
       </div>
     )
   }
@@ -94,7 +94,7 @@ export function ItemEditPage() {
     <div className="card narrow">
       <div className="row spread">
         <h1>Edit item</h1>
-        <Link to={`/shops/${shopId}/items`}>Back to inventory</Link>
+        <Link className="button" to={`/shops/${shopId}/items`}>Back to inventory</Link>
       </div>
       <form onSubmit={onSubmit}>
         <label>

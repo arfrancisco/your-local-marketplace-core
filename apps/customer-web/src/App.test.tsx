@@ -109,3 +109,35 @@ describe('Header', () => {
     expect(screen.queryByRole('link', { name: /vendor dashboard/i })).not.toBeInTheDocument()
   })
 })
+
+describe('EmailVerificationBanner', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    vi.mocked(api.listShops).mockResolvedValue({ shops: [] })
+    vi.mocked(api.listOrders).mockResolvedValue({ orders: [] })
+  })
+
+  it('is absent when signed out', async () => {
+    renderApp()
+    await screen.findByRole('link', { name: /prisma kapitmarket/i })
+    expect(screen.queryByText(/verify your email/i)).not.toBeInTheDocument()
+  })
+
+  it('is absent when signed in with a verified email', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser({ email_verified: true }) })
+    renderApp()
+    await screen.findByRole('link', { name: /prisma kapitmarket/i })
+    expect(screen.queryByText(/verify your email/i)).not.toBeInTheDocument()
+  })
+
+  it('shows and links to /account#email-verify when signed in with an unverified email', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser({ email_verified: false }) })
+    renderApp()
+
+    expect(await screen.findByText(/verify your email/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /verify now/i })).toHaveAttribute('href', '/account#email-verify')
+  })
+})

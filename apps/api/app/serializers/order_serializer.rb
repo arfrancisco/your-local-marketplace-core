@@ -12,6 +12,16 @@ module OrderSerializer
       # only ever sees their own id and the vendor only sees the id of a
       # customer they are actively serving.
       customer_profile_id: order.customer_profile_id,
+      # Customer identity/logistics info — deliberately NOT snapshotted, same
+      # reasoning as opening_message above: this is contextual info about a
+      # person, not a term of the sale (order_items is where snapshotting
+      # matters). A customer has exactly one address record (editing it in
+      # place if they move), so there's nothing to snapshot in the first
+      # place — see Carts::Checkout, which never collects a separate address.
+      customer_name: customer_name(order.customer_profile),
+      customer_is_resident: order.customer_profile.is_resident,
+      customer_building: order.customer_profile.default_address&.building,
+      customer_unit: order.customer_profile.default_address&.unit,
       status: order.status,
       can_transition_to: Order::TRANSITIONS.fetch(order.status, []),
       fulfillment_method: order.fulfillment_method,
@@ -38,6 +48,10 @@ module OrderSerializer
       # rating this phase — .first is the whole set, not a shortcut.
       rating: order.ratings.first && RatingSerializer.call(order.ratings.first)
     }
+  end
+
+  def customer_name(customer_profile)
+    customer_profile.display_name.presence || customer_profile.user.email
   end
 
   def line(order_item)

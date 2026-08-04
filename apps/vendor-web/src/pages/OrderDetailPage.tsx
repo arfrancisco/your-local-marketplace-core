@@ -4,32 +4,14 @@ import { api, ApiError } from '../api/client'
 import { useAuth } from '../auth'
 import { OrderChat } from '../OrderChat'
 import { CancelOrderModal } from '../components/CancelOrderModal'
+import { CustomerSummary } from '../components/CustomerSummary'
 import { EditItemsPanel } from '../components/EditItemsPanel'
-import type { Order, OrderStatus, Photo, VendorCustomerNote } from '../api/types'
-
-const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
+import { OrderDetailActionsMenu } from '../components/OrderDetailActionsMenu'
+import { groupKeyForStatus, statusBadgeClass } from '../orderStatus'
+import type { Order, OrderStatus, VendorCustomerNote } from '../api/types'
 
 function formatPrice(cents: number, currency: string) {
   return `${currency} ${(cents / 100).toFixed(2)}`
-}
-
-// Click a QR/opening-message photo to view it full-size and save it. The
-// download attribute doesn't force a save cross-origin (browser security),
-// so "open full size" + right-click/long-press-to-save is the reliable path.
-function PhotoLightbox({ photo, onClose }: { photo: Photo | null; onClose: () => void }) {
-  if (!photo) return null
-  const url = `${API_ORIGIN}${photo.url}`
-  return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" aria-label="Close" onClick={onClose}>×</button>
-        <img className="modal-image" src={url} alt={photo.filename} />
-        <a href={url} target="_blank" rel="noopener noreferrer" className="button">
-          Open full size (save from here)
-        </a>
-      </div>
-    </div>
-  )
 }
 
 // Private notes this vendor has written about the customer on this order,
@@ -92,7 +74,7 @@ function CustomerNotes({ customerProfileId, orderId }: { customerProfileId: numb
   }
 
   return (
-    <section className="card">
+    <section className="card customer-notes">
       <h2>Private notes about this customer</h2>
       <p className="muted">
         Only visible to you — never shown to the customer or other vendors.
@@ -167,7 +149,6 @@ export function OrderDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [transitioning, setTransitioning] = useState(false)
   const [markingPaid, setMarkingPaid] = useState(false)
-  const [viewingPhoto, setViewingPhoto] = useState<Photo | null>(null)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [editingItems, setEditingItems] = useState(false)
 
@@ -208,15 +189,51 @@ export function OrderDetailPage() {
   if (loading) return <p>Loading order…</p>
   if (!order || !user) return <p>Order not found.</p>
 
+  const visibleTransitions = order.can_transition_to.filter((status) => status !== 'cancelled')
+  const hasActions = order.payment_status === 'unpaid' || visibleTransitions.length > 0
+  const canEditItems = ITEM_EDITABLE_STATUSES.includes(order.status) && !editingItems
+  const canCancel = order.can_transition_to.includes('cancelled')
+
   return (
-    <div>
+    <div className="order-detail-page">
       <div className="row spread">
         <h1>{order.public_reference}</h1>
-        <Link to="/orders">Back to orders</Link>
+        <Link className="button" to="/shops">← Back to dashboard</Link>
+      </div>
+
+      {/* Tags live above the card, not inside it, so more can be added here
+          later (e.g. a payment-status flag) without crowding the customer
+          line the way a growing badge list would. */}
+      <div className="row gap order-tags">
+        <span className={`order-status-badge ${statusBadgeClass(groupKeyForStatus(order.status))}`}>
+          {order.status.replace(/_/g, ' ')}
+        </span>
+        <span className={`payment-badge ${order.payment_status === 'unpaid' ? 'is-unpaid' : 'is-paid'}`}>
+          {order.payment_status === 'unpaid' ? 'Unpaid' : 'Paid'}
+        </span>
+        {!order.customer_is_resident && <span className="non-resident-badge">Not a resident</span>}
       </div>
 
       <div className="card">
-        <p className="tagline">{order.status.replace(/_/g, ' ')}</p>
+        <CustomerSummary
+          name={order.customer_name}
+          building={order.customer_building}
+          unit={order.customer_unit}
+          isResident={order.customer_is_resident}
+          showResidentBadge={false}
+        />
+      </div>
+
+      {error && <p role="alert" className="error">{error}</p>}
+
+      <h2>Order details</h2>
+      <div className="card order-detail-section">
+        {(canEditItems || canCancel) && (
+          <OrderDetailActionsMenu
+            onEditOrder={canEditItems ? () => setEditingItems(true) : undefined}
+            onCancelOrder={canCancel ? () => setShowCancelModal(true) : undefined}
+          />
+        )}
         <ul className="list">
           {order.items.map((line) => (
             <li key={line.id}>
@@ -226,26 +243,6 @@ export function OrderDetailPage() {
         </ul>
         <p>Total: {formatPrice(order.total_cents, order.currency)}</p>
         <p className="muted">Fulfillment: {order.fulfillment_method}</p>
-        <div className="row gap">
-          <p className="muted">Payment: {order.payment_status.replace('_', ' ')}</p>
-          {order.payment_status === 'unpaid' && (
-            <button onClick={onMarkPaid} disabled={markingPaid}>
-              {markingPaid ? 'Marking…' : 'Mark as paid'}
-            </button>
-          )}
-        </div>
-
-        <div className="row gap">
-          {order.can_transition_to.map((status) => (
-            <button key={status} disabled={transitioning} onClick={() => onTransition(status)}>
-              {TRANSITION_LABELS[status]}
-            </button>
-          ))}
-          {ITEM_EDITABLE_STATUSES.includes(order.status) && !editingItems && (
-            <button onClick={() => setEditingItems(true)}>Edit items</button>
-          )}
-        </div>
-        {error && <p role="alert" className="error">{error}</p>}
       </div>
 
       {editingItems && (
@@ -259,27 +256,10 @@ export function OrderDetailPage() {
         />
       )}
 
-      {(order.opening_message || order.opening_message_photos.length > 0) && (
-        <div className="card opening-message">
-          {order.opening_message && <p className="opening-message-text">{order.opening_message}</p>}
-          {order.opening_message_photos.length > 0 && (
-            <div className="thumbs">
-              {order.opening_message_photos.map((p) => (
-                <button key={p.id} className="thumb-btn" onClick={() => setViewingPhoto(p)} aria-label={`View ${p.filename} larger`}>
-                  <img src={`${API_ORIGIN}${p.url}`} alt={p.filename} />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      <CustomerNotes customerProfileId={order.customer_profile_id} orderId={order.id} />
-
       <h2>Chat</h2>
       <OrderChat orderId={order.id} currentUserId={user.id} />
 
-      <PhotoLightbox photo={viewingPhoto} onClose={() => setViewingPhoto(null)} />
+      <CustomerNotes customerProfileId={order.customer_profile_id} orderId={order.id} />
 
       {showCancelModal && (
         <CancelOrderModal
@@ -290,6 +270,32 @@ export function OrderDetailPage() {
             setShowCancelModal(false)
           }}
         />
+      )}
+
+      {hasActions && (
+        <div className="order-actions-bar">
+          {order.payment_status === 'unpaid' && (
+            <button className="button-success" onClick={onMarkPaid} disabled={markingPaid}>
+              {markingPaid ? 'Marking…' : 'Mark as paid'}
+            </button>
+          )}
+          {visibleTransitions.map((status) => (
+            <button
+              key={status}
+              disabled={transitioning}
+              className={
+                status === 'rejected'
+                  ? 'button-danger'
+                  : status === 'preparing'
+                    ? 'button-progress'
+                    : undefined
+              }
+              onClick={() => onTransition(status)}
+            >
+              {TRANSITION_LABELS[status]}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   )

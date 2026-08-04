@@ -162,7 +162,7 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
           only way out was the browser's back button. */}
       {editing && (
         <p className="back-link">
-          <Link to="/shops">← Back to dashboard</Link>
+          <Link className="button" to="/shops">← Back to dashboard</Link>
         </p>
       )}
       <div className="row spread">

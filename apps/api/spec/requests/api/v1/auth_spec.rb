@@ -97,6 +97,15 @@ RSpec.describe "Api::V1 Auth", type: :request do
       expect(user.customer_profile.is_resident).to eq(true)
       expect(user.customer_profile.willing_to_verify_residency).to eq(true)
     end
+
+    it "issues an email verification challenge on registration" do
+      expect {
+        post "/api/v1/auth/register", params: params
+      }.to have_enqueued_job(VerificationDeliveryJob)
+
+      user = User.find_by(email: "new@example.com")
+      expect(user.verification_challenges.where(purpose: "email_verification")).to be_present
+    end
   end
 
   describe "POST /api/v1/auth/login" do
