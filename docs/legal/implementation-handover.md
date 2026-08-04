@@ -32,6 +32,28 @@ Two things are true at once and both matter:
 Nothing here is legal advice, and neither document has been reviewed by a
 lawyer. That review is still needed before launch.
 
+## Start here: two fixes that need no decisions
+
+Do these before anything else in this brief. Both are live in production
+right now, both are a few lines, and neither depends on any of the
+decisions in Part F.
+
+**1. Verification codes are being written to production logs in
+plaintext** (`app/jobs/verification_delivery_job.rb`). Resend and
+Semaphore are actually sending now, so every OTP and its destination
+address is landing in the log. Guard the `Rails.logger.info` line to
+development only, or delete it. Full detail in **C-1**.
+
+**2. Private chat messages and verification codes are passing through
+unfiltered request params**
+(`config/initializers/filter_parameter_logging.rb`). `code` and `body`
+are not in the filter list, so verification codes and the full text of
+users' private messages are written to the Rails log on every request.
+Add both. Full detail in **C-2**.
+
+Neither is theoretical and neither needs sign-off. Everything else in
+this brief can wait behind them.
+
 ---
 
 # Part A: Statements that are now wrong
