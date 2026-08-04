@@ -3,7 +3,12 @@
 **Date:** 2026-08-04
 **Commit audited:** `07d8342`
 **Scope:** `apps/api`, `apps/customer-web`, `apps/vendor-web`, `apps/admin-web`, `admin-mcp`, `.github/workflows`, `docs/`
-**Method:** static review of the checked-in source. No dynamic testing, no running instance, no cloud-console review. See [What was not audited](#what-was-not-audited).
+**Method:** static review of the checked-in source, plus dependency scans (`bundler-audit`, `npm audit`) executed 2026-08-04. No dynamic testing, no running instance, no cloud-console review. See [What was not audited](#what-was-not-audited).
+
+> **⚠️ Read [SEC-00](#sec-00) first.** The dependency scan found an actively
+> exploitable **CVSS 9.5 unauthenticated RCE** in the pinned Rails version. This
+> application meets every precondition. It outranks everything else in this
+> document. There is a one-line mitigation that ships today.
 
 ---
 
@@ -28,8 +33,12 @@ whole codebase, but **not** to be trusted blindly.
   reasonable fix; where that is true I say so. Pick one and record it as an ADR
   in `docs/adr/`, consistent with this project's existing convention.
 
-**One-paragraph summary for a human:** the application-layer authorization in
-this codebase is genuinely good — ownership scoping is correct in every
+**One-paragraph summary for a human:** the single most urgent item is not
+application code at all — it is a six-day-old **CVSS 9.5 unauthenticated RCE in
+the pinned Rails version** ([SEC-00](#sec-00)) that this app is fully exposed to,
+found by running a scanner that this project does not run. Set one environment
+variable to mitigate it today, then upgrade and rotate secrets. Past that: the
+application-layer authorization in this codebase is genuinely good — ownership scoping is correct in every
 controller I read, the service-object boundary is disciplined, and several
 subtle things (enumeration-resistant auth errors, price snapshotting, the
 `rescue_from` ordering, the admin-routes-not-drawn-without-credentials guard)
@@ -151,6 +160,7 @@ paperwork, not safety.
 
 | ID | Severity | Title | Standard |
 |---|---|---|---|
+| [SEC-00](#sec-00) | **Critical (9.5)** | **CVE-2026-66066** — unauthenticated arbitrary file read → RCE in Active Storage variant processing | API6, ASVS V14.2, CWE-22/94 |
 | [SEC-01](#sec-01) | **Critical** | Admin console: shared password, no brute-force limit, plaintext in localStorage, same origin as public app | API2, ASVS V2.2.1, CWE-307/522 |
 | [SEC-02](#sec-02) | **High** | `admin`/`admin` fallback reachable if `ADMIN_PASSWORD` is unset (and it is undocumented) | ASVS V14.1, CWE-1188/798 |
 | [SEC-03](#sec-03) | **High** | Suspending a user does not revoke their access | ASVS V3.3, CWE-613 |
@@ -223,6 +233,100 @@ Stated first, deliberately. A future agent handed a findings list tends to
   No SQL injection was found anywhere in the codebase.
 - **The Dockerfile runs as a non-root user** and uses multi-stage builds
   (`Dockerfile:97-99`).
+
+---
+
+<a id="sec-00"></a>
+### SEC-00 — CVE-2026-66066: unauthenticated arbitrary file read → RCE via Active Storage variant processing
+**Severity: Critical — CVSS v4 9.5** · GHSA-xr9x-r78c-5hrm · API6 · ASVS V14.2.1 · CWE-22, CWE-94
+
+**Fix this before anything else in this document.**
+
+Found by `bundler-audit` against `apps/api/Gemfile.lock` (advisory DB commit
+`e814c84`, 2026-08-02). Published 2026-07-29 — **six days before this audit**.
+
+```
+Name: activestorage
+Version: 8.1.3
+CVE: CVE-2026-66066   GHSA: GHSA-xr9x-r78c-5hrm   CVSS v4: 9.5
+Title: Possible arbitrary file read and remote code execution in
+       Active Storage variant processing
+Solution: update to '~> 7.2.3, >= 7.2.3.2', '~> 8.0.5, >= 8.0.5.1', '>= 8.1.3.1'
+```
+
+**From the advisory:** *"In its default configuration, a Rails application that
+displays image variants may allow an unauthenticated attacker to read arbitrary
+files from the server, including the process environment. That environment
+typically holds `secret_key_base` and often credentials for external systems,
+which may in turn allow escalation to remote code execution or lateral movement
+to those systems."*
+
+**This application meets every precondition. I verified each one:**
+
+| Precondition | Status |
+|---|---|
+| Uses libvips as the variant processor | ✅ `config.load_defaults 8.1` (`config/application.rb:24`) sets `:vips`; nothing overrides it — `grep -rn variant_processor config/` returns nothing. `ruby-vips (2.3.0)` and `image_processing (1.14.0)` are both in `Gemfile.lock`. |
+| Accepts image uploads from untrusted users | ✅ Three separate paths: vendor item photos, vendor shop profile/cover/opening-message photos, and **customer chat images** (`ImageAttachable`, ADR 0006). |
+| Vulnerable version | ✅ `rails (8.1.3)`, `activestorage (8.1.3)`. Patch line is `>= 8.1.3.1`. |
+
+Note the advisory's explicit clarification: *"Generating variants is not a
+separate requirement."* Merely accepting the upload is enough.
+
+**This app is worse-positioned than the baseline case**, for reasons already
+documented elsewhere in this audit:
+
+- **SEC-08** identified an *unauthenticated* variant-processing path: any
+  request with a recognized crawler user-agent to `/shops/:slug` triggers a
+  `resize_to_fill` variant (`social_previews/build_shop_meta.rb:53` via
+  `static_controller.rb:31`). No login, no token — a `User-Agent: facebookexternalhit`
+  header is the entire entry requirement.
+- **SEC-08** also found that **upload content-type validation trusts the
+  client-declared MIME type**, so nothing stops a crafted non-image file from
+  being accepted as `image/png` and reaching the processor.
+- The stolen environment is unusually valuable here: `secret_key_base`, plus
+  `R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY` (all user photos), `RESEND_API_KEY`
+  (send mail as the app), `SEMAPHORE_API_KEY` (send SMS, spend real money),
+  `DATABASE_URL`, `REDIS_URL`, and — per **SEC-01/SEC-02** — `ADMIN_USERNAME`
+  and `ADMIN_PASSWORD`. **This finding chains directly into full admin
+  compromise.**
+
+**Remediation — do all three, in this order:**
+
+**1. Today, without a deploy** — `ruby-vips` is at `2.3.0`, which is `>= 2.2.1`,
+so the upstream workaround is available. Add an initializer:
+
+```ruby
+# config/initializers/vips_block_untrusted.rb
+# Mitigates CVE-2026-66066 by disabling libvips' unfuzzed loaders.
+# Remove once Rails is on >= 8.1.3.1 (kept as defense in depth is also fine).
+Vips.block_untrusted(true) if defined?(Vips)
+```
+
+Or set `VIPS_BLOCK_UNTRUSTED=1` as a Railway environment variable, which needs
+no rebuild at all and is therefore the fastest possible action. Do that first.
+
+**2. This week — the actual fix.** Bump to Rails `8.1.3.1`:
+
+```bash
+cd apps/api && bundle update rails --conservative && bundle exec rspec
+```
+
+A patch-level bump within 8.1.x; expect no application changes.
+
+**3. Assume the environment may already be exposed.** The vulnerability has been
+public since 2026-07-29 and the app has been live at `prisma.kapitmarket.ph`.
+There is no way to determine from the repository whether it was exploited, and
+per **ARC-06** there is no logging that would show it. Treat every secret in the
+Railway environment as potentially compromised and **rotate all of them**:
+`SECRET_KEY_BASE`, R2 keys, `RESEND_API_KEY`, `SEMAPHORE_API_KEY`, database and
+Redis credentials, `ADMIN_PASSWORD`, `SIDEKIQ_WEB_PASSWORD`. Rotating
+`SECRET_KEY_BASE` will invalidate existing Active Storage signed URLs; that is
+acceptable and expected.
+
+This is also the concrete argument for **SEC-17** and **ARC-02**: a Dependabot
+alert would have surfaced this on 2026-07-29, and a CI gate would have blocked
+the release. Neither exists, so a 9.5 sat in production for six days with nobody
+in a position to know.
 
 ---
 
@@ -836,11 +940,13 @@ Absent:
 - **Brakeman** — the standard Rails SAST tool, would have flagged several
   findings above automatically.
 - **`bundle audit`** / **`bundler-audit`** — no check against the Ruby Advisory
-  Database.
+  Database. **This is how CVE-2026-66066 (CVSS 9.5) sat undetected in production
+  for six days. See [SEC-00](#sec-00) and [§4.1](#41-dependency-scan-results-executed-2026-08-04).**
 - **`npm audit`** — no check on any of four Node projects (three SPAs plus
   `admin-mcp`, plus `e2e`).
 - **Dependabot or Renovate** — no `.github/dependabot.yml`; nothing tells anyone
-  a dependency has a published CVE.
+  a dependency has a published CVE. Dependabot would have alerted on SEC-00 on
+  2026-07-29, the day it was published.
 - **Secret scanning** — no gitleaks/trufflehog. `apps/api/config/credentials.yml.enc`
   is committed (correct — it is encrypted) and `config/master.key` is properly
   gitignored (`apps/api/.gitignore:24`), so nothing is currently leaked. There is
@@ -861,6 +967,63 @@ for the three SPAs running `tsc --noEmit`, lint, and vitest; enable Dependabot
 for `bundler` and all four `npm` directories; enable GitHub secret scanning and
 push protection (free on public repos, and available on private with Advanced
 Security). Then make CI a required check and wire deployment to it.
+
+---
+
+## 4.1 Dependency scan results (executed 2026-08-04)
+
+Scans run: `bundler-audit` 0.9.3 (advisory DB `e814c84`) against
+`apps/api/Gemfile.lock`, and `npm audit` against all five Node projects.
+
+### Ruby — 1 finding, and it is the most serious item in this audit
+
+| Gem | Version | Advisory | CVSS | Reachable? |
+|---|---|---|---|---|
+| `activestorage` | 8.1.3 | CVE-2026-66066 | **9.5** | **Yes — unauthenticated.** See [SEC-00](#sec-00). |
+
+No other Ruby advisories. The rest of the Gemfile is clean.
+
+### JavaScript — 22 raw findings, **0 reachable in production**
+
+`npm audit` reports "7 vulnerabilities (3 moderate, 3 high, 1 critical)" for each
+of the three SPAs, 1 moderate for `admin-mcp`, and 0 for `e2e`. **Do not
+escalate on those labels.** I checked reachability for each; every one is either
+a development-only dependency or an unused code path.
+
+| Package | Advisory | npm severity | Actual exposure |
+|---|---|---|---|
+| `vitest` ≤3.2.5 | GHSA-5xrq-8626-4rwp | **critical** | **None in production.** `devDependency`; the flaw requires the Vitest **UI server** to be listening. Scripts are `vitest run` / `vitest` — `--ui` is never used, and no test tooling ships in the built bundle. |
+| `vite` ≤6.4.2 | GHSA-fx2h-pf6j-xcff | high | **None in production.** `devDependency`; `server.fs.deny` bypass affects the **dev server**, and additionally is Windows-specific. This project deploys static build output. |
+| `vite` ≤6.4.2 | GHSA-4w7w-66w2-5vf9, GHSA-v6wh-96g9-6wx3 | moderate | Same — dev server only; the second is a Windows NTLM issue and this is a Linux/macOS project. |
+| `esbuild` ≤0.24.2 | GHSA-67mh-4wv8-2f99 | moderate | **None in production.** Transitive under `vite`; dev server only. |
+| `react-router` 7.12.0–8.2.0 | GHSA-qwww-vcr4-c8h2 | high | **Not reachable.** This is an **RSC-mode** CSRF bypass. All three SPAs use plain client-side `BrowserRouter` (`apps/*/src/main.tsx:3`) with no RSC, no framework mode, and no React Router server. This is the only *runtime* dependency on the list, so it is the one to patch first regardless. |
+| `hono` <4.12.34 | GHSA-8j4g-w8fx-2239 | moderate | **Not reachable.** Transitive under `@modelcontextprotocol/sdk` (`npm ls hono` shows no direct dependency). The flaw is ReDoS in **CORS middleware**; `admin-mcp` uses `StdioServerTransport` (`admin-mcp/src/index.ts`) and runs no HTTP server at all. |
+
+**Interpretation.** The dev-server findings are not nothing — they are a real
+risk to a developer running `npm run dev` on an untrusted network (a café, a
+co-working space), where a malicious page can reach `localhost` and read source.
+They are simply not a production risk for this application, and treating a
+"critical" `vitest` label as equivalent to a 9.5 unauthenticated RCE would be a
+serious misallocation of attention.
+
+**Remediation.** All fixes are non-breaking except the `vite`/`vitest` majors:
+
+```bash
+# Non-breaking. Fixes react-router (the only runtime dep) and hono.
+( cd apps/customer-web && npm audit fix )
+( cd apps/vendor-web   && npm audit fix )
+( cd apps/admin-web    && npm audit fix )
+( cd admin-mcp         && npm audit fix )
+
+# Major bumps: vite 5→8, vitest 2→4. Do deliberately, run the suites after.
+# Not urgent — dev-tooling only.
+```
+
+**The meta-finding is the one that matters.** Nothing in this repository would
+have told anyone about any of the above. SEC-00 was published 2026-07-29 and
+found here on 2026-08-04 only because this audit ran the scanner by hand. See
+[SEC-17](#sec-17) and [ARC-02](#arc-02) — those two are the reason a 9.5 sat
+undetected, and fixing them is what prevents the next one.
 
 ---
 
@@ -1256,6 +1419,15 @@ increment-quantity semantics, and clear local state only on a 2xx.
 Ordered by impact × ease, not by severity. This is where an implementing agent
 should start.
 
+### Do right now — before anything else on this page
+
+| # | Action | Closes |
+|---|---|---|
+| 0a | Set `VIPS_BLOCK_UNTRUSTED=1` in Railway (no rebuild, effective immediately) | SEC-00 |
+| 0b | `bundle update rails --conservative` → 8.1.3.1, test, deploy | SEC-00 |
+| 0c | Rotate every secret in the Railway environment | SEC-00 |
+| 0d | `npm audit fix` in the three SPAs and `admin-mcp` (non-breaking) | §4.1 |
+
 ### Do this week — hours each, disproportionate payoff
 
 | # | Action | Closes |
@@ -1315,11 +1487,10 @@ State these plainly. Do not let a reader infer coverage that does not exist.
 
 - **No dynamic testing.** No running instance was probed. Every finding is from
   static reading. Findings marked **[VERIFY]** specifically require a live check.
-- **No dependency CVE scan was executed.** `Gemfile.lock` and four
-  `package-lock.json` files were not checked against any advisory database. This
-  is a gap in *this audit*, separate from SEC-17's gap in CI. **Run
-  `bundle audit` and `npm audit` before treating this audit as complete** —
-  a known-vulnerable dependency would outrank most findings above.
+- ~~No dependency CVE scan was executed.~~ **Done 2026-08-04 — see [§4.1](#41-dependency-scan-results-executed-2026-08-04).**
+  It found CVE-2026-66066 (CVSS 9.5), which does indeed outrank every other
+  finding, exactly as this section originally warned. Re-run both scanners
+  before acting on this document; the advisory DB moves daily.
 - **Cloud configuration is entirely outside the repo and was not reviewed:**
   R2 bucket policies and public-access settings, Railway environment variables
   and network configuration, Cloudflare DNS/WAF, Resend and Semaphore account
@@ -1367,16 +1538,25 @@ grep -n "admin" config/initializers/rack_attack.rb
 # SEC-14: prints true, demonstrating the no-op
 ruby -e 'test_env = true; p(ENV.fetch("RACK_ATTACK_ENABLED", !test_env.to_s) != "false")'
 
-# --- The scans this audit could not run ---
-gem install bundler-audit && bundler-audit check --update
-gem install brakeman && brakeman -A --no-pager
-( cd ../customer-web && npm audit --production )
-( cd ../vendor-web   && npm audit --production )
-( cd ../admin-web    && npm audit --production )
-( cd ../../admin-mcp && npm audit --production )
+# --- Dependency scans: RUN on 2026-08-04, results in §4.1 ---
+# Re-run before acting; the advisory DB updates daily.
+gem install bundler-audit && bundle-audit check --update
+# 2026-08-04: 1 finding — activestorage 8.1.3 / CVE-2026-66066 / CVSS 9.5 (SEC-00).
 
-# History secret scan (SEC-17)
-gitleaks detect --source . --no-git=false
+( cd ../customer-web && npm audit )   # 2026-08-04: 7 findings, all dev-only
+( cd ../vendor-web   && npm audit )   # or unreachable — see §4.1 before
+( cd ../admin-web    && npm audit )   # escalating on the severity labels
+( cd ../../admin-mcp && npm audit )   # 2026-08-04: 1 moderate, unreachable
+( cd ../../e2e       && npm audit )   # 2026-08-04: clean
+
+# SEC-00: confirm the fix landed. Want rails/activestorage >= 8.1.3.1,
+# and/or block_untrusted set as the interim mitigation.
+grep -E "^    (rails|activestorage) " Gemfile.lock
+grep -rn "block_untrusted" config/ ; echo "also check VIPS_BLOCK_UNTRUSTED in Railway"
+
+# --- Still not run by this audit ---
+gem install brakeman && brakeman -A --no-pager
+gitleaks detect --source . --no-git=false   # history secret scan (SEC-17)
 ```
 
 ```bash
