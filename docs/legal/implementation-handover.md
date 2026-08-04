@@ -267,6 +267,72 @@ Part A before any of it is copied over.
 
 ---
 
+# Part F: Decisions needed from the owner
+
+These are not engineering choices. Do not guess at them, and do not write
+either document as if one had been made. Each is blocking the section
+named next to it. Recommendations are given, but the call is the owner's.
+
+**F-1. Vendor notes about customers (blocks B-1).**
+`vendor_customer_notes` holds a vendor's private note and `flagged`
+boolean about a customer, invisible to that customer. Options:
+
+| Option | Consequence |
+|---|---|
+| Disclose, and include in DPA access requests (**recommended**) | Feature stays. Policy says vendors may keep private notes. If a customer formally requests their data, notes are included. Defensible. Vendors should be told their notes are not permanently secret. |
+| Disclose, exclude from access requests | Argues the note is the vendor's opinion, not the operator's record. Legally the weakest position; expect a lawyer to push back. |
+| Make notes visible to the customer | Removes the problem entirely, but kills the point of a candid "no-showed for pickup" note. |
+| Remove the feature | Cleanest privacy position, loses a trust and safety signal that was built deliberately. |
+
+**F-2. Operator access to private chat (blocks B-2).**
+The admin namespace can read every conversation, address, cart, and
+token behind one shared credential with no audit trail. Options:
+
+| Option | Consequence |
+|---|---|
+| Keep access, disclose it, add an audit log (**recommended**) | Policy states the operator may access chat for support, fraud investigation, and dispute mediation. Logging who read what makes the disclosure verifiable. Pair with fixing C-4. |
+| Keep access, disclose it, no audit log | Fastest and still honest. Fine while one person holds the credential, weak the moment anyone else does. |
+| Restrict technically, then disclose narrowly | Gate the admin conversations endpoint to orders with an open report or dispute. Strongest position, most work, slower debugging. |
+
+**F-3. Vendor identity collection (blocks Part E's RA 11967 work, and
+`docs/open-decisions.md` #5).**
+The law wants merchant identity collected before listing. Options:
+
+| Option | Consequence |
+|---|---|
+| Collect ID at vendor signup, publish immediately, verify after (**recommended**) | Meets "collect before listing" without blocking anyone. Review at your own pace and flip `verification_status` later. Keeps beta velocity. |
+| Require verification before a shop is discoverable | Matches the anti-scam thesis most strongly, but makes you the bottleneck for every vendor. |
+| Collect nothing during beta | Least work. Leaves RA 11967 exposure, including subsidiary liability, for the whole beta. |
+
+**F-4. Re-consent when the documents change (blocks D-2).**
+Options: prompt for re-acceptance on next sign-in and block until
+accepted (**recommended**, gives a clean per-version consent record);
+notify in-app and by email without blocking (lower friction, but the
+record shows only the old acceptance); or update silently (not
+defensible for material changes, and the Terms already promise
+reasonable notice).
+
+**F-5. Closed accounts and vendor notes (blocks C-5).**
+When a customer closes their account, what happens to
+`vendor_customer_notes` about them? Delete with the rest of the personal
+data, or keep as part of the vendor's trust record? Depends partly on
+F-1.
+
+**F-6. Smaller open items.**
+
+- **Effective date.** Both documents say "upon beta launch (date to be
+  confirmed)". Set a real date when the beta opens.
+- **DTI registration timing.** Decided: documents name "KapitMarket PH"
+  with no personal name. Still open is when the business name actually
+  gets registered, which is what makes that naming durable rather than
+  interim (see A-1).
+- **Support vs privacy contact.** Both currently point at one personal
+  Gmail address. Worth splitting before launch, at minimum to a
+  role-based address.
+- **Vendor permits.** If vendors will sell home-cooked food, decide
+  whether the Terms should require a specific health or sanitation
+  clearance rather than the current general wording.
+
 # Scope boundaries
 
 Do not build, and do not write into the documents as if they existed: a
