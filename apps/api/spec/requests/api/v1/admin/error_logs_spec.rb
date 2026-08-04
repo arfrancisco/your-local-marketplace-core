@@ -18,7 +18,7 @@ RSpec.describe "Api::V1::Admin::ErrorLogs", type: :request do
     let(:request_method) { :get }
     let(:request_path) { "/api/v1/admin/error_logs" }
 
-    it_behaves_like "requires admin basic auth"
+    it_behaves_like "requires admin auth"
 
     it "filters by resolved" do
       record(message: "resolved one").resolve!

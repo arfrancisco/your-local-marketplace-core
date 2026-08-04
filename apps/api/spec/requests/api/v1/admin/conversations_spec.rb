@@ -7,7 +7,7 @@ RSpec.describe "Api::V1::Admin::Conversations", type: :request do
     let(:request_method) { :get }
     let(:request_path) { "/api/v1/admin/conversations/#{conversation.id}" }
 
-    it_behaves_like "requires admin basic auth"
+    it_behaves_like "requires admin auth"
 
     it "returns the full transcript" do
       create(:message, conversation: conversation, body: "When will it be ready?")

@@ -7,7 +7,7 @@ RSpec.describe "Api::V1::Admin::Shops", type: :request do
     let(:request_method) { :get }
     let(:request_path) { "/api/v1/admin/shops" }
 
-    it_behaves_like "requires admin basic auth"
+    it_behaves_like "requires admin auth"
 
     it "includes payment/opening-message info unlike public discovery" do
       shop.update!(opening_message: "GCash to 0917-000-0000")

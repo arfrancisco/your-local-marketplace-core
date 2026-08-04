@@ -5,7 +5,7 @@ RSpec.describe "Api::V1::Admin::VendorCustomerNotes", type: :request do
     let(:request_method) { :get }
     let(:request_path) { "/api/v1/admin/vendor_customer_notes" }
 
-    it_behaves_like "requires admin basic auth"
+    it_behaves_like "requires admin auth"
 
     it "sees notes across multiple vendors, unlike the vendor-facing endpoint" do
       vendor_a = create(:vendor_profile)

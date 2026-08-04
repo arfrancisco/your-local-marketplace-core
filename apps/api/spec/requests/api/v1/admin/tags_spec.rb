@@ -7,7 +7,7 @@ RSpec.describe "Api::V1::Admin::Tags", type: :request do
     let(:request_method) { :get }
     let(:request_path) { "/api/v1/admin/tags" }
 
-    it_behaves_like "requires admin basic auth"
+    it_behaves_like "requires admin auth"
   end
 
   describe "DELETE /api/v1/admin/tags/:id" do

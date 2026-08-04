@@ -1,53 +1,63 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { api, getCredentials, setCredentials, clearCredentials } from './api/client'
+import { api, getToken, setToken, getStoredAdminAccount, setStoredAdminAccount } from './api/client'
+import type { AdminAccount } from './api/types'
 
+// Mirrors customer-web's auth.tsx shape: a real per-admin bearer token
+// (AdminUser/AdminApiToken on the backend), not the old shared HTTP Basic
+// operator credential. adminAccount carries the signed-in admin's identity
+// (used for e.g. showing who's signed in, and disabling self-service
+// actions on your own row) rather than a bare authenticated boolean.
 interface AuthState {
-  authenticated: boolean
+  adminAccount: AdminAccount | null
   loading: boolean
-  login: (username: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<void>
   logout: () => void
 }
 
 const AuthContext = createContext<AuthState | null>(null)
 
-// There's no admin User record — this is a single shared operator
-// credential (HTTP Basic), not a real account. Auth state is just a
-// boolean, verified by round-tripping a cheap read against the admin API
-// rather than trusting whatever's sitting in localStorage.
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [authenticated, setAuthenticated] = useState(false)
+  const [adminAccount, setAdminAccount] = useState<AdminAccount | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!getCredentials()) {
+    if (!getToken()) {
       setLoading(false)
       return
     }
+    // There's no GET /admin/me endpoint, so verify-on-load re-validates the
+    // token with a cheap authenticated call and, if it still works, trusts
+    // the admin identity cached alongside the token at login time.
     api
-      .listUsers({ page: 1 })
-      .then(() => setAuthenticated(true))
-      .catch(() => clearCredentials())
+      .listAdminAccounts({ page: 1 })
+      .then(() => setAdminAccount(getStoredAdminAccount()))
+      .catch(() => {
+        setToken(null)
+        setStoredAdminAccount(null)
+      })
       .finally(() => setLoading(false))
   }, [])
 
-  async function login(username: string, password: string) {
-    setCredentials(username, password)
-    try {
-      await api.listUsers({ page: 1 })
-      setAuthenticated(true)
-    } catch (err) {
-      clearCredentials()
-      throw err
-    }
+  async function login(email: string, password: string) {
+    const res = await api.login(email, password)
+    setToken(res.token)
+    setStoredAdminAccount(res.admin_user)
+    setAdminAccount(res.admin_user)
   }
 
   function logout() {
-    clearCredentials()
-    setAuthenticated(false)
+    // Best-effort server-side revocation; local sign-out proceeds regardless
+    // (e.g. the token may already be expired/invalid).
+    api.logout().catch(() => {})
+    setToken(null)
+    setStoredAdminAccount(null)
+    setAdminAccount(null)
   }
 
   return (
-    <AuthContext.Provider value={{ authenticated, loading, login, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ adminAccount, loading, login, logout }}>
+      {children}
+    </AuthContext.Provider>
   )
 }
 

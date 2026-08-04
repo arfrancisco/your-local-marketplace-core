@@ -7,7 +7,7 @@ RSpec.describe "Api::V1::Admin::Orders", type: :request do
     let(:request_method) { :get }
     let(:request_path) { "/api/v1/admin/orders" }
 
-    it_behaves_like "requires admin basic auth"
+    it_behaves_like "requires admin auth"
   end
 
   describe "POST /api/v1/admin/orders/:id/transitions" do

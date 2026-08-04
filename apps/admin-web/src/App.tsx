@@ -20,18 +20,20 @@ import { AddressesPage } from './pages/AddressesPage'
 import { CartsPage } from './pages/CartsPage'
 import { TagsPage } from './pages/TagsPage'
 import { EarlyAccessSignupsPage } from './pages/EarlyAccessSignupsPage'
+import { AdminAccountsPage } from './pages/AdminAccountsPage'
+import { AuditLogsPage } from './pages/AuditLogsPage'
 
 function RequireAuth({ children }: { children: ReactNode }) {
-  const { authenticated, loading } = useAuth()
+  const { adminAccount, loading } = useAuth()
   if (loading) return <p className="container">Loading…</p>
-  if (!authenticated) return <Navigate to="/login" replace />
+  if (!adminAccount) return <Navigate to="/login" replace />
   return <>{children}</>
 }
 
 function Header() {
-  const { authenticated, logout } = useAuth()
+  const { adminAccount, logout } = useAuth()
   const navigate = useNavigate()
-  if (!authenticated) return null
+  if (!adminAccount) return null
   return (
     <header className="topbar">
       <strong>KapitMarket PH Admin</strong>
@@ -49,6 +51,9 @@ function Header() {
         <Link to="/carts">Carts</Link>
         <Link to="/tags">Tags</Link>
         <Link to="/early_access_signups">Early access</Link>
+        <Link to="/admin_accounts">Admin accounts</Link>
+        <Link to="/audit_logs">Audit log</Link>
+        <span className="muted">{adminAccount.email}</span>
         <button onClick={() => { logout(); navigate('/login') }}>Sign out</button>
       </nav>
     </header>
@@ -79,6 +84,8 @@ export default function App() {
         <Route path="/carts" element={<RequireAuth><CartsPage /></RequireAuth>} />
         <Route path="/tags" element={<RequireAuth><TagsPage /></RequireAuth>} />
         <Route path="/early_access_signups" element={<RequireAuth><EarlyAccessSignupsPage /></RequireAuth>} />
+        <Route path="/admin_accounts" element={<RequireAuth><AdminAccountsPage /></RequireAuth>} />
+        <Route path="/audit_logs" element={<RequireAuth><AuditLogsPage /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/users" replace />} />
       </Routes>
     </>

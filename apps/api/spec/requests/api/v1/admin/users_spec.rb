@@ -7,7 +7,7 @@ RSpec.describe "Api::V1::Admin::Users", type: :request do
     let(:request_method) { :get }
     let(:request_path) { "/api/v1/admin/users" }
 
-    it_behaves_like "requires admin basic auth"
+    it_behaves_like "requires admin auth"
 
     it "lists users, filterable by status and a search query" do
       create(:user, :suspended, email: "flagged@example.com")

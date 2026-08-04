@@ -86,6 +86,7 @@ Rails.application.routes.draw do
       patch "orders/:id/items",         to: "orders#update_items"
       get   "orders/:id/conversation",   to: "conversations#show"
       post  "orders/:id/messages",       to: "conversations#create_message"
+      post  "orders/:id/conversation/mark_read", to: "conversations#mark_read"
 
       # Ratings (M4) — customer rates the shop once an order is completed,
       # once per completed order (see Ratings::Create for the actual gate).
@@ -133,15 +134,25 @@ Rails.application.routes.draw do
         delete "customer_notes/:id", to: "customer_notes#destroy"
       end
 
-      # Internal admin surface: one shared Basic-Auth credential
-      # (ADMIN_USERNAME/PASSWORD), not a User role — see
-      # Api::V1::Admin::BaseController. Guarded the same way as Sidekiq::Web
-      # below: only drawn if credentials are actually configured (or in
-      # dev/test, so specs can hit it without the env var set), so
-      # production never silently ships with an admin/admin fallback
-      # reachable before the operator actually sets real credentials.
-      if Rails.env.local? || ENV["ADMIN_USERNAME"].present?
+      # Internal admin surface: real per-admin accounts + bearer-token
+      # sessions (see docs/adr/0010-per-admin-accounts.md), not a shared
+      # credential. Guarded the same way as Sidekiq::Web below: only drawn
+      # once explicitly enabled (or in dev/test, so specs can hit it without
+      # the env var set), so production never silently ships this reachable
+      # before the operator has actually bootstrapped the first AdminUser.
+      if Rails.env.local? || ENV["ADMIN_ENABLED"] == "true"
         namespace :admin do
+          post "auth/login",  to: "sessions#create"
+          post "auth/logout", to: "sessions#destroy"
+
+          get    "admin_users",                to: "admin_users#index"
+          post   "admin_users",                to: "admin_users#create"
+          post   "admin_users/:id/deactivate", to: "admin_users#deactivate"
+          post   "admin_users/:id/reactivate", to: "admin_users#reactivate"
+
+          get "audit_logs",     to: "audit_logs#index"
+          get "audit_logs/:id", to: "audit_logs#show"
+
           get   "users",                to: "users#index"
           get   "users/:id",            to: "users#show"
           post  "users/:id/suspend",    to: "users#suspend"
@@ -217,7 +228,7 @@ Rails.application.routes.draw do
   get "vendor/*path", to: "static#vendor_app"
 
   # admin-web, same mechanism as vendor-web above — served under /admin/*.
-  # Its own API surface (Api::V1::Admin::*) is Basic-Auth gated, not this
+  # Its own API surface (Api::V1::Admin::*) is bearer-token gated, not this
   # static shell; the shell itself is just the SPA's index.html.
   get "admin", to: "static#admin_app"
   get "admin/*path", to: "static#admin_app"

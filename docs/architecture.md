@@ -82,40 +82,74 @@ served from one Rails app). `authenticate!` requires a valid token;
 must work for anonymous callers too) attributes the request to a user
 when a token happens to be present, without requiring one.
 
-**Admin auth** (`Api::V1::Admin::BaseController`): a single shared HTTP
-Basic Auth credential (`ADMIN_USERNAME`/`ADMIN_PASSWORD` env vars), not a
-`User` role and not a database-backed admin-accounts table. There is one
-admin identity for the whole namespace, so Basic Auth *is* the
-authorization boundary — Pundit is deliberately not used here, since
-there's nothing finer-grained to express once `authenticate_admin!`
-passes. This inherits `ApplicationController` directly, not
-`Api::V1::BaseController`, because bearer-token auth and admin Basic
-Auth are unrelated concerns that never overlap on the same request. The
-admin namespace is only drawn into `config/routes.rb` at all when
-`ADMIN_USERNAME` is set (or in dev/test) — in production, without that
-env var configured, the routes don't exist, so there's no
-admin/admin fallback reachable before an operator sets real credentials.
-The Sidekiq::Web dashboard at `/sidekiq` is guarded the identical way
-with its own `SIDEKIQ_WEB_USERNAME`/`PASSWORD` pair.
+**Admin auth** (`Api::V1::Admin::BaseController`): real per-admin accounts
+(`AdminUser`, `has_secure_password`) and bearer-token sessions
+(`AdminApiToken`, SHA-256 digest storage, 30-day TTL), not the old shared
+HTTP Basic Auth credential. `AdminUser`/`AdminApiToken` are a deliberately
+isolated model set — not the same rows as `User`/`ApiToken`, not a
+polymorphic extension of them — mirroring that *pattern* rather than
+reusing it, matching this repo's existing preference for duplication over
+cross-cutting shared abstractions (`ADR 0001`, extended here to a second
+axis: admin identity is architecturally separate from marketplace-user
+identity, not just a role flag on it). The `Admin::Authentication` concern
+resolves the bearer token, rejects a missing/invalid/expired token or one
+belonging to a suspended admin, and sets `current_admin_user` — checked on
+**every request**, so deactivating an admin revokes access immediately,
+not just at their next login. This inherits `ApplicationController`
+directly, not `Api::V1::BaseController`, because bearer-token auth for
+marketplace users and bearer-token auth for admins are unrelated concerns
+that never overlap on the same request (see `ADR 0010`). The admin
+namespace is only drawn into `config/routes.rb` at all when
+`ADMIN_ENABLED=true` — in production, without that env var, the routes
+don't exist. The Sidekiq::Web dashboard at `/sidekiq` is intentionally
+left on its own, separate `SIDEKIQ_WEB_USERNAME`/`PASSWORD` Basic Auth
+pair — different tool, different audience, out of scope for this change
+(`ADR 0010`).
 
-admin-web's own login screen just prompts for that one Basic Auth
-username/password and stores it (base64'd) in a separate localStorage
-key (`kapitmarket_admin_basic_auth`) from the customer/vendor bearer
-token — the two apps' sessions never mix.
+Every mutating admin request (POST/PATCH/PUT/DELETE) is attributed to the
+signed-in admin via one `around_action :record_audit_log` hook on
+`Api::V1::Admin::BaseController`, writing an `AdminAuditLog` row (admin,
+HTTP method, path, controller/action, resource type/id, status code,
+filtered params, IP). This is a single-file addition, not something
+touched per-controller, since all 16+ admin resource controllers already
+inherit the same base. Reads are deliberately not logged — the ask this
+answers is "who did this," not a full request log. Audit log rows are
+browsable read-only via `GET /api/v1/admin/audit_logs` (and admin-web's
+Audit log page), filterable by `admin_user_id`/`resource_type`.
+
+The very first `AdminUser` is bootstrapped via `admin_users:create` (a
+rake task, aborts if any admin already exists); every admin after that is
+created self-service from admin-web's Admin accounts page
+(`Api::V1::Admin::AdminUsersController`), which also handles
+deactivate/reactivate. Deactivating an admin immediately expires their
+active tokens; an admin can't deactivate their own account (self-lockout
+guard).
+
+admin-web's login screen prompts for email/password against
+`POST /api/v1/admin/auth/login`, storing the returned bearer token in its
+own localStorage key (`kapitmarket_admin_token`) — distinct from the
+customer/vendor `kapitmarket_token` key, so the two apps' sessions never
+mix, same as before.
 
 ## admin-mcp is a client, not a backdoor
 
 `admin-mcp/` is a small TypeScript MCP server that wraps the admin API
 (`Api::V1::Admin::*`) as a set of MCP tools — `read.ts` for list/show
 tools, `mutate.ts` for state-changing ones (suspend a user, resolve a
-feedback submission, etc.). It authenticates with the exact same
-`ADMIN_USERNAME`/`ADMIN_PASSWORD` Basic Auth credential as admin-web, over
-the same HTTP endpoints. It has no special access, no service-role token,
-and no direct database connection — it's a second HTTP client of the
-same admin API admin-web already uses. Every mutate tool requires
-`confirm: true` or it dry-runs, a code-enforced branch (not just a
-description hint) so an agent calling these tools can't accidentally
-suspend a user or delete a row without an explicit confirmation flag.
+feedback submission, etc.). It authenticates with a bearer `AdminApiToken`
+(`ADMIN_TOKEN` env var) over the same HTTP endpoints admin-web uses. It
+has no special access, no service-role token, and no direct database
+connection — it's a second HTTP client of the same admin API admin-web
+already uses. Because it's a long-running local process with no login
+flow, its token is pre-minted out-of-band via `admin_users:mint_token`
+(a rake task, defaults to a 180-day TTL) rather than obtained through the
+HTTP login endpoint, which always issues the standard 30-day token. Every
+mutate tool still requires `confirm: true` or it dry-runs, a
+code-enforced branch (not just a description hint) so an agent calling
+these tools can't accidentally suspend a user or delete a row without an
+explicit confirmation flag — and every such call is attributed to
+whichever `AdminUser` the token belongs to in the audit log, same as any
+admin-web action.
 
 ## Request flow: placing an order through to chat
 

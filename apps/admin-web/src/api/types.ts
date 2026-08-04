@@ -248,3 +248,30 @@ export interface AdminEarlyAccessSignup {
   context: string | null
   created_at: string
 }
+
+// A real per-admin-operator account (AdminUser on the backend). Deliberately
+// NOT named AdminUser here — that name is already taken above by the
+// serialized *marketplace* User as seen by admin (id/email/status/
+// customer_profile/vendor_profile), a completely different thing.
+export interface AdminAccount {
+  id: number
+  email: string
+  status: 'active' | 'suspended'
+  first_name: string | null
+  last_name: string | null
+  last_signed_in_at: string | null
+  created_at: string
+}
+
+export interface AdminAuditLogEntry {
+  id: number
+  admin_user_id: number | null
+  http_method: string
+  path: string
+  controller: string
+  action: string
+  resource_type: string | null
+  resource_id: number | null
+  status_code: number
+  created_at: string
+}

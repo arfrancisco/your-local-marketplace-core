@@ -8,7 +8,7 @@ RSpec.describe "Api::V1::Admin::ApiTokens", type: :request do
     let(:request_method) { :get }
     let(:request_path) { "/api/v1/admin/api_tokens" }
 
-    it_behaves_like "requires admin basic auth"
+    it_behaves_like "requires admin auth"
 
     it "never leaks the token digest" do
       get "/api/v1/admin/api_tokens", headers: admin_auth_headers

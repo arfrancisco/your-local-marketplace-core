@@ -7,7 +7,7 @@ RSpec.describe "Api::V1::Admin::VendorProfiles", type: :request do
     let(:request_method) { :get }
     let(:request_path) { "/api/v1/admin/vendor_profiles" }
 
-    it_behaves_like "requires admin basic auth"
+    it_behaves_like "requires admin auth"
 
     it "filters by verification_status" do
       create(:vendor_profile, verification_status: "pending")

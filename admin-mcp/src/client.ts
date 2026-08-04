@@ -1,12 +1,11 @@
 const BASE = process.env.ADMIN_API_BASE_URL ?? 'https://prisma.kapitmarket.ph/api/v1'
-const USERNAME = process.env.ADMIN_USERNAME
-const PASSWORD = process.env.ADMIN_PASSWORD
+const TOKEN = process.env.ADMIN_TOKEN
 
-if (!USERNAME || !PASSWORD) {
-  throw new Error('ADMIN_USERNAME and ADMIN_PASSWORD must be set')
+if (!TOKEN) {
+  throw new Error('ADMIN_TOKEN must be set')
 }
 
-const authHeader = 'Basic ' + Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64')
+const authHeader = `Bearer ${TOKEN}`
 
 interface ApiErrorBody {
   error?: { code?: string; message?: string }

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_03_143106) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_04_010002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -56,6 +56,47 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_03_143106) do
     t.datetime "updated_at", null: false
     t.bigint "user_id"
     t.index ["user_id"], name: "index_addresses_on_user_id"
+  end
+
+  create_table "admin_api_tokens", force: :cascade do |t|
+    t.bigint "admin_user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "expires_at"
+    t.datetime "last_used_at"
+    t.string "token_digest", null: false
+    t.datetime "updated_at", null: false
+    t.index ["admin_user_id"], name: "index_admin_api_tokens_on_admin_user_id"
+    t.index ["token_digest"], name: "index_admin_api_tokens_on_token_digest", unique: true
+  end
+
+  create_table "admin_audit_logs", force: :cascade do |t|
+    t.string "action", null: false
+    t.bigint "admin_user_id"
+    t.string "controller", null: false
+    t.datetime "created_at", null: false
+    t.string "http_method", null: false
+    t.string "ip_address"
+    t.string "path", null: false
+    t.jsonb "request_params"
+    t.bigint "resource_id"
+    t.string "resource_type"
+    t.integer "status_code"
+    t.datetime "updated_at", null: false
+    t.index ["admin_user_id"], name: "index_admin_audit_logs_on_admin_user_id"
+    t.index ["created_at"], name: "index_admin_audit_logs_on_created_at"
+    t.index ["resource_type", "resource_id"], name: "index_admin_audit_logs_on_resource_type_and_resource_id"
+  end
+
+  create_table "admin_users", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "email", null: false
+    t.string "first_name"
+    t.string "last_name"
+    t.datetime "last_signed_in_at"
+    t.string "password_digest", null: false
+    t.string "status", default: "active", null: false
+    t.datetime "updated_at", null: false
+    t.index "lower((email)::text)", name: "index_admin_users_on_lower_email", unique: true
   end
 
   create_table "api_tokens", force: :cascade do |t|
@@ -363,6 +404,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_03_143106) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "addresses", "users"
+  add_foreign_key "admin_api_tokens", "admin_users"
+  add_foreign_key "admin_audit_logs", "admin_users", on_delete: :nullify
   add_foreign_key "api_tokens", "users"
   add_foreign_key "cart_items", "carts"
   add_foreign_key "cart_items", "items"

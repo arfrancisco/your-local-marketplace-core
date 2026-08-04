@@ -8,7 +8,7 @@ vi.mock('./api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./api/client')>()
   return {
     ...actual,
-    getCredentials: () => null,
+    getToken: () => null,
   }
 })
 

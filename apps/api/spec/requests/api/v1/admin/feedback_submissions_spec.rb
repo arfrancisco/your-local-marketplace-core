@@ -7,7 +7,7 @@ RSpec.describe "Api::V1::Admin::FeedbackSubmissions", type: :request do
     let(:request_method) { :get }
     let(:request_path) { "/api/v1/admin/feedback_submissions" }
 
-    it_behaves_like "requires admin basic auth"
+    it_behaves_like "requires admin auth"
 
     it "filters by resolved" do
       feedback_submission.resolve!

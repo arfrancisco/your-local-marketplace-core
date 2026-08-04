@@ -9,7 +9,7 @@ RSpec.describe "Api::V1::Admin::VerificationChallenges", type: :request do
     let(:request_method) { :get }
     let(:request_path) { "/api/v1/admin/verification_challenges" }
 
-    it_behaves_like "requires admin basic auth"
+    it_behaves_like "requires admin auth"
 
     it "never leaks the code digest" do
       get "/api/v1/admin/verification_challenges", headers: admin_auth_headers

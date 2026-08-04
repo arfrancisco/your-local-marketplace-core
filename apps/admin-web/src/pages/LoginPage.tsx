@@ -6,7 +6,7 @@ import { ApiError } from '../api/client'
 export function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -16,7 +16,7 @@ export function LoginPage() {
     setError(null)
     setSubmitting(true)
     try {
-      await login(username, password)
+      await login(email, password)
       navigate('/users')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not sign in')
@@ -30,8 +30,8 @@ export function LoginPage() {
       <h1>Admin sign in</h1>
       <form onSubmit={onSubmit}>
         <label>
-          Username
-          <input value={username} onChange={(e) => setUsername(e.target.value)} required />
+          Email
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
         <label>
           Password

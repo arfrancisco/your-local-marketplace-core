@@ -7,7 +7,7 @@ RSpec.describe "Api::V1::Admin::Items", type: :request do
     let(:request_method) { :get }
     let(:request_path) { "/api/v1/admin/items" }
 
-    it_behaves_like "requires admin basic auth"
+    it_behaves_like "requires admin auth"
   end
 
   describe "PATCH /api/v1/admin/items/:id" do

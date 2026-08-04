@@ -7,7 +7,7 @@ RSpec.describe "Api::V1::Admin::EarlyAccessSignups", type: :request do
     let(:request_method) { :get }
     let(:request_path) { "/api/v1/admin/early_access_signups" }
 
-    it_behaves_like "requires admin basic auth"
+    it_behaves_like "requires admin auth"
   end
 
   describe "DELETE /api/v1/admin/early_access_signups/:id" do
