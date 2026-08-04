@@ -76,12 +76,15 @@ never shown to the customer and never visible to another vendor.
 
 This is the most sensitive gap in the list. A person is being profiled by
 a counterparty, in a record they cannot see, that can influence how they
-are treated. It is not disclosed anywhere. Two things are needed: a
-disclosure in the Privacy Policy, and a decision about whether these
-notes are surfaced when a customer exercises their DPA right of access.
-The default legal answer is that they are personal data about that
-customer and are in scope for an access request. Flag this one for the
-lawyer specifically.
+are treated. It is not disclosed anywhere.
+
+**Decided (F-1): keep the feature, disclose it, and include the notes in
+DPA access requests.** So the Privacy Policy must say vendors may keep
+private notes about customers they have dealt with, and that a customer
+can obtain those notes through an access request. The Terms must tell
+vendors the same thing, so a vendor writing a note knows it is not
+permanently private. Still worth raising with the lawyer, but the
+position is settled.
 
 **B-2. Operator access to private chat.** The `Api::V1::Admin` namespace
 includes `conversations_controller`, `addresses_controller`,
@@ -91,9 +94,12 @@ includes `conversations_controller`, `addresses_controller`,
 `ADMIN_PASSWORD`), no per-admin accounts, no audit trail.
 
 Both documents currently imply chat is visible only to the two order
-participants. That is not true: the operator can read all of it. Disclose
-it plainly, scoped to what it is actually used for (support, fraud
-investigation, dispute mediation).
+participants. That is not true: the operator can read all of it.
+
+**Decided (F-2): keep the access, disclose it plainly scoped to support,
+fraud investigation and dispute mediation, and add an audit log.** The
+policy wording will say access is logged, so build the log (see Part F)
+rather than writing the claim first.
 
 **B-3. Feedback submissions.** `feedback_submissions` stores free-text
 `message`, `email`, `page_url`, and `user_id`, and
@@ -185,15 +191,15 @@ never call `user.destroy`:
   `null: false` and uniquely indexed), null `mobile_number`, both
   verified stamps, `first_name`, `last_name`; reset `password_digest` to
   random.
-- Delete `addresses`, `carts` and `cart_items`, `verification_challenges`.
+- Delete `addresses`, `carts` and `cart_items`, `verification_challenges`,
+  and (per F-5) every `vendor_customer_notes` row about this customer.
 - Neutralize `customer_profile.display_name` and
   `vendor_profile.display_name`.
 - For vendors, set shops to `status: "suspended"`, `accepting_orders:
   false`. Do not destroy shops or items, since `order_items.item_id`
   references them.
 - **Keep** `orders`, `order_items`, `order_status_events`,
-  `conversations`, `messages`, `ratings`. Decide explicitly what happens
-  to `vendor_customer_notes` about a closed customer.
+  `conversations`, `messages`, `ratings`.
 - Reject `"closed"` in `Auth::AuthenticateUser` the way `"suspended"`
   already is.
 
@@ -267,71 +273,62 @@ Part A before any of it is copied over.
 
 ---
 
-# Part F: Decisions needed from the owner
+# Part F: Decisions made (owner, 2026-08-04)
 
-These are not engineering choices. Do not guess at them, and do not write
-either document as if one had been made. Each is blocking the section
-named next to it. Recommendations are given, but the call is the owner's.
+These were open questions. They are now answered. Implement to these,
+and do not reopen them without the owner.
 
-**F-1. Vendor notes about customers (blocks B-1).**
-`vendor_customer_notes` holds a vendor's private note and `flagged`
-boolean about a customer, invisible to that customer. Options:
+| # | Question | Decision |
+|---|---|---|
+| F-1 | Vendor notes about customers | **Keep the feature, disclose it, and include the notes in DPA access requests.** |
+| F-2 | Operator access to private chat | **Keep the access, disclose it, and add an audit log.** |
+| F-3 | Vendor identity collection | **Collect at vendor signup, publish the shop immediately, verify afterwards.** |
+| F-4 | Re-consent on a version bump | **Prompt on next sign-in and block until the new version is accepted.** |
+| F-5 | Vendor notes when a customer closes their account | **Delete them along with the rest of that customer's personal data.** |
+| F-6a | Food permits and safety wording | **Keep the general wording**: the vendor represents they hold whatever the law requires, and must show proof on request. Do not name specific clearances. |
+| F-6b | Contact addresses | **Set up role addresses on `kapitmarket.ph`** (`support@`, `privacy@`) forwarding to the owner's inbox. Replace the personal Gmail in both documents. |
 
-| Option | Consequence |
-|---|---|
-| Disclose, and include in DPA access requests (**recommended**) | Feature stays. Policy says vendors may keep private notes. If a customer formally requests their data, notes are included. Defensible. Vendors should be told their notes are not permanently secret. |
-| Disclose, exclude from access requests | Argues the note is the vendor's opinion, not the operator's record. Legally the weakest position; expect a lawyer to push back. |
-| Make notes visible to the customer | Removes the problem entirely, but kills the point of a candid "no-showed for pickup" note. |
-| Remove the feature | Cleanest privacy position, loses a trust and safety signal that was built deliberately. |
+Still genuinely open, and not blocking: the real **effective date** (set
+it when the beta opens) and **when DTI registration actually happens**
+(see A-1; it is what makes the trade-name usage durable rather than
+interim).
 
-**F-2. Operator access to private chat (blocks B-2).**
-The admin namespace can read every conversation, address, cart, and
-token behind one shared credential with no audit trail. Options:
+## Work these decisions create
 
-| Option | Consequence |
-|---|---|
-| Keep access, disclose it, add an audit log (**recommended**) | Policy states the operator may access chat for support, fraud investigation, and dispute mediation. Logging who read what makes the disclosure verifiable. Pair with fixing C-4. |
-| Keep access, disclose it, no audit log | Fastest and still honest. Fine while one person holds the credential, weak the moment anyone else does. |
-| Restrict technically, then disclose narrowly | Gate the admin conversations endpoint to orders with an open report or dispute. Strongest position, most work, slower debugging. |
+Beyond the disclosure edits already covered in Part B, the decisions add
+the following build items:
 
-**F-3. Vendor identity collection (blocks Part E's RA 11967 work, and
-`docs/open-decisions.md` #5).**
-The law wants merchant identity collected before listing. Options:
+**F-2 → admin access audit log.** Record every admin read of a
+conversation, address, cart, or API token: what was accessed, which
+record, and when. A dedicated table is fine; it does not need a UI yet.
+The Privacy Policy will say operator access is logged, so the log has to
+actually exist. Fix C-4's `admin`/`admin` fallback in the same pass.
 
-| Option | Consequence |
-|---|---|
-| Collect ID at vendor signup, publish immediately, verify after (**recommended**) | Meets "collect before listing" without blocking anyone. Review at your own pace and flip `verification_status` later. Keeps beta velocity. |
-| Require verification before a shop is discoverable | Matches the anti-scam thesis most strongly, but makes you the bottleneck for every vendor. |
-| Collect nothing during beta | Least work. Leaves RA 11967 exposure, including subsidiary liability, for the whole beta. |
+**F-3 → vendor identity capture.** Add fields to record what was
+collected at vendor signup (legal name, contact number, ID or business
+registration reference) plus who checked it and when. Collection is
+mandatory before a shop can be created; publishing is not gated on
+review. `verification_status` moves manually afterwards. This satisfies
+RA 11967's "collect before listing" without making the owner a
+bottleneck, and it resolves `docs/open-decisions.md` #5.
 
-**F-4. Re-consent when the documents change (blocks D-2).**
-Options: prompt for re-acceptance on next sign-in and block until
-accepted (**recommended**, gives a clean per-version consent record);
-notify in-app and by email without blocking (lower friction, but the
-record shows only the old acceptance); or update silently (not
-defensible for material changes, and the Terms already promise
-reasonable notice).
+**F-4 → re-consent flow.** When `terms_version` on a user is older than
+`CURRENT_TERMS_VERSION`, the clients must show what changed and require
+acceptance before the user can continue. Needs: the comparison exposed
+on the `/me` payload, a blocking prompt in customer-web (and vendor-web
+once D-3 lands), and an endpoint to record the new acceptance. Pair this
+with D-2 so bumping the constant is a deliberate, complete action.
 
-**F-5. Closed accounts and vendor notes (blocks C-5).**
-When a customer closes their account, what happens to
-`vendor_customer_notes` about them? Delete with the rest of the personal
-data, or keep as part of the vendor's trust record? Depends partly on
-F-1.
+**F-1 and F-5 → access request and closure behavior.** `Users::CloseAccount`
+(C-5) must delete that customer's `vendor_customer_notes` along with
+addresses and carts. Separately, whatever process answers a DPA access
+request has to include notes written about that customer. Vendors should
+be told, in the Terms, that notes they write about a customer may be
+disclosed to that customer on a lawful request.
 
-**F-6. Smaller open items.**
-
-- **Effective date.** Both documents say "upon beta launch (date to be
-  confirmed)". Set a real date when the beta opens.
-- **DTI registration timing.** Decided: documents name "KapitMarket PH"
-  with no personal name. Still open is when the business name actually
-  gets registered, which is what makes that naming durable rather than
-  interim (see A-1).
-- **Support vs privacy contact.** Both currently point at one personal
-  Gmail address. Worth splitting before launch, at minimum to a
-  role-based address.
-- **Vendor permits.** If vendors will sell home-cooked food, decide
-  whether the Terms should require a specific health or sanitation
-  clearance rather than the current general wording.
+**F-6b → role addresses.** Create `support@kapitmarket.ph` and
+`privacy@kapitmarket.ph`, then replace every `armfrancisco@gmail.com`
+occurrence in both documents and in this brief.
 
 # Scope boundaries
 
@@ -357,10 +354,17 @@ cd apps/vendor-web   && npm run test && npm run build
 1. **C-1, C-2** first. They are small, and every day they stay unfixed
    more live OTPs and private messages go into logs.
 2. **Part A** corrections, since the published text is currently wrong.
-3. **Part B** disclosures, B-1 and B-2 first as the most significant.
-4. **C-5** account closure, then align the deletion section to it.
-5. **C-3, C-4, D-1, D-2, D-3, D-4**.
-6. **Part E** content additions, then the lawyer review.
+3. **F-6b** role addresses, so the contact details only get rewritten
+   once rather than twice.
+4. **C-4 plus the F-2 audit log** together, then the B-2 disclosure.
+   Build the log before the policy claims it exists.
+5. **Part B** remaining disclosures, B-1 first.
+6. **C-5** account closure including the F-5 note deletion, then align
+   the deletion section to what it actually does.
+7. **D-1, D-2 with the F-4 re-consent flow, D-3, D-4**, then **C-3**.
+8. **F-3** vendor identity capture, which also closes
+   `docs/open-decisions.md` #5.
+9. **Part E** content additions, then the lawyer review.
 
 # Definition of done
 
@@ -374,5 +378,10 @@ cd apps/vendor-web   && npm run test && npm run build
   intact.
 - The two copies of each document cannot silently drift.
 - `CURRENT_TERMS_VERSION`, both "Last updated" lines, and the actual
-  content all agree.
+  content all agree, and a user on an older version is prompted to
+  re-accept before continuing.
+- Admin reads of chat, addresses, carts and tokens are logged, and no
+  environment falls back to `admin`/`admin`.
+- A vendor cannot create a shop without identity details on file.
+- No `armfrancisco@gmail.com` remains in either document or this brief.
 - Full API suite green, both frontend suites green, both clients build.
