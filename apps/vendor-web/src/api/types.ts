@@ -79,6 +79,11 @@ export interface Order {
   id: number
   public_reference: string
   shop_id: number
+  shop_name: string
+  shop_building: string | null
+  shop_profile_photo: Photo | null
+  shop_average_rating: number | null
+  shop_ratings_count: number
   customer_profile_id: number
   // Customer identity/logistics info, live-read from the profile rather than
   // snapshotted — a customer has exactly one address record (editing it in

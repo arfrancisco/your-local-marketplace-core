@@ -3,8 +3,11 @@ import { Link, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import { useAuth } from '../auth'
 import { OrderChat } from '../OrderChat'
-import { Stars } from '../components/Ratings'
+import { Stars, RatingSummary } from '../components/Ratings'
 import { CancelOrderModal } from '../components/CancelOrderModal'
+import { OrderDetailActionsMenu } from '../components/OrderDetailActionsMenu'
+import { groupKeyForStatus, statusBadgeClass } from '../orderStatus'
+import { colorFor, emojiFor } from '../visuals'
 import type { Order, Photo } from '../api/types'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
@@ -125,11 +128,38 @@ export function OrderPage() {
     <div>
       <div className="row spread">
         <h1>Order {order.public_reference}</h1>
-        <Link to="/shops" className="muted">← All shops</Link>
+        <Link className="button" to="/orders">← Your orders</Link>
+      </div>
+
+      <div className="row gap order-tags">
+        <span className={`order-status-badge ${statusBadgeClass(groupKeyForStatus(order.status))}`}>
+          {order.status.replace(/_/g, ' ')}
+        </span>
+        <span className={`payment-badge ${order.payment_status === 'unpaid' ? 'is-unpaid' : 'is-paid'}`}>
+          {order.payment_status === 'unpaid' ? 'Unpaid' : 'Paid'}
+        </span>
       </div>
 
       <div className="card">
-        <p className="tagline">{order.status.replace(/_/g, ' ')}</p>
+        <div className="order-shop-info">
+          {order.shop_profile_photo ? (
+            <img className="order-shop-avatar" src={`${API_ORIGIN}${order.shop_profile_photo.url}`} alt="" />
+          ) : (
+            <div className="order-shop-avatar tile" style={{ background: colorFor(order.shop_name) }} aria-hidden>
+              {emojiFor(order.shop_name)}
+            </div>
+          )}
+          <div>
+            <span className="shop-name">{order.shop_name}</span>
+            {order.shop_building && <p className="muted">{order.shop_building}</p>}
+            <RatingSummary averageRating={order.shop_average_rating} ratingsCount={order.shop_ratings_count} />
+          </div>
+        </div>
+      </div>
+
+      <h2 className="section">Order details</h2>
+      <div className="card order-detail-section">
+        {canCancel && <OrderDetailActionsMenu onCancelOrder={() => setShowCancelModal(true)} />}
         <ul className="list">
           {order.items.map((line) => (
             <li key={line.id}>
@@ -139,10 +169,6 @@ export function OrderPage() {
         </ul>
         <p>Total: {formatPrice(order.total_cents, order.currency)}</p>
         <p className="muted">Fulfillment: {order.fulfillment_method}</p>
-
-        {canCancel && (
-          <button onClick={() => setShowCancelModal(true)}>Cancel order</button>
-        )}
       </div>
 
       {(order.opening_message || order.opening_message_photos.length > 0) && (

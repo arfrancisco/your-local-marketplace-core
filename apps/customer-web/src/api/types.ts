@@ -151,6 +151,12 @@ export interface Order {
   id: number
   public_reference: string
   shop_id: number
+  shop_name: string
+  // Building only — never the vendor's exact unit, for the vendor's safety.
+  shop_building: string | null
+  shop_profile_photo: Photo | null
+  shop_average_rating: number | null
+  shop_ratings_count: number
   status: OrderStatus
   can_transition_to: OrderStatus[]
   fulfillment_method: FulfillmentMethod

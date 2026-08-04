@@ -10,7 +10,12 @@ module Api
       def index
         raise ApiError::Forbidden, "A customer profile is required for this action" if current_user.customer_profile.nil?
 
-        orders = current_user.customer_profile.orders.order(placed_at: :desc)
+        # profile_photo is has_many_attached under the hood (see ShopSerializer),
+        # so the preloadable association is the plural attachments, not a
+        # singular "_attachment" one.
+        orders = current_user.customer_profile.orders
+          .includes(:order_items, shop: { profile_photo_attachments: :blob })
+          .order(placed_at: :desc)
         render json: { orders: orders.map { |order| OrderSerializer.call(order) } }
       end
 

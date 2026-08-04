@@ -6,6 +6,16 @@ module OrderSerializer
       id: order.id,
       public_reference: order.public_reference,
       shop_id: order.shop_id,
+      shop_name: order.shop.name,
+      # Building only, never the vendor's exact unit (shop.address) — same
+      # public/private split as ShopSerializer's own building/address gate,
+      # for the vendor's safety (many vendors sell out of their own unit).
+      shop_building: order.shop.building,
+      # Same fields as ShopSerializer's public (non-payment-info) payload —
+      # all already safe for any anonymous browser, so no less safe here.
+      shop_profile_photo: order.shop.profile_photo.attached? ? PhotoSerializer.one(order.shop.profile_photo.first) : nil,
+      shop_average_rating: order.shop.ratings.average(:score)&.round(1)&.to_f,
+      shop_ratings_count: order.shop.ratings.count,
       # Needed by the vendor's private customer-notes UI to look up prior
       # notes about this customer. Safe on the shared payload: this endpoint
       # is already gated to the order's two participants, so the customer

@@ -11,6 +11,11 @@ const { baseOrder, user } = vi.hoisted(() => ({
     id: 7,
     public_reference: 'ORD-ABC12345',
     shop_id: 1,
+    shop_name: 'Adobo Republic',
+    shop_building: 'Celeste',
+    shop_profile_photo: null,
+    shop_average_rating: null,
+    shop_ratings_count: 0,
     status: 'completed',
     can_transition_to: [],
     fulfillment_method: 'pickup',
@@ -141,17 +146,19 @@ describe('OrderPage cancellation', () => {
   it('blocks submit until a reason is selected', async () => {
     renderPage()
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Cancel order' }))
-    const submit = screen.getAllByRole('button', { name: /cancel order/i })[1]
+    await userEvent.click(await screen.findByRole('button', { name: 'Order actions menu' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Cancel order' }))
+    const submit = screen.getByRole('button', { name: /cancel order/i })
     expect(submit).toBeDisabled()
   })
 
   it('requires free text only when "Other" is selected', async () => {
     renderPage()
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Cancel order' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Order actions menu' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Cancel order' }))
     const select = screen.getByLabelText('Reason')
-    const submit = screen.getAllByRole('button', { name: /cancel order/i })[1]
+    const submit = screen.getByRole('button', { name: /cancel order/i })
 
     await userEvent.selectOptions(select, 'changed_mind')
     expect(submit).not.toBeDisabled()
@@ -171,9 +178,10 @@ describe('OrderPage cancellation', () => {
 
     renderPage()
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Cancel order' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Order actions menu' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Cancel order' }))
     await userEvent.selectOptions(screen.getByLabelText('Reason'), 'changed_mind')
-    await userEvent.click(screen.getAllByRole('button', { name: /cancel order/i })[1])
+    await userEvent.click(screen.getByRole('button', { name: /cancel order/i }))
 
     expect(api.cancelOrder).toHaveBeenCalledWith(7, { reason_code: 'changed_mind', reason: undefined })
     expect(await screen.findByText('cancelled')).toBeInTheDocument()
