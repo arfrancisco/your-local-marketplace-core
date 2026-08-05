@@ -1,13 +1,16 @@
-# Codebase learning guide
+# Codebase learning guide (condensed reference)
 
-A structured way to actually understand this system before the beta goes
-live, split into 11 daily modules. Each module is one sitting: ~20-30
-minutes of reading, then the self-check.
+The **condensed** version of the material in `docs/curriculum/`. Same 11
+topics, same order, roughly a fifth of the length.
+
+> **Learning this for the first time? Start with
+> [`docs/curriculum/`](curriculum/README.md), not here.** Those are actual
+> lessons — teaching, worked examples, exercises. This page is the revision
+> sheet you come back to afterward, and what the daily quiz draws from.
 
 This guide is **descriptive of the code as it exists**, not aspirational.
-Where the code and the older docs disagree, this guide follows the code and
-says so. Module 11 is a list of exactly those drifts plus the real pre-beta
-risks.
+Where the code and the older docs disagree, it follows the code and says so.
+Module 11 is a list of exactly those drifts plus the real pre-beta risks.
 
 How to use it:
 
@@ -18,7 +21,8 @@ How to use it:
    tracks which ones you are shaky on.
 
 Order matters. Modules 1-5 are the spine; 6-10 are the feature areas;
-11 is the go-live review.
+11 is the go-live review. Each module below maps 1:1 to the lesson of the
+same number in `docs/curriculum/`.
 
 | Day | Module | Theme |
 |---|---|---|
@@ -314,6 +318,21 @@ Two asymmetries in `OrderPolicy` worth remembering:
   order's lines after telling the customer in chat. There is no formal
   approval gate.
 
+**One rule lives in the controller, not the policy.**
+`OrderPolicy#transition?` is true for both sides, because both legitimately
+transition orders. *Which* transitions a customer may request is narrowed
+one layer up, in `OrdersController#transition`:
+
+```ruby
+if customer_actor? && to_status != "cancelled"
+  raise ApiError::Forbidden, "Customers may only cancel an order"
+end
+```
+
+So a transition request passes through three checks: **do you own this
+order** (policy, 403) → **may you make this specific move** (controller,
+403) → **is the move legal from the current state** (service, 422).
+
 **Some authorization is at the query layer, not the policy layer.** Private
 vendor notes about customers are enforced by scoping every vendor-facing
 read through `current_vendor_profile.vendor_customer_notes`. There is no
@@ -465,6 +484,13 @@ so it is easy to lift later.
 - `docs/adr/0007-daily-rotating-shop-order.md`
 
 ### What to actually know
+
+**Discovery is public.** `ShopsController` calls
+`skip_before_action :authenticate!` — `GET /shops`, `/shops/:slug`,
+`/shops/:slug/items`, and `/shops/:slug/ratings` all work with no token, so
+people can browse the community before signing up. (`routes.rb` comments
+these as "Authenticated"; the comment is stale.) This is why the guest cart
+has to exist.
 
 **Daily rotation, never alphabetical.** `GET /shops` orders shops by:
 
@@ -657,6 +683,10 @@ Two things to notice: **cancellation is only possible from `placed` or
 enforces the state machine itself; *who* may call which transition is the
 controller's Pundit check (`OrderPolicy`), deliberately not this service's
 job.
+
+**Customers may only ever request `cancelled`** — enforced in
+`OrdersController#transition`, not the policy. Every other move, including
+`completed`, is vendor-only.
 
 Each call, inside a transaction: validate the transition is legal, update
 `status`, stamp the matching timestamp column (`accepted_at`, `completed_at`,
@@ -954,6 +984,8 @@ This is the module to actually act on, not just learn. Three categories.
 | `docs/erd.md` | Orders are cart-free direct placement | Checkout is cart-based |
 | `docs/adr/0009` | Payment message auto-posts as the first chat message | Read live by `OrderSerializer` as a pinned panel, "ADR 0009, revised" |
 | `docs/adr/0003` | `POST /orders` takes `shop_id`, `item_id`, `quantity` | That route does not exist; orders come from `POST /cart/checkout` |
+| `routes.rb` | Customer discovery is "Authenticated" | Public — `ShopsController` skips authentication |
+| `static_controller.rb` | admin-web logs in with HTTP Basic | Bearer tokens since ADR 0010 |
 | `docs/milestones.md` | Frozen at the original M0-M4 plan | Explicitly historical |
 
 `CLAUDE.md` and `docs/architecture.md` are the two docs that *are* current.
