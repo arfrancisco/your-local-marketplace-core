@@ -4,7 +4,10 @@
 default: &default
   adapter: postgresql
   encoding: unicode
-  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  # Kept in lockstep with config/puma.rb's thread count fallback: the AR pool
+  # must be at least as large as Puma's thread count, or threads will queue
+  # waiting for a DB connection instead of a Puma thread.
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 10 } %>
   host: <%= ENV.fetch("DATABASE_HOST", "127.0.0.1") %>
   port: <%= ENV.fetch("DATABASE_PORT", 5432) %>
   username: <%= ENV.fetch("DATABASE_USER", "marketplace") %>

@@ -5,9 +5,21 @@
 # Puma can serve each request in a thread from an internal thread pool.
 # The `threads` method setting takes two numbers: a minimum and maximum.
 # Any libraries that use thread pools should be configured to match
-# the maximum value specified for Puma. Default is set to 5 threads for minimum
-# and maximum; this matches the default thread size of Active Record.
-max_threads_count = ENV.fetch("RAILS_MAX_THREADS") { 5 }
+# the maximum value specified for Puma.
+#
+# Default bumped from Rails' stock 5 to 10 (matched by the Active Record pool
+# size in config/database.yml, which reads the same RAILS_MAX_THREADS var).
+# Action Cable is mounted in-process (config/routes.rb) with no separate cable
+# server, so under Puma's threaded worker model every open websocket/long-poll
+# connection pins one thread for its full lifetime (observed up to several
+# minutes in production). With only 5 threads total, a couple of open
+# dashboard tabs alone could leave almost nothing free for ordinary HTTP
+# traffic, causing requests to queue for a free thread rather than fail or run
+# slow for any per-request reason. Production CPU/memory are nowhere near
+# saturated (observed ~0.14 vCPU / 0.32GB peak on Railway), so there's ample
+# headroom to raise this. Still overridable via RAILS_MAX_THREADS if a
+# specific deploy needs a different value.
+max_threads_count = ENV.fetch("RAILS_MAX_THREADS") { 10 }
 min_threads_count = ENV.fetch("RAILS_MIN_THREADS") { max_threads_count }
 threads min_threads_count, max_threads_count
 
