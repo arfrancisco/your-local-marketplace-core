@@ -264,9 +264,7 @@ export function ShopsPage() {
                       {shop.demo && <span className="demo-tag">Demo</span>}
                       {shop.verified && <span className="verified-tag">Verified</span>}
                     </h3>
-                    <p className="tagline shop-row-tagline">
-                      {shop.fulfillment_methods.join(' · ') || 'pickup'}
-                    </p>
+                    {shop.description && <p className="shop-row-description">{shop.description}</p>}
                     {/* Any of the three can be absent (no priced items yet, no
                         ratings yet, too few completed orders) — only render
                         a line at all once there's something to show on it. */}

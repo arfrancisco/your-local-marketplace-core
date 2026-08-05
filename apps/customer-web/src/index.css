@@ -898,7 +898,14 @@ button.link {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.shop-row-tagline { margin: 0.15rem 0 0; }
+.shop-row-description {
+  margin: 0.15rem 0 0;
+  color: #8a7862;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .shop-row-stats {
   margin: 0.2rem 0 0;
   font-size: 0.8rem;
