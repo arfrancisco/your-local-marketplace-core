@@ -599,6 +599,43 @@ button:disabled { opacity: 0.6; cursor: default; }
   max-width: 520px;
   text-align: left;
 }
+
+/* Legal docs (LegalDoc.tsx) rendered inside LegalModal, opened from the
+   footer (Footer.tsx). Mirrors customer-web's equivalent block. */
+.legal-doc ul { padding-left: 1.25rem; margin: 0.5rem 0; }
+.legal-doc li { margin-bottom: 0.35rem; }
+.legal-doc p { margin: 0.5rem 0; }
+/* An inline text link rendered as a <button> (LegalDoc's cross-links, the
+   footer's Terms/Privacy buttons) — anchor-styled but without a link's block
+   padding/margin, since this sits mid-sentence or inline in the footer. */
+.inline-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: #2563eb;
+  text-decoration: underline;
+  font: inherit;
+  cursor: pointer;
+}
+/* Wider than the default .modal, left-aligned (the base .modal is
+   text-align: center, wrong for paragraphs of legal text), with its own
+   scroll region so the modal itself doesn't grow past the viewport. */
+.modal.wide { max-width: 560px; text-align: left; }
+.legal-modal-body { max-height: 65vh; overflow-y: auto; }
+.legal-modal-body .legal-doc { border: none; padding: 0; margin: 0; }
+
+/* Persistent footer (App.tsx) — Terms/Privacy, reachable on every page, not
+   just at signup. Muted/small — this is a footer, not a call to action. */
+.app-footer {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+.app-footer .inline-link { color: inherit; }
 /* react-easy-crop absolutely positions its container into this box, so it
    needs an explicit height and a positioning context. */
 .crop-area {

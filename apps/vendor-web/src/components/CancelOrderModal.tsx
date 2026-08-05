@@ -72,6 +72,9 @@ export function CancelOrderModal({ orderId, onClose, onCancelled }: Props) {
             </label>
           )}
           {error && <p role="alert" className="error">{error}</p>}
+          <p className="muted small">
+            Cancelling often may temporarily restrict your account — please only cancel when you need to.
+          </p>
           <button type="submit" disabled={submitting || !reasonCode || (needsFreeText && !reason.trim())}>
             {submitting ? 'Cancelling…' : 'Cancel order'}
           </button>

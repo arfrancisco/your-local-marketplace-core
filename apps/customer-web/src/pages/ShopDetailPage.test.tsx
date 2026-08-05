@@ -15,11 +15,11 @@ const { shop, item, user } = vi.hoisted(() => ({
     contact_number: null, building: null, fulfillment_methods: ['pickup'] as Shop['fulfillment_methods'], open: true,
     profile_photo: null, cover_photo: null,
     average_rating: null, ratings_count: 0,
-    price_range_cents: null, completed_orders_count: 0,
+    price_range_cents: null, completed_orders_count: 0, demo: false, verified: false,
   },
   item: {
     id: 10, shop_id: 1, name: 'Adobo Bowl', description: null, price_cents: 18000,
-    currency: 'PHP', enabled: true, stock_count: null, sold_out: false, tags: [], photos: [],
+    currency: 'PHP', enabled: true, stock_count: null, sold_out: false, tags: [], photos: [], demo: false,
   },
   user: {
     id: 5, email: 'neighbor@example.com',

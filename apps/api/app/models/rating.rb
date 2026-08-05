@@ -9,4 +9,11 @@ class Rating < ApplicationRecord
   # Mirrors the DB's composite unique index — a second submission for the same
   # order surfaces as a validation failure (422) instead of a raw index error.
   validates :reviewer_user_id, uniqueness: { scope: %i[order_id reviewee_type reviewee_id] }
+
+  scope :demo, -> { where(order: Order.demo) }
+  scope :real, -> { where(order: Order.real) }
+
+  def demo?
+    order.demo?
+  end
 end

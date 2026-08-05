@@ -4,16 +4,19 @@ module Api
       class OrdersController < BaseController
         before_action :set_order, only: %i[show transition]
 
-        # GET /api/v1/admin/orders?status=placed&shop_id=1
+        # GET /api/v1/admin/orders?status=placed&shop_id=1&demo=true
         def index
-          scope = Order.order(placed_at: :desc)
+          scope = filter_by_demo(Order.order(placed_at: :desc))
           scope = scope.where(status: params[:status]) if params[:status].present?
           scope = scope.where(shop_id: params[:shop_id]) if params[:shop_id].present?
-          render json: { orders: paginate(scope).map { |o| OrderSerializer.call(o) }, meta: pagination_meta(scope) }
+          render json: {
+            orders: paginate(scope).map { |o| OrderSerializer.call(o).merge(demo: o.demo?) },
+            meta: pagination_meta(scope)
+          }
         end
 
         def show
-          render json: { order: OrderSerializer.call(@order) }
+          render json: { order: OrderSerializer.call(@order).merge(demo: @order.demo?) }
         end
 
         # POST /api/v1/admin/orders/:id/transitions (to_status, reason)

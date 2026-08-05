@@ -21,6 +21,10 @@ FactoryBot.define do
       status { "suspended" }
     end
 
+    trait :demo do
+      demo { true }
+    end
+
     trait :customer do
       after(:create) { |user| create(:customer_profile, user: user) }
     end
@@ -45,7 +49,7 @@ FactoryBot.define do
     user
     label { "Home" }
     recipient_name { "Juan Dela Cruz" }
-    building { "Tower A" }
+    building { "Astra" }
     unit { "12F" }
   end
 end

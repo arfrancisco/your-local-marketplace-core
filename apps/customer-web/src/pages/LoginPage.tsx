@@ -4,14 +4,17 @@ import { useAuth } from '../auth'
 import { ApiError } from '../api/client'
 import { SignupProgress } from '../components/SignupProgress'
 import { LegalModal } from '../components/LegalModal'
-import { VerifyMobilePage } from './VerifyMobilePage'
+import { VerifyEmailPage } from './VerifyEmailPage'
 import { CompleteProfilePage } from './CompleteProfilePage'
 
-// Beta-launch toggle: verification delivery isn't reliable yet (Semaphore
-// SMS sender-name approval pending), so mobile verification is temporarily
-// skipped during registration to remove friction for beta signups. Flip
-// VITE_SKIP_VERIFICATION off (or unset it) to restore screen 2.
-const SKIP_VERIFICATION = import.meta.env.VITE_SKIP_VERIFICATION === 'true'
+// Screen 2 is temporarily email verification, not mobile — Resend (email)
+// is confirmed working end to end, but Semaphore (SMS) sender-name approval
+// is still pending, so a mobile-verification step would just be a dead end
+// for every beta signup. VerifyMobilePage.tsx is left in place, unused, for
+// exactly this swap-back: once Semaphore is approved, change the import
+// above back to VerifyMobilePage and the render below back to
+// <VerifyMobilePage .../> — same non-skippable requirement should carry
+// over, don't reintroduce VerifyMobilePage's old "Skip for now" link.
 
 // Browsing stays fully public — this page only exists for the moment
 // someone wants a real cart, which needs a real account (see auth.tsx).
@@ -39,8 +42,6 @@ export function LoginPage() {
   const [isResident, setIsResident] = useState<boolean | null>(null)
   const [willingToVerify, setWillingToVerify] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
-  const [emailMarketingOptIn, setEmailMarketingOptIn] = useState(false)
-  const [smsMarketingOptIn, setSmsMarketingOptIn] = useState(false)
   const [registerError, setRegisterError] = useState<string | null>(null)
   const [emailTaken, setEmailTaken] = useState(false)
   const [registerSubmitting, setRegisterSubmitting] = useState(false)
@@ -87,10 +88,8 @@ export function LoginPage() {
         is_resident: isResident,
         ...(isResident ? { willing_to_verify_residency: willingToVerify } : {}),
         terms_accepted: termsAccepted,
-        email_marketing_opt_in: emailMarketingOptIn,
-        sms_marketing_opt_in: smsMarketingOptIn,
       })
-      setRegisterStep(SKIP_VERIFICATION ? 3 : 2)
+      setRegisterStep(2)
     } catch (err) {
       if (err instanceof ApiError && err.code === 'email_taken') {
         setEmailTaken(true)
@@ -113,7 +112,7 @@ export function LoginPage() {
     return (
       <div className="card narrow">
         <SignupProgress step={2} />
-        <VerifyMobilePage onDone={() => setRegisterStep(3)} />
+        <VerifyEmailPage onDone={() => setRegisterStep(3)} />
       </div>
     )
   }
@@ -192,46 +191,29 @@ export function LoginPage() {
           </fieldset>
 
           {isResident === true && (
-            <label className="inline">
+            <label className="checkbox-field">
               <input
                 type="checkbox"
                 checked={willingToVerify}
                 onChange={(e) => setWillingToVerify(e.target.checked)}
               />
-              I'm willing to be verified as a resident/tenant if asked.
+              <span>I'm willing to be verified as a resident/tenant.</span>
             </label>
           )}
 
-          <label className="inline">
+          <label className="checkbox-field">
             <input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} />
-            I agree to the{' '}
-            <button type="button" className="inline-link" onClick={() => setLegalModalOpen('terms')}>
-              Terms and Conditions
-            </button>{' '}
-            and{' '}
-            <button type="button" className="inline-link" onClick={() => setLegalModalOpen('privacy')}>
-              Privacy Policy
-            </button>
+            <span>
+              I agree to the{' '}
+              <button type="button" className="inline-link" onClick={() => setLegalModalOpen('terms')}>
+                Terms and Conditions
+              </button>{' '}
+              and{' '}
+              <button type="button" className="inline-link" onClick={() => setLegalModalOpen('privacy')}>
+                Privacy Policy
+              </button>
+            </span>
           </label>
-
-          <div className="marketing-opt-ins">
-            <label className="inline">
-              <input
-                type="checkbox"
-                checked={emailMarketingOptIn}
-                onChange={(e) => setEmailMarketingOptIn(e.target.checked)}
-              />
-              Email me about updates and offers
-            </label>
-            <label className="inline">
-              <input
-                type="checkbox"
-                checked={smsMarketingOptIn}
-                onChange={(e) => setSmsMarketingOptIn(e.target.checked)}
-              />
-              Text me about updates and offers
-            </label>
-          </div>
 
           {emailTaken && (
             <div className="card" style={{ background: '#fef3c7' }}>

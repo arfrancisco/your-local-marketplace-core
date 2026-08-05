@@ -38,6 +38,13 @@ export interface Shop {
   price_range_cents: { min: number; max: number } | null
   // Completed orders only, not a raw order count (see ShopSerializer).
   completed_orders_count: number
+  // Seed/demo data, not a real neighbor's shop — see ShopSerializer. An
+  // order placed against a demo shop is never actually fulfilled, so this
+  // must stay visible everywhere a customer could place an order.
+  demo: boolean
+  // Binary only (no pending/rejected) — see ShopSerializer. Admin-verified
+  // via docs/legal's residency-style workflow, not automatic.
+  verified: boolean
 }
 
 export interface Rating {
@@ -64,6 +71,7 @@ export interface Item {
   sold_out: boolean
   tags: Tag[]
   photos: Photo[]
+  demo: boolean
 }
 
 export interface User {

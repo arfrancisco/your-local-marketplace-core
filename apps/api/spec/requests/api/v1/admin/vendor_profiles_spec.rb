@@ -33,4 +33,18 @@ RSpec.describe "Api::V1::Admin::VendorProfiles", type: :request do
       expect(vendor_profile.reload.verification_status).to eq("rejected")
     end
   end
+
+  describe "POST /api/v1/admin/vendor_profiles/:id/clear_cancellation_restriction" do
+    it "clears the tier-1 restriction without touching the permanent count, and does not reopen the shop" do
+      restricted = create(:vendor_profile, cancellation_restricted_at: Time.current, cancellation_restriction_count: 1)
+      shop = create(:shop, vendor_profile: restricted, accepting_orders: false)
+
+      post "/api/v1/admin/vendor_profiles/#{restricted.id}/clear_cancellation_restriction", headers: admin_auth_headers
+
+      expect(json.dig("vendor_profile", "cancellation_restricted_at")).to be_nil
+      expect(restricted.reload.cancellation_restricted_at).to be_nil
+      expect(restricted.cancellation_restriction_count).to eq(1)
+      expect(shop.reload.accepting_orders).to be(false)
+    end
+  end
 end

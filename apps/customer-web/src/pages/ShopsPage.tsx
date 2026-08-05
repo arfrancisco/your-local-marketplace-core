@@ -159,7 +159,11 @@ export function ShopSpotlightCarousel({ shops }: { shops: Shop[] }) {
           <Link to={`/shops/${shop.slug}`} className="shop-spotlight-link">
             <ShopCover shop={shop} className="shop-spotlight-cover" />
             <div className="shop-spotlight-body">
-              <h3 className="shop-spotlight-name">{shop.name}</h3>
+              <h3 className="shop-spotlight-name">
+                {shop.name}
+                {shop.demo && <span className="demo-tag">Demo</span>}
+                {shop.verified && <span className="verified-tag">Verified</span>}
+              </h3>
               {shop.description && <p className="shop-spotlight-description">{shop.description}</p>}
               <ShopStatLines shop={shop} />
             </div>
@@ -255,7 +259,11 @@ export function ShopsPage() {
                 <Link to={`/shops/${shop.slug}`} className="shop-row-link">
                   <ShopThumb shop={shop} className="shop-row-thumb" />
                   <div className="shop-row-body">
-                    <h3 className="shop-row-name">{shop.name}</h3>
+                    <h3 className="shop-row-name">
+                      {shop.name}
+                      {shop.demo && <span className="demo-tag">Demo</span>}
+                      {shop.verified && <span className="verified-tag">Verified</span>}
+                    </h3>
                     <p className="tagline shop-row-tagline">
                       {shop.fulfillment_methods.join(' · ') || 'pickup'}
                     </p>

@@ -5,7 +5,7 @@ RSpec.describe "Api::V1::Vendor Shops", type: :request do
   let(:vendor_profile) { vendor_user.vendor_profile }
 
   let(:valid_params) do
-    { shop: { name: "Corner Kitchen", description: "Home food", building: "Tower A",
+    { shop: { name: "Corner Kitchen", description: "Home food", building: "Astra",
               address: "Unit 12F", contact_number: "+639170001234",
               fulfillment_methods: %w[pickup delivery] } }
   end
@@ -24,7 +24,7 @@ RSpec.describe "Api::V1::Vendor Shops", type: :request do
     it "returns both the public building and the private exact-unit address to the vendor themselves" do
       post "/api/v1/vendor/shops", params: valid_params, headers: auth_headers(vendor_user)
 
-      expect(json.dig("shop", "building")).to eq("Tower A")
+      expect(json.dig("shop", "building")).to eq("Astra")
       expect(json.dig("shop", "address")).to eq("Unit 12F")
     end
 

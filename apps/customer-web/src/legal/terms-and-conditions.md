@@ -5,8 +5,8 @@
 
 These Terms and Conditions ("Terms") govern your access to and use of
 KapitMarket PH (the "Service"), operated by Alain Roy Francisco, doing
-business as KapitMarket PH ("we," "us," "our"), of 3017 Astra Tower, Prisma
-Residences, Pasig Blvd., Brgy. Bagong Ilog, Pasig City 1600, Philippines. By
+business as KapitMarket PH ("we," "us," "our"), of Prisma Residences,
+Pasig City, Philippines. By
 creating an account you agree to these Terms and to our
 [Privacy Policy](./privacy-policy.md). If you do not agree, do not create
 an account or use the Service.
@@ -43,10 +43,10 @@ misrepresenting their location.
 
 At signup, you may tell us whether you're a resident or tenant of the
 community, and, if so, whether you're willing to be verified as one.
-This is a self-reported answer. Unless and until a future verification
-feature confirms it, we do not independently verify residency, and a
-"resident" answer is not a guarantee or representation by us that the
-person is in fact a resident.
+This starts as a self-reported answer; an administrator may later review
+and mark it verified or rejected. Unless and until that review confirms
+it, a "resident" answer is not a guarantee or representation by us that
+the person is in fact a resident.
 
 The Service is a venue that connects vendors and customers. **We are not
 a party to any sale.** The contract for the sale of goods is between the
@@ -57,18 +57,24 @@ title to any item listed or sold.
 
 - You must be at least 18 years old, or the age of majority where you
   live, to create an account.
-- You must provide a valid email address. A mobile number is optional
-  unless a specific feature requires it (for example, mobile-based
-  verification).
+- You must provide a valid email address and mobile number at signup.
 - One account may act as a customer, a vendor, or both. You are
   responsible for keeping your login credentials confidential and for
   all activity under your account. Tell us immediately at
-  armfrancisco@gmail.com if you suspect unauthorized access.
+  team.kapitmarket@gmail.com if you suspect unauthorized access.
 - We may ask you to verify your email or mobile number with a one-time
   code before certain actions are available. Codes expire and are
   single-use; do not share them with anyone.
 - We may suspend or terminate an account for violating these Terms, for
   fraud or abuse, or to protect the safety of other users. See Section 11.
+- Repeated order cancellations are treated as a form of abuse. If you
+  cancel orders too often within a short period, your account may be
+  temporarily restricted — blocked from placing new orders (customers) or
+  from reopening your shop (vendors) — without further notice. Contact
+  team.kapitmarket@gmail.com to request review of a restriction. If the
+  same pattern happens again after your account has been reinstated once,
+  it may result in permanent removal from the Service at our discretion.
+  See Section 11.
 
 ## 4. If you're a vendor
 
@@ -103,10 +109,11 @@ title to any item listed or sold.
 - Placing an order is a commitment to pay the vendor via the payment
   method the vendor has provided, outside the app. See Section 6.
 - Cancellation is only possible through the states the order status
-  machine allows at the time. [Cancellation policy — which states allow
-  customer self-cancel vs. require vendor agreement — is still being
-  finalized; this section will be tightened once decided. See
-  `docs/open-decisions.md`.]
+  machine allows at the time — while an order is placed or accepted, not
+  once a vendor has started preparing it. Both a customer and a vendor may
+  cancel during that window; either one must select a reason from a
+  predefined list (or provide free text under "Other"), and the reason is
+  recorded on the order.
 - After an order is completed, you may be able to rate the vendor. Ratings
   must reflect your genuine experience — see Section 8.
 
@@ -247,4 +254,4 @@ effect means you accept the updated Terms.
 
 ## 18. Contact
 
-Questions about these Terms: armfrancisco@gmail.com.
+Questions about these Terms: team.kapitmarket@gmail.com.

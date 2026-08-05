@@ -44,6 +44,9 @@ class Shop < ApplicationRecord
     words.reduce(all) { |scope, word| scope.matching_word(word) }
   }
 
+  scope :demo, -> { joins(vendor_profile: :user).merge(User.demo) }
+  scope :real, -> { joins(vendor_profile: :user).merge(User.real) }
+
   scope :matching_word, lambda { |word|
     like = "%#{sanitize_sql_like(word)}%"
     where(
@@ -60,8 +63,19 @@ class Shop < ApplicationRecord
   }
 
   # The manual open switch. Opening also activates a draft shop so a vendor can
-  # go from "created" to "discoverable" in one action (M1 acceptance).
+  # go from "created" to "discoverable" in one action (M1 acceptance). A
+  # vendor under a tier-1 cancellation-abuse restriction (Orders::
+  # CancellationAbuseCheck) can't just reopen to bypass it — the restriction
+  # has to be cleared by an admin first.
   def open!
+    if vendor_profile.restricted?
+      raise ApiError.new(
+        "This shop is temporarily restricted from reopening due to repeated order cancellations. " \
+        "Contact team.kapitmarket@gmail.com to request a review.",
+        code: "cancellation_restricted", status: :forbidden
+      )
+    end
+
     update!(status: "active", accepting_orders: true)
   end
 
@@ -71,6 +85,10 @@ class Shop < ApplicationRecord
 
   def open?
     status == "active" && accepting_orders?
+  end
+
+  def demo?
+    vendor_profile.demo?
   end
 
   private

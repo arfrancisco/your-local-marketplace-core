@@ -185,11 +185,7 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
         </label>
         <label>
           Building / Tower
-          <input
-            value={building}
-            onChange={(e) => setBuilding(e.target.value)}
-            placeholder="e.g. Tower B"
-          />
+          <input value={building} onChange={(e) => setBuilding(e.target.value)} />
           <p className="muted small">
             Shown publicly on your shop page — customers see this, but never your exact unit.
           </p>

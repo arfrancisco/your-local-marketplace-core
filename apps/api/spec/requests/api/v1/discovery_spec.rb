@@ -17,12 +17,12 @@ RSpec.describe "Api::V1 Discovery", type: :request do
     end
 
     it "shows the building label but never the vendor's exact unit" do
-      shop = create(:shop, :open, building: "Tower A", address: "Unit 12F")
+      shop = create(:shop, :open, building: "Astra", address: "Unit 12F")
 
       get "/api/v1/shops", headers: auth_headers(customer)
 
       body = json["shops"].first
-      expect(body["building"]).to eq("Tower A")
+      expect(body["building"]).to eq("Astra")
       expect(body).not_to have_key("address")
       expect(shop.address).to eq("Unit 12F") # sanity: the private detail still exists on the record
     end

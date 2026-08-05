@@ -52,7 +52,7 @@ const existingShop: Shop = {
   slug: 'tita-nena-kitchen',
   description: 'Home cooking',
   contact_number: '0917',
-  building: 'Tower A',
+  building: 'Astra',
   address: 'Unit 3B',
   fulfillment_methods: ['pickup'],
   status: 'active',

@@ -1,6 +1,6 @@
 # Idempotent seed data. Safe to run repeatedly: every record is looked up before
 # it is created. Covers M0 test accounts plus a set of believable open demo shops
-# so the customer discovery / early-access demo looks alive.
+# so customer discovery looks alive.
 #
 # Run with: bin/rails db:seed
 
@@ -76,7 +76,8 @@ def find_or_create_user!(email:, password:, mobile_number:, verified: true)
     password: password,
     mobile_number: mobile_number,
     email_verified_at: verified ? Time.current : nil,
-    mobile_verified_at: verified ? Time.current : nil
+    mobile_verified_at: verified ? Time.current : nil,
+    demo: true
   )
 end
 
@@ -93,7 +94,10 @@ def seed_resident_address!(user, display_name, building, unit)
   profile = user.customer_profile
   return if profile.default_address.present?
 
-  profile.update!(is_resident: true, willing_to_verify_residency: true)
+  # Matches Auth::RegisterUser's own behavior for a real resident signup —
+  # pending, not verified, since seeding data shouldn't fake an admin's
+  # sign-off. See CustomerProfile::RESIDENCY_VERIFICATION_STATUSES.
+  profile.update!(is_resident: true, willing_to_verify_residency: true, residency_verification_status: "pending")
   address = user.addresses.create!(
     recipient_name: display_name, building: building, unit: unit, mobile_number: user.mobile_number
   )
@@ -124,7 +128,7 @@ DEMO_SHOPS = [
   {
     owner: "Lola Remedios", email: "lolas.kitchen@example.com", slug: "kare-kare-oke",
     name: "Kare-Kare-oke", description: "Home-cooked Filipino meals, fresh daily.",
-    address: "Tower A, Unit 3B", fulfillment: %w[pickup delivery], cover_photo: "adobo-candidate.jpg",
+    address: "Astra, Unit 3B", fulfillment: %w[pickup delivery], cover_photo: "adobo-candidate.jpg",
     banner_photo: "banner-kare-kare-oke.jpg",
     items: [
       ["Chicken Adobo Bowl", "Classic pork-and-chicken adobo over garlic rice.", 18_000, ["Rice Meal", "Filipino", "Comfort Food"], "adobo-candidate.jpg"],
@@ -135,7 +139,7 @@ DEMO_SHOPS = [
   {
     owner: "Manong Ben", email: "corner.bakeshop@example.com", slug: "bread-pitt",
     name: "Bread Pitt", description: "Fresh bread and pastries baked every morning.",
-    address: "Tower B, Ground Floor", fulfillment: %w[pickup], cover_photo: "bread-rolls.jpg",
+    address: "Celeste, Ground Floor", fulfillment: %w[pickup], cover_photo: "bread-rolls.jpg",
     banner_photo: "banner-bread-pitt.jpg",
     items: [
       ["Pandesal (6 pcs)", "Warm, soft classic pandesal.", 4_000, ["Bread", "Breakfast"], "bread-rolls.jpg"],
@@ -146,7 +150,7 @@ DEMO_SHOPS = [
   {
     owner: "Ate Grace", email: "brew.and.co@example.com", slug: "brewhaha",
     name: "Brewhaha", description: "Small-batch coffee and cold drinks.",
-    address: "Tower A, Unit 1F", fulfillment: %w[pickup delivery], cover_photo: "iced-latte.jpg",
+    address: "Astra, Unit 1F", fulfillment: %w[pickup delivery], cover_photo: "iced-latte.jpg",
     banner_photo: "banner-brewhaha.jpg",
     items: [
       ["Iced Spanish Latte", "Espresso, milk, and a touch of condensed milk.", 13_000, ["Coffee", "Drinks"], "iced-latte.jpg"],
@@ -157,7 +161,7 @@ DEMO_SHOPS = [
   {
     owner: "Kuya Ram", email: "sizzle.house@example.com", slug: "lord-of-the-grills",
     name: "Lord of the Grills", description: "Grilled favorites and hearty ulam.",
-    address: "Tower C, Unit 2A", fulfillment: %w[pickup delivery], cover_photo: "grill-skewers.jpg",
+    address: "Kiran, Unit 2A", fulfillment: %w[pickup delivery], cover_photo: "grill-skewers.jpg",
     banner_photo: "banner-lord-of-the-grills.jpg",
     items: [
       ["Pork BBQ Skewers (3)", "Sweet-savory grilled pork skewers.", 12_000, ["Grill", "Savory"], "grill-skewers.jpg"],
@@ -168,7 +172,7 @@ DEMO_SHOPS = [
   {
     owner: "Tita Baby", email: "sweet.tooth@example.com", slug: "ube-or-not-ube",
     name: "Ube or Not Ube", description: "Homemade desserts and merienda treats.",
-    address: "Tower B, Unit 5C", fulfillment: %w[pickup], cover_photo: "ube-cake.png",
+    address: "Celeste, Unit 5C", fulfillment: %w[pickup], cover_photo: "ube-cake.png",
     banner_photo: "banner-ube-or-not-ube.jpg",
     items: [
       ["Leche Flan", "Silky caramel custard.", 9_000, ["Dessert", "Sweet"], "leche-flan.jpg"],
@@ -179,7 +183,7 @@ DEMO_SHOPS = [
   {
     owner: "Coach Mia", email: "green.bowl@example.com", slug: "lettuce-eat-healthy",
     name: "Lettuce Eat Healthy", description: "Fresh salads and healthy rice bowls.",
-    address: "Tower A, Unit 8D", fulfillment: %w[pickup delivery], cover_photo: "buddha-bowl.jpg",
+    address: "Astra, Unit 8D", fulfillment: %w[pickup delivery], cover_photo: "buddha-bowl.jpg",
     banner_photo: "banner-lettuce-eat-healthy.jpg",
     items: [
       ["Chicken Caesar Bowl", "Grilled chicken, romaine, parmesan, house Caesar.", 21_000, ["Healthy", "Salad"], "caesar-bowl.jpg"],
@@ -190,7 +194,7 @@ DEMO_SHOPS = [
   {
     owner: "Kuya Jun", email: "street.eats@example.com", slug: "i-saw-my-chance",
     name: "I Saw My Chance", description: "Filipino street food favorites, made fresh to order.",
-    address: "Tower C, Ground Floor", fulfillment: %w[pickup], cover_photo: "isaw-manila-skewers.jpg",
+    address: "Kiran, Ground Floor", fulfillment: %w[pickup], cover_photo: "isaw-manila-skewers.jpg",
     banner_photo: "banner-i-saw-my-chance.jpg",
     items: [
       ["Fishball (10 pcs)", "Deep-fried fishball with sweet and spicy sauce.", 5_000, ["Street Food", "Snack"], "street-food-cart.jpg"],
@@ -201,7 +205,7 @@ DEMO_SHOPS = [
   {
     owner: "Ate Len", email: "milky.way.tea@example.com", slug: "milky-way-tea",
     name: "Milky Way Tea", description: "Milk tea and fruit tea, made fresh per order.",
-    address: "Tower B, Unit 2C", fulfillment: %w[pickup delivery], cover_photo: "milk-tea.jpg",
+    address: "Celeste, Unit 2C", fulfillment: %w[pickup delivery], cover_photo: "milk-tea.jpg",
     banner_photo: "banner-milky-way-tea.jpg",
     items: [
       ["Classic Milk Tea", "Black tea, fresh milk, brown sugar pearls.", 11_000, ["Tea", "Milk Tea", "Drinks"], "milk-tea.jpg"],
@@ -212,7 +216,7 @@ DEMO_SHOPS = [
   {
     owner: "Manong Dado", email: "slice.corner@example.com", slug: "pizza-my-heart",
     name: "Pizza My Heart", description: "Pizza by the slice, baked fresh throughout the day.",
-    address: "Tower A, Unit 6A", fulfillment: %w[pickup delivery], cover_photo: "pizza-pepperoni.jpg",
+    address: "Astra, Unit 6A", fulfillment: %w[pickup delivery], cover_photo: "pizza-pepperoni.jpg",
     banner_photo: "banner-pizza-my-heart.jpg",
     items: [
       ["Pepperoni Slice", "Classic pepperoni with mozzarella.", 9_500, ["Pizza", "Savory"], "pizza-pepperoni.jpg"],
@@ -223,7 +227,7 @@ DEMO_SHOPS = [
   {
     owner: "Aling Nena", email: "sunny.side.diner@example.com", slug: "sunny-side-diner",
     name: "Sunny Side Diner", description: "All-day Filipino breakfast, silog meals a specialty.",
-    address: "Tower C, Unit 4B", fulfillment: %w[pickup delivery], cover_photo: "tapsilog.jpg",
+    address: "Kiran, Unit 4B", fulfillment: %w[pickup delivery], cover_photo: "tapsilog.jpg",
     banner_photo: "banner-sunny-side-diner.jpg",
     items: [
       ["Tapsilog", "Beef tapa, garlic rice, and a fried egg.", 14_000, ["Breakfast", "Silog", "Filipino"], "tapsilog.jpg"],
@@ -234,7 +238,7 @@ DEMO_SHOPS = [
   {
     owner: "Kuya Wesley", email: "wok.this.way@example.com", slug: "wok-this-way",
     name: "Wok This Way", description: "Chinese-Filipino comfort food: siomai, noodles, dimsum.",
-    address: "Tower B, Unit 7A", fulfillment: %w[pickup delivery], cover_photo: "siomai.jpg",
+    address: "Celeste, Unit 7A", fulfillment: %w[pickup delivery], cover_photo: "siomai.jpg",
     banner_photo: "banner-wok-this-way.jpg",
     items: [
       ["Siomai (8 pcs)", "Steamed pork and shrimp siomai with soy-calamansi.", 9_000, ["Dimsum", "Chinese"], "siomai.jpg"],

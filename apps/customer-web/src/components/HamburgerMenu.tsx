@@ -52,6 +52,11 @@ export function HamburgerMenu() {
                 <>
                   <li><Link to="/orders" onClick={close}>My orders</Link></li>
                   <li><Link to="/account" onClick={close}>My account</Link></li>
+                  {!user.vendor_profile && (
+                    <li className="drawer-cta">
+                      <Link to="/account" onClick={close} className="link-button">Become a vendor</Link>
+                    </li>
+                  )}
                   {user.vendor_profile && (
                     <li>
                       {/* Real page navigation, not React Router's Link — this

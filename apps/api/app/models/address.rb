@@ -3,6 +3,11 @@ class Address < ApplicationRecord
 
   validates :recipient_name, presence: true
   validates :building, presence: true
+  # Starts with a digit, not strictly digits-only — real unit numbers in
+  # this community are sometimes floor+letter (e.g. "12F"), but a value
+  # with no leading digit at all ("asdfasdf") is just bad input, not a
+  # real unit.
+  validates :unit, format: { with: /\A\d/, message: "must start with a number" }, allow_blank: true
   validate :unit_required_for_residents
 
   private

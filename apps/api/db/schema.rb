@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_04_010002) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_05_030000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -154,27 +154,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_04_010002) do
   end
 
   create_table "customer_profiles", force: :cascade do |t|
+    t.datetime "cancellation_restricted_at"
+    t.integer "cancellation_restriction_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.bigint "default_address_id"
     t.string "display_name", null: false
     t.boolean "is_resident", default: false, null: false
+    t.string "residency_verification_status", default: "unverified", null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.boolean "willing_to_verify_residency"
     t.index ["default_address_id"], name: "index_customer_profiles_on_default_address_id"
+    t.index ["residency_verification_status"], name: "index_customer_profiles_on_residency_verification_status"
     t.index ["user_id"], name: "index_customer_profiles_on_user_id", unique: true
-  end
-
-  create_table "early_access_signups", force: :cascade do |t|
-    t.string "context"
-    t.datetime "created_at", null: false
-    t.string "email"
-    t.string "interest", default: "buyer", null: false
-    t.string "mobile_number"
-    t.string "name"
-    t.datetime "updated_at", null: false
-    t.index "lower((email)::text)", name: "index_early_access_signups_on_lower_email", unique: true, where: "(email IS NOT NULL)"
-    t.index ["mobile_number"], name: "index_early_access_signups_on_mobile_number", unique: true, where: "(mobile_number IS NOT NULL)"
   end
 
   create_table "error_logs", force: :cascade do |t|
@@ -345,6 +337,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_04_010002) do
 
   create_table "users", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.boolean "demo", default: false, null: false
     t.string "email", null: false
     t.boolean "email_marketing_opt_in", default: false, null: false
     t.datetime "email_verified_at"
@@ -360,6 +353,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_04_010002) do
     t.string "terms_version"
     t.datetime "updated_at", null: false
     t.index "lower((email)::text)", name: "index_users_on_lower_email", unique: true
+    t.index ["demo"], name: "index_users_on_demo"
     t.index ["mobile_number"], name: "index_users_on_mobile_number", unique: true, where: "(mobile_number IS NOT NULL)"
   end
 
@@ -378,6 +372,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_04_010002) do
   end
 
   create_table "vendor_profiles", force: :cascade do |t|
+    t.datetime "cancellation_restricted_at"
+    t.integer "cancellation_restriction_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.string "display_name", null: false
     t.datetime "updated_at", null: false

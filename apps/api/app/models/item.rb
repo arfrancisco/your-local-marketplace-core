@@ -19,6 +19,8 @@ class Item < ApplicationRecord
   # gets it for free with no change on their end.
   scope :enabled, -> { where(enabled: true, archived_at: nil) }
   scope :active, -> { where(archived_at: nil) }
+  scope :demo, -> { joins(shop: { vendor_profile: :user }).merge(User.demo) }
+  scope :real, -> { joins(shop: { vendor_profile: :user }).merge(User.real) }
 
   # A disabled item cannot be ordered but stays intact for historical orders.
   def enable!
@@ -48,5 +50,9 @@ class Item < ApplicationRecord
   # shown grayed out rather than hidden.
   def sold_out?
     stock_count.present? && stock_count <= 0
+  end
+
+  def demo?
+    shop.demo?
   end
 end

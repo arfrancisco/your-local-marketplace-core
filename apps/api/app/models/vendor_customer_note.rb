@@ -13,4 +13,11 @@ class VendorCustomerNote < ApplicationRecord
   belongs_to :order, optional: true
 
   validates :note, presence: true
+
+  scope :demo, -> { where(vendor_profile: VendorProfile.demo).or(where(customer_profile: CustomerProfile.demo)) }
+  scope :real, -> { where(vendor_profile: VendorProfile.real).where(customer_profile: CustomerProfile.real) }
+
+  def demo?
+    vendor_profile.demo? || customer_profile.demo?
+  end
 end

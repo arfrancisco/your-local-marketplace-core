@@ -16,6 +16,18 @@ RSpec.describe Shop, type: :model do
     end
   end
 
+  describe "demo/real derivation" do
+    it "delegates to the owning vendor's user" do
+      demo_shop = create(:shop, vendor_profile: create(:vendor_profile, user: create(:user, :demo)))
+      real_shop = create(:shop)
+
+      expect(demo_shop).to be_demo
+      expect(real_shop).not_to be_demo
+      expect(Shop.demo).to contain_exactly(demo_shop)
+      expect(Shop.real).to contain_exactly(real_shop)
+    end
+  end
+
   describe "slug generation" do
     it "derives a slug from the name at creation" do
       shop = create(:shop, name: "Corner Kitchen")
@@ -32,6 +44,13 @@ RSpec.describe Shop, type: :model do
       shop = create(:shop, name: "Corner Kitchen")
       shop.update!(name: "Renamed Kitchen")
       expect(shop.slug).to eq("corner-kitchen")
+    end
+  end
+
+  describe "building (tower)" do
+    it "allows a blank building — publishing it is optional for a vendor" do
+      expect(build(:shop, building: "")).to be_valid
+      expect(build(:shop, building: nil)).to be_valid
     end
   end
 
@@ -70,6 +89,15 @@ RSpec.describe Shop, type: :model do
       open_shop = create(:shop, :open)
       create(:shop) # draft
       expect(Shop.listed).to contain_exactly(open_shop)
+    end
+
+    it "refuses to open when the owning vendor is under a cancellation-abuse restriction" do
+      restricted_vendor = create(:vendor_profile, cancellation_restricted_at: Time.current)
+      shop = create(:shop, vendor_profile: restricted_vendor)
+
+      expect { shop.open! }
+        .to raise_error(ApiError) { |e| expect(e.code).to eq("cancellation_restricted"); expect(e.status).to eq(:forbidden) }
+      expect(shop.reload.status).to eq("draft")
     end
   end
 end

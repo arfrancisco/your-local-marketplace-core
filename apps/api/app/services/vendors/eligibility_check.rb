@@ -3,10 +3,12 @@ module Vendors
   # by Vendors::Upgrade (to reject) and by serialization (to show a customer
   # what's missing), so frontend and backend logic can't drift apart.
   #
-  # Self-reported data only: no real human/admin residency-verification tool
-  # exists yet, so is_resident + willing_to_verify_residency (which, per the
+  # Self-reported data only, deliberately: an admin residency-verification
+  # queue does exist now (CustomerProfile#residency_verification_status),
+  # but gating vendor eligibility on it would block signup on manual review
+  # backlog. is_resident + willing_to_verify_residency (which, per the
   # registration flow's consent-checkbox design, can only ever be true
-  # together) is the practical interim bar.
+  # together) stays the practical bar here.
   class EligibilityCheck
     Result = Struct.new(:eligible, :reasons, keyword_init: true) do
       def eligible?

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, Link, useNavigate } from 'react-router-dom'
 import { useState, type ReactNode } from 'react'
 import { useAuth } from './auth'
 import { FeedbackModal } from './components/FeedbackModal'
+import { Footer } from './components/Footer'
 import { HamburgerMenu } from './components/HamburgerMenu'
 import { LoginPage } from './pages/LoginPage'
 import { ShopDashboardPage } from './pages/ShopDashboardPage'
@@ -97,6 +98,8 @@ export default function App() {
           <Route path="*" element={<Navigate to="/shops" replace />} />
         </Routes>
       </main>
+
+      <Footer />
     </>
   )
 }

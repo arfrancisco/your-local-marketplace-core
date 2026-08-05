@@ -6,16 +6,19 @@ module Api
 
         # GET /api/v1/admin/users?status=suspended&q=juan
         def index
-          scope = User.order(created_at: :desc)
+          scope = filter_by_demo(User.order(created_at: :desc))
           scope = scope.where(status: params[:status]) if params[:status].present?
           if params[:q].present?
             scope = scope.where("email ILIKE :q OR mobile_number ILIKE :q", q: "%#{params[:q]}%")
           end
-          render json: { users: paginate(scope).map { |u| UserSerializer.call(u) }, meta: pagination_meta(scope) }
+          render json: {
+            users: paginate(scope).map { |u| UserSerializer.call(u).merge(demo: u.demo?) },
+            meta: pagination_meta(scope)
+          }
         end
 
         def show
-          render json: { user: UserSerializer.call(@user) }
+          render json: { user: UserSerializer.call(@user).merge(demo: @user.demo?) }
         end
 
         # POST /api/v1/admin/users/:id/suspend — never a hard delete; a User

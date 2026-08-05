@@ -13,8 +13,18 @@ make before going live to real neighbors.
 1. **Pilot location** — which specific cluster of buildings is the first pilot?
 2. **Fulfillment** — pickup only, vendor delivery only, or both, for the pilot?
    (The data model supports both; this is about what to enable.)
-3. **Cancellation policy** — which order states allow customer self-cancel vs.
-   require vendor agreement?
+3. **Cancellation abuse (resolved mechanism, open consequence question)** —
+   the cancellation mechanism itself is built and live: either a customer or
+   a vendor may cancel while an order is `placed` or `accepted` (not once
+   preparation has started), and must select a reason code (see
+   `Order::CUSTOMER_CANCELLATION_REASONS`/`VENDOR_CANCELLATION_REASONS` and
+   `Orders::TransitionStatus`). What's still undecided: there's no
+   consequence today for a user who cancels repeatedly — no rate limit, no
+   flagging, no visible pattern for an admin to catch a vendor who accepts
+   and then routinely bails, or a customer who orders and backs out. Decide
+   whether/how to address this (a cancellation-rate threshold, an admin
+   flag on the user/vendor, a cooldown, etc.) before real volume makes it a
+   real problem.
 4. **Order edits** — when edits are eventually built, may a vendor edit an
    accepted order directly, or must every change be customer-approved?
    (Edits are out of scope for the current phase — see ADR 0005.)

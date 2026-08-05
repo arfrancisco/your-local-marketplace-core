@@ -69,16 +69,29 @@ describe('Header', () => {
     vi.mocked(api.listOrders).mockResolvedValue({ orders: [] })
   })
 
-  it('shows only the brand plus the cart and menu icons — no inline link row', async () => {
+  it('shows a Sign in / Sign up CTA instead of the hamburger when signed out', async () => {
     renderApp()
 
     expect(await screen.findByRole('link', { name: /prisma kapitmarket/i })).toHaveAttribute('href', '/shops')
-    expect(screen.getByRole('button', { name: /^menu$/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^cart, empty$/i })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /^home$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^menu$/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^sign in$/i })).toHaveAttribute('href', '/login')
+    expect(screen.getByRole('link', { name: /^sign up$/i })).toHaveAttribute('href', '/login?mode=register')
   })
 
-  it('always shows an explicit Home link in the drawer, signed in or out', async () => {
+  it('shows the hamburger instead of the Sign in / Sign up CTA when signed in', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
+    renderApp()
+
+    expect(await screen.findByRole('button', { name: /^menu$/i })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /^sign in$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /^sign up$/i })).not.toBeInTheDocument()
+  })
+
+  it('shows an explicit Home link in the drawer when signed in', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
     renderApp()
     await openMenu()
     expect(await screen.findByRole('link', { name: /^home$/i })).toHaveAttribute('href', '/shops')

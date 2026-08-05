@@ -54,6 +54,66 @@ body::before {
 }
 .verify-banner a { color: inherit; font-weight: 600; }
 
+/* Red/orange, deliberately distinct from the amber beta-banner and blue
+   verify-banner above — this one is a warning, not just a status note.
+   A demo shop looks identical to a real one, so this has to be unmissable
+   everywhere a customer could mistake it for a real neighbor's shop. */
+.demo-tag {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.45rem;
+  margin-left: 0.4rem;
+  border-radius: 3px;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  vertical-align: middle;
+}
+
+.demo-shop-banner {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0.6rem 1rem;
+  margin: 0 0 1rem;
+  border-radius: 6px;
+}
+
+.demo-cart-warning {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+}
+
+/* A positive trust signal, not a warning — same pill shape as .demo-tag,
+   green instead of red, and quiet (no banner, no checkout-flow copy) since
+   there's nothing to warn anyone about. */
+.verified-tag {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.45rem;
+  margin-left: 0.4rem;
+  border-radius: 3px;
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+  vertical-align: middle;
+}
+
 .topbar {
   position: relative;
   display: grid;
@@ -404,6 +464,14 @@ input, textarea {
 .inline { display: inline-flex; align-items: center; gap: 0.35rem; margin-right: 1rem; }
 .inline input { width: auto; display: inline-block; margin: 0; }
 fieldset.interest { border: 1px solid #ecdfcd; border-radius: 6px; margin: 0.6rem 0; }
+/* Full-sentence checkbox rows (e.g. registration consent checkboxes). Unlike
+   .inline (meant for short items sitting side by side), the label text here
+   can wrap and may contain inline <button> links, so only the checkbox and
+   the text span are flex items — the sentence itself stays in normal text
+   flow instead of each word/link becoming its own flex item and wrapping
+   independently. */
+.checkbox-field { display: flex; align-items: flex-start; gap: 0.5rem; margin: 0.6rem 0; }
+.checkbox-field input[type='checkbox'] { width: auto; flex-shrink: 0; margin: 0.2rem 0 0; }
 
 button {
   padding: 0.5rem 0.9rem;
@@ -707,6 +775,20 @@ button.link {
 .legal-modal-body { max-height: 65vh; overflow-y: auto; }
 .legal-modal-body .legal-doc { border: none; padding: 0; margin: 0; }
 
+/* Persistent footer (App.tsx) — Terms/Privacy, reachable on every page, not
+   just at signup. Sits inside .container as its last child, so it renders
+   above the padding that's reserved for the fixed .bottom-bar rather than
+   getting hidden behind it. Muted/small — this is a footer, not a CTA. */
+.app-footer {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #ecdfcd;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #8a7862;
+}
+.app-footer .inline-link { color: inherit; }
+
 /* ==================================================================
    Landing page: carousel + row cards (ShopsPage)
    ==================================================================
@@ -855,6 +937,19 @@ button.link {
   gap: 0.5rem;
 }
 
+/* Signed-out header CTA (App.tsx's HeaderActions) — replaces the hamburger
+   for anonymous visitors so Sign in / Sign up are one tap away instead of
+   buried in a drawer. .header-signup-btn layers onto .link-button; only
+   .header-signin-link needs its own rule. */
+.header-signin-link {
+  color: #4f7a5c;
+  text-decoration: none;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.header-signin-link:hover { text-decoration: underline; }
+.header-signup-btn { white-space: nowrap; }
+
 .icon-btn {
   position: relative;
   width: 42px;
@@ -934,6 +1029,19 @@ button.link {
 .drawer-nav { margin: 0; display: flex; flex-direction: column; }
 .drawer-nav li { padding: 0.15rem 0; border-top: 1px solid #ecdfcd; }
 .drawer-nav li:first-child { border-top: none; }
+/* Become-a-vendor CTA — a real button in a list of plain links, so it needs
+   its own breathing room instead of the tight single-line list rhythm. */
+.drawer-nav li.drawer-cta { padding: 0.6rem 0; }
+/* .drawer-nav a below (higher specificity than .link-button alone) would
+   otherwise stretch this to a full-width, unpadded plain link — chain the
+   classes so the button styling wins. */
+.drawer-nav a.link-button {
+  display: inline-block;
+  width: auto;
+  padding: 0.5rem 0.9rem;
+  color: #fff;
+}
+.drawer-nav a.link-button:hover { color: #fff; }
 .drawer-nav a,
 .drawer-nav .inline-link {
   display: block;

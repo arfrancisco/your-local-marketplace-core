@@ -19,6 +19,7 @@ export interface AdminUser {
   customer_profile: { id: number; display_name: string | null } | null
   vendor_profile: { id: number; display_name: string | null; verification_status: string } | null
   created_at: string
+  demo: boolean
 }
 
 export interface AdminVendorProfile {
@@ -29,6 +30,9 @@ export interface AdminVendorProfile {
   verification_status: 'unverified' | 'pending' | 'verified' | 'rejected'
   shop_count: number
   created_at: string
+  demo: boolean
+  cancellation_restricted_at: string | null
+  cancellation_restriction_count: number
 }
 
 export interface AdminCustomerProfile {
@@ -40,6 +44,12 @@ export interface AdminCustomerProfile {
   willing_to_verify_residency: boolean | null
   default_address_id: number | null
   created_at: string
+  demo: boolean
+  residency_verification_status: 'unverified' | 'pending' | 'verified' | 'rejected'
+  email_verified: boolean
+  mobile_verified: boolean
+  cancellation_restricted_at: string | null
+  cancellation_restriction_count: number
 }
 
 export interface Photo {
@@ -63,6 +73,27 @@ export interface AdminShop {
   opening_message_photos?: Photo[]
   created_at: string
   updated_at: string
+  demo: boolean
+  vendor_verification_status: 'unverified' | 'pending' | 'verified' | 'rejected'
+  // Only present on GET/PATCH of a single shop, not on the shops list — see
+  // admin_shop_json's include_vendor in shops_controller.rb.
+  vendor?: {
+    id: number
+    display_name: string | null
+    verification_status: 'unverified' | 'pending' | 'verified' | 'rejected'
+    created_at: string
+    cancellation_restricted_at: string | null
+    cancellation_restriction_count: number
+    user: {
+      id: number
+      email: string
+      mobile_number: string | null
+      status: 'active' | 'suspended'
+      email_verified: boolean
+      mobile_verified: boolean
+      demo: boolean
+    }
+  }
 }
 
 export interface Tag {
@@ -86,6 +117,7 @@ export interface AdminItem {
   photos: Photo[]
   created_at: string
   updated_at: string
+  demo: boolean
 }
 
 export interface AdminOrderLine {
@@ -116,6 +148,7 @@ export interface AdminOrder {
   completed_at: string | null
   cancelled_at: string | null
   conversation_id: number | null
+  demo: boolean
 }
 
 export interface AdminOrderStatusEvent {
@@ -124,6 +157,7 @@ export interface AdminOrderStatusEvent {
   from_status: string | null
   to_status: string
   reason: string | null
+  reason_code: string | null
   actor_user_id: number
   actor_user_email: string
   created_at: string
@@ -237,16 +271,6 @@ export interface AdminTag {
   name: string
   slug: string
   item_count: number
-}
-
-export interface AdminEarlyAccessSignup {
-  id: number
-  email: string | null
-  mobile_number: string | null
-  name: string | null
-  interest: 'buyer' | 'seller' | 'both'
-  context: string | null
-  created_at: string
 }
 
 // A real per-admin-operator account (AdminUser on the backend). Deliberately

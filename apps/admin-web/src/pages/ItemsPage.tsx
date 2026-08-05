@@ -22,7 +22,7 @@ export function ItemDetailPage() {
 
   return (
     <div className="container">
-      <h1>{item.name}</h1>
+      <h1>{item.name} {item.demo && <span className="badge badge-demo">Demo</span>}</h1>
       <p className="muted">Shop #{item.shop_id}</p>
       <p>{(item.price_cents / 100).toFixed(2)} {item.currency}</p>
       <p>

@@ -38,7 +38,14 @@ module Customers
       field_errors[:last_name] = ["can't be blank"] if @last_name.blank?
       return if field_errors.empty?
 
-      raise ApiError::UnprocessableEntity.new("Validation failed", details: field_errors)
+      raise ApiError::UnprocessableEntity.new(humanize_field_errors(field_errors), details: field_errors)
+    end
+
+    # See Auth::RegisterUser's identical helper — same reasoning: these are
+    # hand-built field_errors hashes, not a real ActiveModel object, so
+    # there's no errors.full_messages to lean on for free.
+    def humanize_field_errors(field_errors)
+      field_errors.map { |field, messages| "#{field.to_s.humanize} #{messages.first}" }.join(", ")
     end
 
     def full_name

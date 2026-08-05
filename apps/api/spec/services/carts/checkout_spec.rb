@@ -68,4 +68,11 @@ RSpec.describe Carts::Checkout do
     order = described_class.new(cart: cart, fulfillment_method: "pickup").call
     expect(order).to be_persisted
   end
+
+  it "rejects checkout for a customer under a cancellation-abuse restriction" do
+    customer.customer_profile.update!(cancellation_restricted_at: Time.current)
+
+    expect { described_class.new(cart: cart, fulfillment_method: "pickup").call }
+      .to raise_error(ApiError) { |e| expect(e.code).to eq("cancellation_restricted"); expect(e.status).to eq(:forbidden) }
+  end
 end

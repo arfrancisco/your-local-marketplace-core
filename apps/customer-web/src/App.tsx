@@ -4,6 +4,7 @@ import { useAuth } from './auth'
 import { api } from './api/client'
 import type { Order, OrderStatus } from './api/types'
 import { CartButton } from './components/CartButton'
+import { Footer } from './components/Footer'
 import { useCart } from './CartContext'
 import { HamburgerMenu } from './components/HamburgerMenu'
 import { ShopsPage } from './pages/ShopsPage'
@@ -17,15 +18,30 @@ import { AccountPage } from './pages/AccountPage'
 import { OrderPage } from './pages/OrderPage'
 import { OrdersPage } from './pages/OrdersPage'
 
-// The hamburger is the only thing left up here — position: fixed so it stays
-// pinned in the top right as the page scrolls under it; the top offset lines
-// it up with the top bar at scroll 0, below the beta banner. The cart moved
-// to the fixed bottom bar (BottomBar, below) so it doesn't crowd the header
-// on narrow screens.
+// position: fixed so this stays pinned in the top right as the page scrolls
+// under it; the top offset lines it up with the top bar at scroll 0, below
+// the beta banner. The cart moved to the fixed bottom bar (BottomBar, below)
+// so it doesn't crowd the header on narrow screens.
+//
+// Signed-out visitors get a direct Sign in / Sign up CTA here instead of the
+// hamburger — the drawer buried those two links behind an extra tap, and
+// signing up is the one thing this app most wants a first-time visitor to
+// do. Feedback (previously reachable from the drawer even when signed out)
+// moved to the footer, which is present on every route regardless of auth
+// state. Signed-in users keep the hamburger as before.
 function HeaderActions() {
+  const { user } = useAuth()
+
   return (
     <div className="header-actions">
-      <HamburgerMenu />
+      {user ? (
+        <HamburgerMenu />
+      ) : (
+        <>
+          <Link to="/login" className="header-signin-link">Sign in</Link>
+          <Link to="/login?mode=register" className="link-button header-signup-btn">Sign up</Link>
+        </>
+      )}
     </div>
   )
 }
@@ -192,6 +208,13 @@ export default function App() {
           <Route path="/orders/:id" element={<OrderPage />} />
           <Route path="*" element={<Navigate to="/shops" replace />} />
         </Routes>
+
+        {/* Inside .container, not a sibling after it — .container reserves
+            5rem of bottom padding for the fixed BottomBar (see its comment
+            below), so content here, footer included, never ends up hidden
+            behind it. A sibling footer outside .container wouldn't get that
+            protection. */}
+        <Footer />
       </main>
 
       <BottomBar />

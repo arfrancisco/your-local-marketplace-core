@@ -56,6 +56,7 @@ module Orders
           reason: @reason,
           reason_code: @reason_code
         )
+        Orders::CancellationAbuseCheck.new(order: @order, actor_user: @actor_user).call if @to_status == "cancelled"
       end
 
       post_system_message

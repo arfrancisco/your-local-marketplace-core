@@ -113,4 +113,21 @@ RSpec.describe Orders::TransitionStatus do
       expect(message.body).to eq("Order cancelled by the vendor: Fridge broke down overnight.")
     end
   end
+
+  describe "cancellation-abuse detection" do
+    it "runs Orders::CancellationAbuseCheck when the transition is a cancellation" do
+      expect(Orders::CancellationAbuseCheck).to receive(:new)
+        .with(order: order, actor_user: vendor_user).and_call_original
+
+      described_class.new(
+        order: order, to_status: "cancelled", actor_user: vendor_user, reason_code: "item_unavailable"
+      ).call
+    end
+
+    it "does not run the abuse check on a non-cancelling transition" do
+      expect(Orders::CancellationAbuseCheck).not_to receive(:new)
+
+      described_class.new(order: order, to_status: "accepted", actor_user: vendor_user).call
+    end
+  end
 end

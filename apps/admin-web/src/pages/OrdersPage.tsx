@@ -6,10 +6,13 @@ import type { AdminOrder } from '../api/types'
 export function OrdersPage() {
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [status, setStatus] = useState('')
+  const [demoFilter, setDemoFilter] = useState('')
 
   useEffect(() => {
-    api.listOrders({ status: status || undefined }).then((res) => setOrders(res.orders))
-  }, [status])
+    api
+      .listOrders({ status: status || undefined, demo: demoFilter === '' ? undefined : demoFilter === 'true' })
+      .then((res) => setOrders(res.orders))
+  }, [status, demoFilter])
 
   return (
     <div className="container">
@@ -25,8 +28,13 @@ export function OrdersPage() {
         <option value="rejected">Rejected</option>
         <option value="cancelled">Cancelled</option>
       </select>
+      <select value={demoFilter} onChange={(e) => setDemoFilter(e.target.value)}>
+        <option value="">All</option>
+        <option value="true">Demo only</option>
+        <option value="false">Real only</option>
+      </select>
       <table>
-        <thead><tr><th>Ref</th><th>Shop</th><th>Status</th><th>Total</th></tr></thead>
+        <thead><tr><th>Ref</th><th>Shop</th><th>Status</th><th>Total</th><th>Demo</th></tr></thead>
         <tbody>
           {orders.map((o) => (
             <tr key={o.id}>
@@ -34,6 +42,7 @@ export function OrdersPage() {
               <td>{o.shop_id}</td>
               <td>{o.status}</td>
               <td>{(o.total_cents / 100).toFixed(2)} {o.currency}</td>
+              <td>{o.demo && <span className="badge badge-demo">Demo</span>}</td>
             </tr>
           ))}
         </tbody>

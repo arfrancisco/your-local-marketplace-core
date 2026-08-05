@@ -25,6 +25,14 @@ module Carts
         )
       end
 
+      if @cart.customer_profile.restricted?
+        raise ApiError.new(
+          "Your account is temporarily restricted from placing orders due to repeated cancellations. " \
+          "Contact team.kapitmarket@gmail.com to request a review.",
+          code: "cancellation_restricted", status: :forbidden
+        )
+      end
+
       raise ApiError::UnprocessableEntity, "Cart is empty" if @cart.cart_items.empty?
       unless Shop::FULFILLMENT_METHODS.include?(@fulfillment_method) &&
              @cart.shop.fulfillment_methods.include?(@fulfillment_method)

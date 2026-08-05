@@ -19,6 +19,20 @@ RSpec.describe "Api::V1::Admin::Users", type: :request do
       get "/api/v1/admin/users", params: { q: "someone" }, headers: admin_auth_headers
       expect(json["users"].map { |u| u["email"] }).to eq(["someone@example.com"])
     end
+
+    it "filters by demo and reports the demo flag" do
+      demo_user = create(:user, :demo, email: "demo@example.com")
+      create(:user, email: "real@example.com")
+      user # force the lazy let to create before either request fires
+
+      get "/api/v1/admin/users", params: { demo: "true" }, headers: admin_auth_headers
+      expect(json["users"].map { |u| u["email"] }).to eq(["demo@example.com"])
+      expect(json["users"].first["demo"]).to eq(true)
+
+      get "/api/v1/admin/users", params: { demo: "false" }, headers: admin_auth_headers
+      expect(json["users"].map { |u| u["email"] }).to contain_exactly("real@example.com", user.email)
+      expect(json["users"].none? { |u| u["id"] == demo_user.id }).to be true
+    end
   end
 
   describe "POST /api/v1/admin/users/:id/suspend" do

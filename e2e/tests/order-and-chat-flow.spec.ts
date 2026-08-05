@@ -76,7 +76,11 @@ test('vendor opening message, checkout, real-time chat, and status transition', 
     await customer.click('.cart-summary-bar')
     await expect(customer.getByText('Your cart')).toBeVisible()
 
-    await customer.click('button:has-text("Place order")')
+    // "Pizza My Heart" (db/seeds.rb) is a seeded demo shop, so the checkout
+    // button reads "Place demo order (...)" here, not "Place order (...)" —
+    // match both, since this same button serves both a real shop's checkout
+    // and a demo one's (see CartModal.tsx).
+    await customer.getByRole('button', { name: /^place( demo)? order/i }).click()
     await customer.waitForURL('**/orders/*')
     orderId = customer.url().match(/orders\/(\d+)/)![1]
   })

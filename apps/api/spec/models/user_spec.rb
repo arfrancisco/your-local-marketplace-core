@@ -50,4 +50,14 @@ RSpec.describe User, type: :model do
       expect(user).not_to be_vendor
     end
   end
+
+  describe "demo/real scopes" do
+    it "splits users by the demo flag" do
+      demo_user = create(:user, :demo)
+      real_user = create(:user)
+
+      expect(User.demo).to contain_exactly(demo_user)
+      expect(User.real).to contain_exactly(real_user)
+    end
+  end
 end

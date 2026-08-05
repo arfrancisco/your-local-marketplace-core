@@ -28,6 +28,8 @@ function shop(id: number, name: string, overrides: Partial<Shop> = {}): Shop {
     ratings_count: 0,
     price_range_cents: null,
     completed_orders_count: 0,
+    demo: false,
+    verified: false,
     ...overrides,
   }
 }

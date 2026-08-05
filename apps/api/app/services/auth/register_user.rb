@@ -40,7 +40,12 @@ module Auth
           user.create_customer_profile!(
             display_name: display_name,
             is_resident: @is_resident,
-            willing_to_verify_residency: @is_resident ? @willing_to_verify_residency : nil
+            willing_to_verify_residency: @is_resident ? @willing_to_verify_residency : nil,
+            # A resident claim is already the practical bar (see
+            # Vendors::EligibilityCheck) and puts the customer in an admin's
+            # real residency-verification queue instead of sitting
+            # "unverified" forever with no path to ever change.
+            residency_verification_status: @is_resident ? "pending" : "unverified"
           )
         end
         user.create_vendor_profile!(display_name: display_name) if @roles.include?("vendor")
@@ -67,7 +72,16 @@ module Auth
 
       return if field_errors.empty?
 
-      raise ApiError::UnprocessableEntity.new("Validation failed", details: field_errors)
+      raise ApiError::UnprocessableEntity.new(humanize_field_errors(field_errors), details: field_errors)
+    end
+
+    # Rails' own errors.full_messages humanizes an ActiveModel object's
+    # errors for free; these are hand-built field_errors hashes instead
+    # (not a real validation on a persisted record), so the same
+    # humanization is done by hand here to avoid a generic, useless
+    # "Validation failed" reaching the user.
+    def humanize_field_errors(field_errors)
+      field_errors.map { |field, messages| "#{field.to_s.humanize} #{messages.first}" }.join(", ")
     end
 
     def create_user!

@@ -11,4 +11,19 @@ class VendorProfile < ApplicationRecord
   validates :display_name, presence: true
   validates :user_id, uniqueness: true
   validates :verification_status, inclusion: { in: VERIFICATION_STATUSES }
+
+  scope :demo, -> { joins(:user).merge(User.demo) }
+  scope :real, -> { joins(:user).merge(User.real) }
+
+  def demo?
+    user.demo?
+  end
+
+  # Tier-1 cancellation-abuse restriction (Orders::CancellationAbuseCheck).
+  # Presence of the timestamp is the only thing that matters here — cleared
+  # by an admin action, independent of cancellation_restriction_count (which
+  # is permanent and never touched by clearing).
+  def restricted?
+    cancellation_restricted_at.present?
+  end
 end

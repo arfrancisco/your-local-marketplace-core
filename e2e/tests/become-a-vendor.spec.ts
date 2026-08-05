@@ -63,9 +63,10 @@ async function clickThroughTour(page: Page) {
   }
 }
 
-// Registers a resident customer (eligible on that front), skips mobile
-// verification (irrelevant to vendor eligibility), and completes the
-// required profile screen — leaves the browser signed in on /shops.
+// Registers a resident customer (eligible on that front), verifies email
+// (screen 2 is mandatory now — see registration-and-verification.spec.ts's
+// header comment), and completes the required profile screen — leaves the
+// browser signed in on /shops with a verified email.
 async function registerEligibleResident(page: Page, email: string) {
   await page.goto(`${CUSTOMER_BASE}/login`)
   await page.getByRole('button', { name: /don.t have an account/i }).click()
@@ -79,42 +80,37 @@ async function registerEligibleResident(page: Page, email: string) {
   await page.getByRole('button', { name: 'Create account' }).click()
 
   await expect(page.getByText(/step 2 of 3/i)).toBeVisible()
-  await page.getByRole('button', { name: 'Skip for now' }).click()
+  const code = await fetchVerificationCode(page, email, 'email_verification')
+  await page.getByLabel('Verification code').fill(code)
+  await page.getByRole('button', { name: 'Confirm' }).click()
 
   await expect(page.getByText(/step 3 of 3/i)).toBeVisible()
   await page.getByLabel(/first name/i).fill('Ana')
   await page.getByLabel(/last name/i).fill('Reyes')
-  await page.getByLabel(/tower/i).fill('Tower C')
+  await page.getByLabel(/tower/i).fill('Kiran')
   await page.getByLabel(/^unit/i).fill('5B')
   await page.getByRole('button', { name: /finish/i }).click()
   await page.waitForURL('**/shops')
 }
 
-test('customer without a verified email is not yet eligible', async ({ page }) => {
-  const email = uniqueEmail('notyeteligible')
-  await registerEligibleResident(page, email)
+// There used to be a test here for "customer without a verified email is
+// not yet eligible" (email verification was reachable-but-skippable during
+// registration). Now that screen 2 of registration requires email
+// verification to proceed at all (see registration-and-verification.spec.ts's
+// header comment), there is no way to reach the account page via the UI
+// with an unverified email anymore — that state is real for old accounts
+// that registered before this change, but it isn't reachable through any
+// current user-facing flow, so there's nothing left for an e2e test to
+// drive here. The underlying `Vendors::EligibilityCheck` reason
+// (`email_not_verified`) still exists and is still unit-tested at the
+// service level.
 
-  await page.goto(`${CUSTOMER_BASE}/account`)
-  await expect(page.getByText(/vendor accounts are currently limited/i)).not.toBeVisible()
-  await expect(page.getByText(/verify your email to become eligible/i)).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Start selling' })).not.toBeVisible()
-})
-
-test('full upgrade flow: verify email, become a vendor, onboarding tour to a real shop', async ({ page }) => {
+test('full upgrade flow: register with verified email, become a vendor, onboarding tour to a real shop', async ({ page }) => {
   const email = uniqueEmail('vendorupgrade')
 
-  await test.step('register as an eligible resident', async () => {
+  await test.step('register as an eligible resident, email verified as part of registration', async () => {
     await registerEligibleResident(page, email)
-  })
-
-  await test.step('verify email from the account page to become eligible', async () => {
     await page.goto(`${CUSTOMER_BASE}/account`)
-    await page.getByRole('button', { name: 'Verify your email' }).click()
-    await page.getByPlaceholder('Code', { exact: true }).waitFor()
-    const code = await fetchVerificationCode(page, email, 'email_verification')
-    await page.getByPlaceholder('Code', { exact: true }).fill(code)
-    await page.getByRole('button', { name: 'Confirm' }).click()
-    await expect(page.getByText('Verified').first()).toBeVisible()
     await expect(page.getByRole('button', { name: 'Start selling' })).toBeVisible()
   })
 
@@ -156,11 +152,6 @@ test('a vendor with an existing shop skips onboarding entirely', async ({ page }
   await registerEligibleResident(page, email)
 
   await page.goto(`${CUSTOMER_BASE}/account`)
-  await page.getByRole('button', { name: 'Verify your email' }).click()
-  await page.getByPlaceholder('Code', { exact: true }).waitFor()
-  const code = await fetchVerificationCode(page, email, 'email_verification')
-  await page.getByPlaceholder('Code', { exact: true }).fill(code)
-  await page.getByRole('button', { name: 'Confirm' }).click()
   await crossIntoVendorWeb(page)
 
   await page.getByRole('button', { name: 'Get started' }).click()

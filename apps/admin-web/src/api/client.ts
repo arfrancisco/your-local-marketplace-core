@@ -1,7 +1,7 @@
 import type {
   AdminUser, AdminVendorProfile, AdminShop, AdminItem, AdminOrder, AdminOrderStatusEvent,
   AdminFeedbackSubmission, AdminApiToken, AdminVerificationChallenge, AdminCustomerProfile,
-  AdminAddress, AdminCart, AdminTag, AdminEarlyAccessSignup, AdminConversation, AdminErrorLog,
+  AdminAddress, AdminCart, AdminTag, AdminConversation, AdminErrorLog,
   AdminAccount, AdminAuditLogEntry,
   Pagination,
 } from './types'
@@ -82,7 +82,7 @@ async function request<T>(path: string, method = 'GET', body?: Record<string, un
   return data as T
 }
 
-function qs(params?: Record<string, string | number | undefined>): string {
+function qs(params?: Record<string, string | number | boolean | undefined>): string {
   if (!params) return ''
   const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== '')
   if (entries.length === 0) return ''
@@ -153,23 +153,25 @@ export const api = {
   getAuditLog: (id: number) => request<{ audit_log: AdminAuditLogEntry }>(`/admin/audit_logs/${id}`),
 
   // Users
-  listUsers: (params?: { status?: string; q?: string; page?: number }) =>
+  listUsers: (params?: { status?: string; q?: string; demo?: boolean; page?: number }) =>
     request<{ users: AdminUser[]; meta: Pagination }>(`/admin/users${qs(params)}`),
   getUser: (id: number) => request<{ user: AdminUser }>(`/admin/users/${id}`),
   suspendUser: (id: number) => request<{ user: AdminUser }>(`/admin/users/${id}/suspend`, 'POST'),
   reactivateUser: (id: number) => request<{ user: AdminUser }>(`/admin/users/${id}/reactivate`, 'POST'),
 
   // Vendor profiles
-  listVendorProfiles: (params?: { verification_status?: string; page?: number }) =>
+  listVendorProfiles: (params?: { verification_status?: string; demo?: boolean; page?: number }) =>
     request<{ vendor_profiles: AdminVendorProfile[]; meta: Pagination }>(`/admin/vendor_profiles${qs(params)}`),
   getVendorProfile: (id: number) => request<{ vendor_profile: AdminVendorProfile }>(`/admin/vendor_profiles/${id}`),
   approveVendorProfile: (id: number) =>
     request<{ vendor_profile: AdminVendorProfile }>(`/admin/vendor_profiles/${id}/approve`, 'POST'),
   rejectVendorProfile: (id: number) =>
     request<{ vendor_profile: AdminVendorProfile }>(`/admin/vendor_profiles/${id}/reject`, 'POST'),
+  clearVendorCancellationRestriction: (id: number) =>
+    request<{ vendor_profile: AdminVendorProfile }>(`/admin/vendor_profiles/${id}/clear_cancellation_restriction`, 'POST'),
 
   // Shops
-  listShops: (params?: { status?: string; q?: string; page?: number }) =>
+  listShops: (params?: { status?: string; q?: string; demo?: boolean; page?: number }) =>
     request<{ shops: AdminShop[]; meta: Pagination }>(`/admin/shops${qs(params)}`),
   getShop: (id: number) => request<{ shop: AdminShop }>(`/admin/shops/${id}`),
   updateShop: (id: number, payload: Partial<AdminShop>) =>
@@ -177,7 +179,7 @@ export const api = {
   deleteShop: (id: number) => request<null>(`/admin/shops/${id}`, 'DELETE'),
 
   // Items
-  listItems: (params?: { shop_id?: number; q?: string; page?: number }) =>
+  listItems: (params?: { shop_id?: number; q?: string; demo?: boolean; page?: number }) =>
     request<{ items: AdminItem[]; meta: Pagination }>(`/admin/items${qs(params)}`),
   getItem: (id: number) => request<{ item: AdminItem }>(`/admin/items/${id}`),
   updateItem: (id: number, payload: Partial<AdminItem>) =>
@@ -185,7 +187,7 @@ export const api = {
   deleteItem: (id: number) => request<null>(`/admin/items/${id}`, 'DELETE'),
 
   // Orders
-  listOrders: (params?: { status?: string; shop_id?: number; page?: number }) =>
+  listOrders: (params?: { status?: string; shop_id?: number; demo?: boolean; page?: number }) =>
     request<{ orders: AdminOrder[]; meta: Pagination }>(`/admin/orders${qs(params)}`),
   getOrder: (id: number) => request<{ order: AdminOrder }>(`/admin/orders/${id}`),
   forceTransitionOrder: (id: number, toStatus: string, reason: string) =>
@@ -223,8 +225,14 @@ export const api = {
     request<{ verification_challenges: AdminVerificationChallenge[]; meta: Pagination }>(`/admin/verification_challenges${qs(params)}`),
 
   // Customer profiles
-  listCustomerProfiles: (params?: { page?: number }) =>
+  listCustomerProfiles: (params?: { demo?: boolean; page?: number }) =>
     request<{ customer_profiles: AdminCustomerProfile[]; meta: Pagination }>(`/admin/customer_profiles${qs(params)}`),
+  verifyResidency: (id: number) =>
+    request<{ customer_profile: AdminCustomerProfile }>(`/admin/customer_profiles/${id}/verify_residency`, 'POST'),
+  rejectResidency: (id: number) =>
+    request<{ customer_profile: AdminCustomerProfile }>(`/admin/customer_profiles/${id}/reject_residency`, 'POST'),
+  clearCustomerCancellationRestriction: (id: number) =>
+    request<{ customer_profile: AdminCustomerProfile }>(`/admin/customer_profiles/${id}/clear_cancellation_restriction`, 'POST'),
 
   // Addresses
   listAddresses: (params?: { user_id?: number; page?: number }) =>
@@ -237,9 +245,4 @@ export const api = {
   // Tags
   listTags: (params?: { page?: number }) => request<{ tags: AdminTag[]; meta: Pagination }>(`/admin/tags${qs(params)}`),
   deleteTag: (id: number) => request<null>(`/admin/tags/${id}`, 'DELETE'),
-
-  // Early access signups
-  listEarlyAccessSignups: (params?: { page?: number }) =>
-    request<{ early_access_signups: AdminEarlyAccessSignup[]; meta: Pagination }>(`/admin/early_access_signups${qs(params)}`),
-  deleteEarlyAccessSignup: (id: number) => request<null>(`/admin/early_access_signups/${id}`, 'DELETE'),
 }

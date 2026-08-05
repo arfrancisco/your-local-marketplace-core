@@ -4,7 +4,7 @@ RSpec.describe "Api::V1 Addresses", type: :request do
   let(:user) { create(:user, :customer) }
 
   let(:valid_params) do
-    { address: { label: "Home", recipient_name: "Juan Dela Cruz", building: "Tower A", unit: "12F",
+    { address: { label: "Home", recipient_name: "Juan Dela Cruz", building: "Astra", unit: "12F",
                  delivery_instructions: "Leave with the guard" } }
   end
 
@@ -14,7 +14,7 @@ RSpec.describe "Api::V1 Addresses", type: :request do
         post "/api/v1/addresses", params: valid_params, headers: auth_headers(user)
       }.to change(user.addresses, :count).by(1)
       expect(response).to have_http_status(:created)
-      expect(json.dig("address", "building")).to eq("Tower A")
+      expect(json.dig("address", "building")).to eq("Astra")
     end
 
     it "rejects an address missing required fields" do
@@ -44,10 +44,10 @@ RSpec.describe "Api::V1 Addresses", type: :request do
 
   describe "ownership" do
     it "lists only the current user's addresses" do
-      create(:address, user: user, building: "Mine")
-      create(:address, building: "Someone else's")
+      create(:address, user: user, building: "Astra")
+      create(:address, building: "Celeste")
       get "/api/v1/addresses", headers: auth_headers(user)
-      expect(json["addresses"].map { |a| a["building"] }).to eq(["Mine"])
+      expect(json["addresses"].map { |a| a["building"] }).to eq(["Astra"])
     end
 
     it "404s when updating another user's address" do

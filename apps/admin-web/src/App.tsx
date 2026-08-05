@@ -19,7 +19,6 @@ import { CustomerProfilesPage } from './pages/CustomerProfilesPage'
 import { AddressesPage } from './pages/AddressesPage'
 import { CartsPage } from './pages/CartsPage'
 import { TagsPage } from './pages/TagsPage'
-import { EarlyAccessSignupsPage } from './pages/EarlyAccessSignupsPage'
 import { AdminAccountsPage } from './pages/AdminAccountsPage'
 import { AuditLogsPage } from './pages/AuditLogsPage'
 
@@ -50,7 +49,6 @@ function Header() {
         <Link to="/addresses">Addresses</Link>
         <Link to="/carts">Carts</Link>
         <Link to="/tags">Tags</Link>
-        <Link to="/early_access_signups">Early access</Link>
         <Link to="/admin_accounts">Admin accounts</Link>
         <Link to="/audit_logs">Audit log</Link>
         <span className="muted">{adminAccount.email}</span>
@@ -83,7 +81,6 @@ export default function App() {
         <Route path="/addresses" element={<RequireAuth><AddressesPage /></RequireAuth>} />
         <Route path="/carts" element={<RequireAuth><CartsPage /></RequireAuth>} />
         <Route path="/tags" element={<RequireAuth><TagsPage /></RequireAuth>} />
-        <Route path="/early_access_signups" element={<RequireAuth><EarlyAccessSignupsPage /></RequireAuth>} />
         <Route path="/admin_accounts" element={<RequireAuth><AdminAccountsPage /></RequireAuth>} />
         <Route path="/audit_logs" element={<RequireAuth><AuditLogsPage /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/users" replace />} />

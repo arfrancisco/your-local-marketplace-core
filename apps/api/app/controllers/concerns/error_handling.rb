@@ -39,7 +39,11 @@ module ErrorHandling
   def render_record_invalid(error)
     render_error(
       code: "validation_failed",
-      message: "Validation failed",
+      # Rails' own humanization ("Unit must start with a number") instead of
+      # a generic "Validation failed" that told the user nothing — details
+      # still carries the raw field-keyed messages for anything that wants
+      # to highlight a specific input.
+      message: error.record.errors.full_messages.join(", "),
       status: :unprocessable_entity,
       details: error.record.errors.messages
     )

@@ -10,6 +10,9 @@ module Admin
         display_name: vendor_profile.display_name,
         verification_status: vendor_profile.verification_status,
         shop_count: vendor_profile.shops.count,
+        demo: vendor_profile.demo?,
+        cancellation_restricted_at: vendor_profile.cancellation_restricted_at,
+        cancellation_restriction_count: vendor_profile.cancellation_restriction_count,
         created_at: vendor_profile.created_at
       }
     end

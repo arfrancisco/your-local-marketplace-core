@@ -124,6 +124,33 @@ describe('HamburgerMenu', () => {
     expect(screen.queryByRole('link', { name: /vendor dashboard/i })).not.toBeInTheDocument()
   })
 
+  it('shows a button-styled "Become a vendor" CTA for a customer with no vendor_profile', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
+
+    renderMenu()
+    await openMenu()
+
+    const cta = await screen.findByRole('link', { name: /become a vendor/i })
+    expect(cta).toHaveAttribute('href', '/account')
+    expect(cta).toHaveClass('link-button')
+  })
+
+  it('hides the "Become a vendor" CTA once the customer already has a vendor_profile', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({
+      user: baseUser({
+        vendor_profile: { id: 1, display_name: "Lola's Kitchen", verification_status: 'verified' },
+      }),
+    })
+
+    renderMenu()
+    await openMenu()
+
+    await screen.findByRole('link', { name: /vendor dashboard/i })
+    expect(screen.queryByRole('link', { name: /become a vendor/i })).not.toBeInTheDocument()
+  })
+
   it('closes the drawer when a link is followed', async () => {
     renderMenu()
     await openMenu()

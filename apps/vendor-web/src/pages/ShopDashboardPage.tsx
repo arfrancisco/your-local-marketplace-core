@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../api/client'
+import { api, ApiError } from '../api/client'
 import type { Shop } from '../api/types'
 import { TourCallout } from '../components/TourCallout'
 import { RatingSummary } from '../components/Ratings'
@@ -39,6 +39,7 @@ export function ShopDashboardPage({ onboardingMode = false, onTourDone }: ShopDa
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [pendingStatusChange, setPendingStatusChange] = useState<'open' | 'close' | null>(null)
+  const [statusError, setStatusError] = useState<string | null>(null)
   const [tourStep, setTourStep] = useState(0)
   const navigate = useNavigate()
 
@@ -76,12 +77,17 @@ export function ShopDashboardPage({ onboardingMode = false, onTourDone }: ShopDa
 
   async function setOpen(target: Shop, open: boolean) {
     setBusy(true)
+    setStatusError(null)
     try {
       const res = open ? await api.openShop(target.id) : await api.closeShop(target.id)
       setShop(res.shop)
+      setPendingStatusChange(null)
+    } catch (err) {
+      // A restricted vendor (Orders::CancellationAbuseCheck) can't reopen
+      // until an admin clears it — surface why instead of failing silently.
+      setStatusError(err instanceof ApiError ? err.message : 'Could not update your shop status')
     } finally {
       setBusy(false)
-      setPendingStatusChange(null)
     }
   }
 
@@ -90,6 +96,7 @@ export function ShopDashboardPage({ onboardingMode = false, onTourDone }: ShopDa
   // loading) — both directions go through a confirmation, not just closing.
   function onStatusClick() {
     if (!shop) return
+    setStatusError(null)
     setPendingStatusChange(shop.open ? 'close' : 'open')
   }
 
@@ -203,7 +210,7 @@ export function ShopDashboardPage({ onboardingMode = false, onTourDone }: ShopDa
       </div>
 
       {pendingStatusChange && (
-        <div className="modal-backdrop" onClick={() => setPendingStatusChange(null)}>
+        <div className="modal-backdrop" onClick={() => { setPendingStatusChange(null); setStatusError(null) }}>
           <div
             className="modal"
             role="dialog"
@@ -217,8 +224,9 @@ export function ShopDashboardPage({ onboardingMode = false, onTourDone }: ShopDa
                 ? "Customers won't be able to find or order from you until you reopen. Existing orders stay accessible."
                 : 'Customers will be able to find your shop and place orders right away.'}
             </p>
+            {statusError && <p role="alert" className="error">{statusError}</p>}
             <div className="row gap modal-actions">
-              <button type="button" className="button" onClick={() => setPendingStatusChange(null)}>
+              <button type="button" className="button" onClick={() => { setPendingStatusChange(null); setStatusError(null) }}>
                 Cancel
               </button>
               <button

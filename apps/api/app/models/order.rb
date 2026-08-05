@@ -47,6 +47,12 @@ class Order < ApplicationRecord
     "cancelled" => []
   }.freeze
 
+  # An order counts as demo if either party to it is a demo user — a
+  # transaction between a real beta user and a seeded demo shop (or vice
+  # versa) isn't a real transaction either.
+  scope :demo, -> { where(customer_profile: CustomerProfile.demo).or(where(shop: Shop.demo)) }
+  scope :real, -> { where(customer_profile: CustomerProfile.real).where(shop: Shop.real) }
+
   before_validation :generate_public_reference, on: :create
 
   validates :public_reference, presence: true, uniqueness: true
@@ -57,6 +63,10 @@ class Order < ApplicationRecord
 
   def can_transition_to?(to_status)
     TRANSITIONS.fetch(status, []).include?(to_status)
+  end
+
+  def demo?
+    customer_profile.demo? || shop.demo?
   end
 
   private

@@ -187,12 +187,4 @@ export function registerMutateTools(server: McpServer) {
     (a) => `PERMANENTLY DELETE tag ${a.tag_id}`,
     (a) => adminDelete(`/admin/tags/${a.tag_id}`),
   )
-
-  registerMutateTool(
-    server, 'delete_early_access_signup',
-    'Permanently deletes an early-access signup lead. Cannot be undone.',
-    { early_access_signup_id: z.number() },
-    (a) => `PERMANENTLY DELETE early-access signup ${a.early_access_signup_id}`,
-    (a) => adminDelete(`/admin/early_access_signups/${a.early_access_signup_id}`),
-  )
 }

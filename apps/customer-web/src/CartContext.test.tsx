@@ -13,24 +13,24 @@ const shop: Shop = {
   id: 1, name: "Lola's Kitchen", slug: 'lolas-kitchen', description: null,
   contact_number: null, building: null, fulfillment_methods: ['pickup'], open: true,
   profile_photo: null, cover_photo: null, average_rating: null, ratings_count: 0,
-  price_range_cents: null, completed_orders_count: 0,
+  price_range_cents: null, completed_orders_count: 0, demo: false, verified: false,
 }
 
 const item: Item = {
   id: 10, shop_id: 1, name: 'Adobo Bowl', description: null, price_cents: 18000,
-  currency: 'PHP', enabled: true, stock_count: null, sold_out: false, tags: [], photos: [],
+  currency: 'PHP', enabled: true, stock_count: null, sold_out: false, tags: [], photos: [], demo: false,
 }
 
 const shopB: Shop = {
   id: 2, name: 'Halo Stop', slug: 'halo-stop', description: null,
   contact_number: null, building: null, fulfillment_methods: ['pickup'], open: true,
   profile_photo: null, cover_photo: null, average_rating: null, ratings_count: 0,
-  price_range_cents: null, completed_orders_count: 0,
+  price_range_cents: null, completed_orders_count: 0, demo: false, verified: false,
 }
 
 const itemB: Item = {
   id: 20, shop_id: 2, name: 'Halo-Halo', description: null, price_cents: 12000,
-  currency: 'PHP', enabled: true, stock_count: null, sold_out: false, tags: [], photos: [],
+  currency: 'PHP', enabled: true, stock_count: null, sold_out: false, tags: [], photos: [], demo: false,
 }
 
 vi.mock('./api/client', async (importOriginal) => {

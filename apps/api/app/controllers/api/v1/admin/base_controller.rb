@@ -86,6 +86,17 @@ module Api
           end
         end
 
+        # Shared ?demo=true/false filter for any admin list backed by a model
+        # that defines .demo/.real scopes (User and everything that derives
+        # demo-ness from a User — Shop, Item, Order, VendorProfile,
+        # CustomerProfile, ...). scope.klass resolves the right scope for
+        # whichever model called this, so one helper covers all of them.
+        def filter_by_demo(scope)
+          return scope unless params[:demo].present?
+
+          scope.merge(ActiveModel::Type::Boolean.new.cast(params[:demo]) ? scope.klass.demo : scope.klass.real)
+        end
+
         # Shared hand-rolled pagination — no pagination gem in the Gemfile,
         # and admin list sizes don't warrant adding one at this scale.
         def paginate(scope)

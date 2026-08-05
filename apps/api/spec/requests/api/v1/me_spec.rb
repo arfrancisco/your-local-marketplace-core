@@ -31,7 +31,7 @@ RSpec.describe "Api::V1 Me", type: :request do
     let(:valid_params) do
       {
         first_name: "Juan", last_name: "Dela Cruz",
-        address: { building: "Tower A", unit: "12F", delivery_instructions: "Leave with the guard" }
+        address: { building: "Astra", unit: "12F", delivery_instructions: "Leave with the guard" }
       }
     end
 

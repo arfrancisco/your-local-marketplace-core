@@ -16,6 +16,7 @@ module ItemSerializer
       position: item.position,
       tags: item.tags.map { |tag| { id: tag.id, name: tag.name, slug: tag.slug } },
       photos: PhotoSerializer.list(item.photos),
+      demo: item.demo?,
       created_at: item.created_at,
       updated_at: item.updated_at
     }

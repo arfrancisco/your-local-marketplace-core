@@ -9,6 +9,7 @@ module Admin
         from_status: event.from_status,
         to_status: event.to_status,
         reason: event.reason,
+        reason_code: event.reason_code,
         actor_user_id: event.actor_user_id,
         actor_user_email: event.actor_user.email,
         created_at: event.created_at

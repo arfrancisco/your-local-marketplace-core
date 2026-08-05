@@ -86,6 +86,7 @@ RSpec.describe "Api::V1 Auth", type: :request do
       user = User.find_by(email: "new@example.com")
       expect(user.customer_profile.is_resident).to eq(false)
       expect(user.customer_profile.willing_to_verify_residency).to be_nil
+      expect(user.customer_profile.residency_verification_status).to eq("unverified")
     end
 
     it "accepts a resident who agrees to verification willingness" do
@@ -96,6 +97,9 @@ RSpec.describe "Api::V1 Auth", type: :request do
       user = User.find_by(email: "new@example.com")
       expect(user.customer_profile.is_resident).to eq(true)
       expect(user.customer_profile.willing_to_verify_residency).to eq(true)
+      # Not "verified" — claiming residency at signup only queues it for
+      # admin review (Api::V1::Admin::CustomerProfilesController#verify_residency).
+      expect(user.customer_profile.residency_verification_status).to eq("pending")
     end
 
     it "issues an email verification challenge on registration" do

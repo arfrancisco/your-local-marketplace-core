@@ -158,10 +158,4 @@ export function registerReadTools(server: McpServer) {
     { description: 'List catalog tags with their item counts.', inputSchema: { page: z.number().optional() } },
     async (args) => textResult(await adminGet(`/admin/tags${qs(args)}`)),
   )
-
-  server.registerTool(
-    'list_early_access_signups',
-    { description: 'List pre-launch early-access leads.', inputSchema: { page: z.number().optional() } },
-    async (args) => textResult(await adminGet(`/admin/early_access_signups${qs(args)}`)),
-  )
 }

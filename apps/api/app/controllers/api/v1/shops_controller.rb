@@ -11,10 +11,32 @@ module Api
       RATINGS_MAX_LIMIT = 100
 
       # GET /api/v1/shops?q=bread
+      #
+      # Eager-loads everything ShopSerializer touches per shop (vendor_profile's
+      # user for #demo?, ratings, items for price_range_cents, and the profile/
+      # cover photo attachments+blobs) so listing N shops doesn't cost N times
+      # the per-shop query count. profile_photo is has_many_attached under the
+      # hood (see ShopSerializer), so the preloadable association is the plural
+      # attachments, not a singular "_attachment" one (same pattern as
+      # OrdersController#index). completed_orders_count is computed as one
+      # grouped query instead of one COUNT per shop.
       def index
-        scope = Shop.listed.search(params[:q]).includes(:vendor_profile, :ratings).distinct
+        scope = Shop.listed.search(params[:q])
+                     .includes(
+                       vendor_profile: :user,
+                       ratings: [],
+                       items: [],
+                       profile_photo_attachments: :blob,
+                       cover_photo_attachments: :blob
+                     )
+                     .distinct
         shops = ShopRotation.order(scope)
-        render json: { shops: shops.map { |shop| ShopSerializer.call(shop) } }
+        completed_counts = Order.where(shop_id: shops.map(&:id), status: "completed").group(:shop_id).count
+        render json: {
+          shops: shops.map do |shop|
+            ShopSerializer.call(shop, completed_orders_count: completed_counts[shop.id] || 0)
+          end
+        }
       end
 
       # GET /api/v1/shops/:slug

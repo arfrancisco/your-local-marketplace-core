@@ -46,7 +46,7 @@ RSpec.describe "Api::V1::Vendor Orders", type: :request do
 
       expect(json_order["customer_name"]).to eq(customer.customer_profile.display_name)
       expect(json_order["customer_is_resident"]).to eq(true)
-      expect(json_order["customer_building"]).to eq("Tower A")
+      expect(json_order["customer_building"]).to eq("Astra")
       expect(json_order["customer_unit"]).to eq("12F")
     end
 

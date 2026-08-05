@@ -4,7 +4,7 @@ FactoryBot.define do
     sequence(:name) { |n| "Corner Kitchen #{n}" }
     description { "Home-cooked meals from unit 12F." }
     contact_number { "+639170001234" }
-    building { "Tower A" }
+    building { "Astra" }
     address { "Unit 12F" }
     fulfillment_methods { %w[pickup] }
     status { "draft" }

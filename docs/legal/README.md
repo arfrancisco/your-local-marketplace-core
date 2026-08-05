@@ -21,12 +21,20 @@ Philippines, say so and I'll redo the compliance framing.
 
 ## Placeholders — filled in
 
-- **Entity**: Alain Roy Francisco, doing business as KapitMarket PH (an
-  individual/sole proprietor for now, not yet a registered business name —
-  see "Before you charge fees" below)
-- **Address**: 3017 Astra Tower, Prisma Residences, Pasig Blvd., Brgy.
-  Bagong Ilog, Pasig City 1600, Philippines
-- **Contact**: armfrancisco@gmail.com (used for both support and privacy
+- **Entity**: the public-facing documents name "KapitMarket PH" rather
+  than the operator's personal name, for privacy/safety (this is a
+  residential-community app, and the operator lives in the same
+  community it serves). Legally this is still an individual/sole
+  proprietorship, not yet a registered business name (see "Before you
+  charge fees" below) — flag this specifically for the lawyer review,
+  since a not-yet-registered trade name may not be sufficient on its own
+  to identify the responsible party in a binding contract. The internal
+  legal record of who this actually is stays with the operator, not in
+  these files.
+- **Address**: public-facing documents say "Pasig City, Philippines"
+  only — the exact building/unit is deliberately omitted from anything
+  publicly readable, same privacy/safety reasoning as above.
+- **Contact**: team.kapitmarket@gmail.com (used for both support and privacy
   requests for now — split these into separate inboxes once there's
   volume)
 - **Governing city**: Pasig City
@@ -83,23 +91,3 @@ future use; the ToS/signup flow should collect it as its own opt-in
 checkbox (unchecked by default), separate from the required "I agree to the
 Terms and Privacy Policy" checkbox that gates signup. Every marketing
 message needs a working unsubscribe/STOP path once this is built.
-
-## Implementation not yet done
-
-The documents exist as text; nothing in the app enforces "must agree before
-signup" yet. That needs, roughly:
-
-- A `terms_accepted_at` (and maybe `terms_version`) column on `users`,
-  required at registration
-- `email_marketing_opt_in` / `sms_marketing_opt_in` columns, both default
-  `false`, set only from an explicit unchecked-by-default checkbox
-- `Auth::RegisterUser` validating acceptance before creating the account
-- A required checkbox in `AuthModal.tsx` (customer-web) and the equivalent
-  vendor-web registration form, linking to rendered versions of these two
-  documents
-- Somewhere to actually serve the text (a simple route/page in each web
-  client, or host as static pages)
-
-Say the word if you want this wired up — it touches the API and both web
-clients, so I held off doing it until the content itself was reviewed and
-the placeholders above are filled in.

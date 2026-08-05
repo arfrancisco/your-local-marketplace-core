@@ -15,6 +15,38 @@ RSpec.describe "Api::V1::Admin::Shops", type: :request do
       found = json["shops"].find { |s| s["id"] == shop.id }
       expect(found["opening_message"]).to eq("GCash to 0917-000-0000")
     end
+
+    it "reports demo and the vendor's verification status, and filters by demo" do
+      demo_shop = create(:shop, vendor_profile: create(:vendor_profile, user: create(:user, :demo)))
+      shop.vendor_profile.update!(verification_status: "verified")
+
+      get "/api/v1/admin/shops", headers: admin_auth_headers
+      found = json["shops"].find { |s| s["id"] == shop.id }
+      expect(found["demo"]).to eq(false)
+      expect(found["vendor_verification_status"]).to eq("verified")
+
+      get "/api/v1/admin/shops", params: { demo: "true" }, headers: admin_auth_headers
+      expect(json["shops"].map { |s| s["id"] }).to eq([demo_shop.id])
+    end
+  end
+
+  describe "GET /api/v1/admin/shops/:id" do
+    it "nests the vendor profile and its underlying user, unlike the list endpoint" do
+      shop.vendor_profile.update!(verification_status: "pending")
+
+      get "/api/v1/admin/shops/#{shop.id}", headers: admin_auth_headers
+      vendor = json.dig("shop", "vendor")
+      expect(vendor["id"]).to eq(shop.vendor_profile.id)
+      expect(vendor["display_name"]).to eq(shop.vendor_profile.display_name)
+      expect(vendor["verification_status"]).to eq("pending")
+      expect(vendor.dig("user", "id")).to eq(shop.vendor_profile.user.id)
+      expect(vendor.dig("user", "email")).to eq(shop.vendor_profile.user.email)
+      expect(vendor.dig("user", "status")).to eq(shop.vendor_profile.user.status)
+
+      get "/api/v1/admin/shops", headers: admin_auth_headers
+      found = json["shops"].find { |s| s["id"] == shop.id }
+      expect(found).not_to have_key("vendor")
+    end
   end
 
   describe "PATCH /api/v1/admin/shops/:id" do

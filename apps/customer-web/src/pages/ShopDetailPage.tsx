@@ -66,7 +66,10 @@ function ShopHero({ shop }: { shop: Shop }) {
           </div>
         )}
         <div className="shop-identity-text">
-          <h1>{shop.name}</h1>
+          <h1>
+            {shop.name}
+            {shop.verified && <span className="verified-tag">Verified</span>}
+          </h1>
           {shop.description && <p className="muted shop-description">{shop.description}</p>}
           <p className="tagline">
             {shop.fulfillment_methods.join(' · ')}
@@ -145,6 +148,12 @@ export function ShopDetailPage() {
 
   return (
     <div>
+      {shop.demo && (
+        <p className="demo-shop-banner" role="alert">
+          This is a demo shop for previewing the app. Orders placed here are
+          not real and will not be prepared or delivered.
+        </p>
+      )}
       <ShopHero shop={shop} />
 
       <h2 className="section">Menu</h2>

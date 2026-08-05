@@ -104,13 +104,24 @@ export function CartModal() {
               </fieldset>
             )}
 
+            {shop?.demo && (
+              <p className="demo-cart-warning" role="alert">
+                This is a demo shop. Placing an order here is not real — it
+                will not be prepared or delivered.
+              </p>
+            )}
+
             {checkoutError && <p role="alert" className="error">{checkoutError}</p>}
             <button
               className="cart-checkout"
               onClick={placeOrder}
               disabled={placingOrder || hasSoldOutInCart}
             >
-              {placingOrder ? 'Placing order…' : `Place order (${count} item${count === 1 ? '' : 's'})`}
+              {placingOrder
+                ? 'Placing order…'
+                : shop?.demo
+                  ? `Place demo order (${count} item${count === 1 ? '' : 's'})`
+                  : `Place order (${count} item${count === 1 ? '' : 's'})`}
             </button>
           </>
         )}

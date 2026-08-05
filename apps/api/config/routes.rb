@@ -49,9 +49,6 @@ Rails.application.routes.draw do
       get "shops/:slug/items",  to: "shops#items"
       get "tags",               to: "tags#index"
 
-      # Early-access lead capture (demo demand test). Public, rate-limited.
-      post "early_access",      to: "early_access#create"
-
       # Beta feedback/complaints intake. Public — works signed-in or not.
       post "feedback",          to: "feedback#create"
 
@@ -162,6 +159,8 @@ Rails.application.routes.draw do
           get   "vendor_profiles/:id",         to: "vendor_profiles#show"
           post  "vendor_profiles/:id/approve", to: "vendor_profiles#approve"
           post  "vendor_profiles/:id/reject",  to: "vendor_profiles#reject"
+          post  "vendor_profiles/:id/clear_cancellation_restriction",
+                to: "vendor_profiles#clear_cancellation_restriction"
 
           get    "shops",     to: "shops#index"
           get    "shops/:id", to: "shops#show"
@@ -192,8 +191,12 @@ Rails.application.routes.draw do
           get "order_status_events/:id",     to: "order_status_events#show"
           get "conversations/:id",           to: "conversations#show"
 
-          get "customer_profiles",     to: "customer_profiles#index"
-          get "customer_profiles/:id", to: "customer_profiles#show"
+          get  "customer_profiles",                          to: "customer_profiles#index"
+          get  "customer_profiles/:id",                      to: "customer_profiles#show"
+          post "customer_profiles/:id/verify_residency",     to: "customer_profiles#verify_residency"
+          post "customer_profiles/:id/reject_residency",     to: "customer_profiles#reject_residency"
+          post "customer_profiles/:id/clear_cancellation_restriction",
+               to: "customer_profiles#clear_cancellation_restriction"
           get "addresses",             to: "addresses#index"
           get "addresses/:id",         to: "addresses#show"
           get "carts",                 to: "carts#index"
@@ -201,9 +204,6 @@ Rails.application.routes.draw do
 
           get    "tags",     to: "tags#index"
           delete "tags/:id", to: "tags#destroy"
-
-          get    "early_access_signups",     to: "early_access_signups#index"
-          delete "early_access_signups/:id", to: "early_access_signups#destroy"
 
           get "vendor_customer_notes",     to: "vendor_customer_notes#index"
           get "vendor_customer_notes/:id", to: "vendor_customer_notes#show"

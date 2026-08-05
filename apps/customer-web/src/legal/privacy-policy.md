@@ -4,10 +4,10 @@
 **Last updated:** 2026-08-01
 
 Alain Roy Francisco, doing business as KapitMarket PH ("we," "us,"
-"our"), of 3017 Astra Tower, Prisma Residences, Pasig Blvd., Brgy. Bagong
-Ilog, Pasig City 1600, Philippines, operates KapitMarket PH (the
-"Service"), a hyperlocal marketplace connecting vendors and customers
-within a small cluster of nearby buildings. KapitMarket PH is currently
+"our"), of Prisma Residences, Pasig City, Philippines, operates
+KapitMarket PH (the "Service"), a hyperlocal marketplace connecting
+vendors and customers within a small cluster of nearby buildings.
+KapitMarket PH is currently
 in a closed or limited beta / pilot phase — see the Terms and
 Conditions, Section 1, for what that means. This policy explains what
 personal data we collect, why, who sees it, and the rights you have over
@@ -25,7 +25,7 @@ add. Concretely, today, that's:
 
 **Account**
 - Email address (required)
-- Mobile number (optional, unless a feature requires it)
+- Mobile number (required at signup)
 - Password (stored as a one-way cryptographic hash — we never store or
   can see your actual password)
 - Display name
@@ -46,12 +46,11 @@ add. Concretely, today, that's:
   geo-discovery in this product).
 - Residency status: whether you've told us you're a resident/tenant of
   the community, and, if so, whether you're willing to be verified as
-  one. Both are self-reported answers you give at signup; we do not
-  verify residency ourselves at this stage, and answering "no" to either
-  does not restrict your use of the Service. This is collected for
-  filtering/segmentation and to prioritize a future identity-verification
-  feature, which does not exist yet — we'll update this policy to
-  describe that process once it's built.
+  one. Both start as self-reported answers you give at signup, and
+  answering "no" to either does not restrict your use of the Service.
+  If you tell us you're a resident, an administrator may review and mark
+  that claim as verified or rejected; until that review happens, your
+  status is "pending," not confirmed.
 
 **Vendor profile and shop**
 - Display name, verification status
@@ -73,6 +72,13 @@ add. Concretely, today, that's:
 - Payment status as asserted by the vendor — this is not a fact we
   independently verify (see the Terms and Conditions, Section 6)
 
+**Vendor notes about you**
+- If you order from a vendor, that vendor may write and keep a private
+  note about you (for example, noting a no-show), visible to them on any
+  future order you place with that vendor. These notes are never shown to
+  you and are not visible to any other vendor — only to the vendor who
+  wrote it and to us, for moderation and support.
+
 **Chat**
 - Messages (text and, optionally, one image per message) within a
   specific order's conversation, visible only to the customer and vendor
@@ -85,11 +91,6 @@ add. Concretely, today, that's:
   (for example, rate-limiting to stop brute-force login attempts);
   sensitive fields like passwords and tokens are stripped from logs
   before they're written
-
-**Before you're a full user**
-- If you sign up for early access / a waitlist, we collect your name,
-  email and/or mobile number, whether you're interested as a buyer,
-  seller, or both, and any free-text context you provide.
 
 We do not currently collect precise location, run analytics or
 advertising trackers, or use tracking cookies. Your sign-in is kept via a
@@ -137,7 +138,9 @@ for third-party advertising.
   customer's delivery details only for orders placed with that vendor. A
   customer sees a vendor's shop and payment details because the vendor
   chose to publish them. Chat is visible only to the two people on that
-  order.
+  order. Vendor notes about you (see above) go the other direction only —
+  a vendor's note is visible to that vendor, never to you or to any other
+  vendor.
 - **Service providers who process data on our behalf**, under
   confidentiality and data protection obligations:
   - **Cloudflare R2** — stores uploaded images (shop photos, item photos,
@@ -193,7 +196,7 @@ Under the Data Privacy Act, you have the right to:
 - File a complaint with the **National Privacy Commission** (NPC) if you
   believe we've mishandled your data
 
-To exercise any of these, contact us at armfrancisco@gmail.com. We'll respond
+To exercise any of these, contact us at team.kapitmarket@gmail.com. We'll respond
 within a reasonable time and consistent with what the law requires.
 
 ## 7. Security
@@ -215,7 +218,7 @@ but we design for it deliberately rather than as an afterthought.
 
 The Service is not intended for anyone under 18. We don't knowingly
 collect data from minors. If you believe a minor has an account, contact
-us at armfrancisco@gmail.com and we'll investigate and remove it if confirmed.
+us at team.kapitmarket@gmail.com and we'll investigate and remove it if confirmed.
 
 ## 9. Changes to this policy
 
@@ -227,8 +230,7 @@ than relying on this policy alone.
 ## 10. Contact us
 
 Questions, requests, or complaints about your personal data:
-armfrancisco@gmail.com, 3017 Astra Tower, Prisma Residences, Pasig Blvd.,
-Brgy. Bagong Ilog, Pasig City 1600, Philippines.
+team.kapitmarket@gmail.com, Prisma Residences, Pasig City, Philippines.
 
 If you're not satisfied with our response, you may lodge a complaint
 with the National Privacy Commission of the Philippines

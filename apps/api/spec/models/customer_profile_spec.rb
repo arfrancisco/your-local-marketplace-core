@@ -27,4 +27,31 @@ RSpec.describe CustomerProfile, type: :model do
       expect(profile).to be_valid
     end
   end
+
+  describe "residency_verification_status" do
+    it { is_expected.to validate_inclusion_of(:residency_verification_status).in_array(CustomerProfile::RESIDENCY_VERIFICATION_STATUSES) }
+
+    it "defaults to unverified" do
+      expect(create(:customer_profile).residency_verification_status).to eq("unverified")
+    end
+
+    it "reports residency_verified? only once verified" do
+      profile = create(:customer_profile, residency_verification_status: "pending")
+      expect(profile).not_to be_residency_verified
+      profile.update!(residency_verification_status: "verified")
+      expect(profile).to be_residency_verified
+    end
+  end
+
+  describe "demo/real derivation" do
+    it "delegates to the owning user's demo flag" do
+      demo_profile = create(:customer_profile, user: create(:user, :demo))
+      real_profile = create(:customer_profile)
+
+      expect(demo_profile).to be_demo
+      expect(real_profile).not_to be_demo
+      expect(CustomerProfile.demo).to contain_exactly(demo_profile)
+      expect(CustomerProfile.real).to contain_exactly(real_profile)
+    end
+  end
 end

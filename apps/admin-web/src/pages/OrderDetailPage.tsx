@@ -67,13 +67,14 @@ export function OrderDetailPage() {
 
       <h2>Status history</h2>
       <table>
-        <thead><tr><th>From</th><th>To</th><th>Actor</th><th>Reason</th><th>At</th></tr></thead>
+        <thead><tr><th>From</th><th>To</th><th>Actor</th><th>Reason code</th><th>Reason</th><th>At</th></tr></thead>
         <tbody>
           {events.map((e) => (
             <tr key={e.id}>
               <td>{e.from_status ?? '—'}</td>
               <td>{e.to_status}</td>
               <td>{e.actor_user_email}</td>
+              <td>{e.reason_code ?? '—'}</td>
               <td>{e.reason ?? '—'}</td>
               <td>{e.created_at}</td>
             </tr>

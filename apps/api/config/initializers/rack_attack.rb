@@ -30,11 +30,6 @@ class Rack::Attack
     req.ip if req.path.include?("/password_resets") && req.post?
   end
 
-  # Early-access signups: 5 per minute per IP (public endpoint, abuse target).
-  throttle("early_access/ip", limit: 5, period: 60) do |req|
-    req.ip if req.path.end_with?("/early_access") && req.post?
-  end
-
   # Public discovery is scrapeable; cap it generously per IP.
   throttle("discovery/ip", limit: 120, period: 60) do |req|
     req.ip if req.get? && req.path.start_with?("/api/v1/shops")
