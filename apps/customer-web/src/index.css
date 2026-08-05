@@ -926,17 +926,9 @@ button.link {
 }
 
 /* Signed-out header CTA (App.tsx's HeaderActions) — replaces the hamburger
-   for anonymous visitors so Sign in / Sign up are one tap away instead of
-   buried in a drawer. .header-signup-btn layers onto .link-button; only
-   .header-signin-link needs its own rule. */
-.header-signin-link {
-  color: #4f7a5c;
-  text-decoration: none;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.header-signin-link:hover { text-decoration: underline; }
-.header-signup-btn { white-space: nowrap; }
+   for anonymous visitors so Sign in is one tap away instead of buried in a
+   drawer. Layers onto .link-button; only needs to add nowrap here. */
+.header-cta-btn { white-space: nowrap; }
 
 .icon-btn {
   position: relative;

@@ -23,25 +23,21 @@ import { OrdersPage } from './pages/OrdersPage'
 // the beta banner. The cart moved to the fixed bottom bar (BottomBar, below)
 // so it doesn't crowd the header on narrow screens.
 //
-// Signed-out visitors get a direct Sign in / Sign up CTA here instead of the
-// hamburger — the drawer buried those two links behind an extra tap, and
-// signing up is the one thing this app most wants a first-time visitor to
-// do. Feedback (previously reachable from the drawer even when signed out)
-// moved to the footer, which is present on every route regardless of auth
-// state. Signed-in users keep the hamburger as before.
+// Signed-out visitors get a direct Sign in CTA here instead of the
+// hamburger — the drawer buried it behind an extra tap, and signing in is
+// the one thing this app most wants a first-time visitor to find. Just the
+// one button (not a separate Sign up alongside it) — the login page itself
+// already has a "Don't have an account? Create one" link, so a second
+// button here would just be the same destination twice. Feedback
+// (previously reachable from the drawer even when signed out) moved to the
+// footer, which is present on every route regardless of auth state.
+// Signed-in users keep the hamburger as before.
 function HeaderActions() {
   const { user } = useAuth()
 
   return (
     <div className="header-actions">
-      {user ? (
-        <HamburgerMenu />
-      ) : (
-        <>
-          <Link to="/login" className="header-signin-link">Sign in</Link>
-          <Link to="/login?mode=register" className="link-button header-signup-btn">Sign up</Link>
-        </>
-      )}
+      {user ? <HamburgerMenu /> : <Link to="/login" className="link-button header-cta-btn">Sign in</Link>}
     </div>
   )
 }
