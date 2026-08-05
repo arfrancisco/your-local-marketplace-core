@@ -16,25 +16,6 @@ body { margin: 0; position: relative; }
    input (e.g. the chat composer's click-to-browse fallback) stays visible. */
 [hidden] { display: none !important; }
 
-/* Faded community-bazaar photo behind the whole page — texture, not a
-   competing image. Fixed + heavily desaturated/overlaid so foreground cards
-   (which have their own solid background) stay easily readable on top. */
-body::before {
-  content: '';
-  position: fixed;
-  /* Overscanned past the viewport so the blur below fades into more photo,
-     not into transparent edges. */
-  inset: -30px;
-  z-index: -1;
-  background-image:
-    linear-gradient(rgba(250, 246, 239, 0.6), rgba(250, 246, 239, 0.6)),
-    url('/bazaar.jpg');
-  background-blend-mode: normal, normal;
-  background-size: cover;
-  background-position: center;
-  filter: saturate(0.55) brightness(1.05) blur(4px);
-}
-
 .beta-banner {
   background: #fef3c7;
   color: #7c5700;
