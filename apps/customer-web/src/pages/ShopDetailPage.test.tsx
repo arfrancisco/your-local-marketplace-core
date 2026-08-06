@@ -59,6 +59,7 @@ function renderPage(initialEntries = ['/shops/lolas-kitchen']) {
             <Route path="/shops" element={<p>All shops page</p>} />
             <Route path="/shops/:slug" element={<ShopDetailPage />} />
             <Route path="/login" element={<p>Login page</p>} />
+            <Route path="/orders/:id/placed" element={<p>Order placed page</p>} />
             <Route path="/orders/:id" element={<p>Order page</p>} />
           </Routes>
         </CartProvider>
@@ -149,7 +150,7 @@ describe('ShopDetailPage cart flow', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /place order/i }))
     expect(api.checkout).toHaveBeenCalledWith(1, 'pickup')
-    expect(await screen.findByText('Order page')).toBeInTheDocument()
+    expect(await screen.findByText('Order placed page')).toBeInTheDocument()
   })
 
   it('renders a sold-out item dimmed with a disabled Sold out button and no stepper', async () => {

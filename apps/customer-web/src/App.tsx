@@ -16,6 +16,7 @@ import { TermsPage } from './pages/TermsPage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { AccountPage } from './pages/AccountPage'
 import { OrderPage } from './pages/OrderPage'
+import { OrderPlacedPage } from './pages/OrderPlacedPage'
 import { OrdersPage } from './pages/OrdersPage'
 
 // position: fixed so this stays pinned in the top right as the page scrolls
@@ -219,6 +220,7 @@ export default function App() {
           <Route path="/legal/privacy" element={<PrivacyPage />} />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/orders/:id/placed" element={<OrderPlacedPage />} />
           <Route path="/orders/:id" element={<OrderPage />} />
           <Route path="*" element={<Navigate to="/shops" replace />} />
         </Routes>

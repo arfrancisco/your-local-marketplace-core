@@ -18,7 +18,15 @@ module Orders
     # — this just mirrors the change into the thread after the fact).
     # "cancelled" is intentionally absent here — it's built dynamically in
     # cancellation_message, since it always carries a reason.
+    #
+    # "placed" is here too even though it's never reached via #call
+    # (placement doesn't go through this state machine — see
+    # Carts::Checkout) — kept in this same table, not a separate constant,
+    # so Carts::Checkout's own placed-order system message stays worded
+    # consistently with every status message that follows it, in one place
+    # to update.
     SYSTEM_MESSAGE_TEXT = {
+      "placed" => "Order placed.",
       "accepted" => "Order accepted by the vendor.",
       "preparing" => "Vendor is preparing the order.",
       "ready_for_pickup" => "Order is ready for pickup.",

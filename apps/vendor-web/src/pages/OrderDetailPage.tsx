@@ -7,11 +7,30 @@ import { CancelOrderModal } from '../components/CancelOrderModal'
 import { CustomerSummary } from '../components/CustomerSummary'
 import { EditItemsPanel } from '../components/EditItemsPanel'
 import { OrderDetailActionsMenu } from '../components/OrderDetailActionsMenu'
+import { OrderStatusStepper } from '../components/OrderStatusStepper'
 import { groupKeyForStatus, statusBadgeClass } from '../orderStatus'
-import type { Order, OrderStatus, VendorCustomerNote } from '../api/types'
+import type { Order, OrderStatus, Photo, VendorCustomerNote } from '../api/types'
+
+const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
 
 function formatPrice(cents: number, currency: string) {
   return `${currency} ${(cents / 100).toFixed(2)}`
+}
+
+// Click a QR/opening-message photo to view it full-size — mirrors
+// customer-web's OrderPage.tsx PhotoLightbox so a vendor checking their own
+// payment QR/instructions sees the same enlarged view a customer does.
+function PhotoLightbox({ photo, onClose }: { photo: Photo | null; onClose: () => void }) {
+  if (!photo) return null
+  const url = `${API_ORIGIN}${photo.url}`
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <button className="modal-close" aria-label="Close" onClick={onClose}>×</button>
+        <img className="modal-image" src={url} alt={photo.filename} />
+      </div>
+    </div>
+  )
 }
 
 // Private notes this vendor has written about the customer on this order,
@@ -151,6 +170,7 @@ export function OrderDetailPage() {
   const [markingPaid, setMarkingPaid] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [editingItems, setEditingItems] = useState(false)
+  const [viewingPhoto, setViewingPhoto] = useState<Photo | null>(null)
 
   useEffect(() => {
     api.getOrder(orderId).then((res) => setOrder(res.order)).finally(() => setLoading(false))
@@ -215,6 +235,14 @@ export function OrderDetailPage() {
       </div>
 
       <div className="card">
+        <OrderStatusStepper
+          status={order.status}
+          fulfillmentMethod={order.fulfillment_method}
+          acceptedAt={order.accepted_at}
+        />
+      </div>
+
+      <div className="card">
         <CustomerSummary
           name={order.customer_name}
           building={order.customer_building}
@@ -245,6 +273,21 @@ export function OrderDetailPage() {
         <p className="muted">Fulfillment: {order.fulfillment_method}</p>
       </div>
 
+      {(order.opening_message || (order.opening_message_photos ?? []).length > 0) && (
+        <div className="card opening-message">
+          {order.opening_message && <p className="opening-message-text">{order.opening_message}</p>}
+          {(order.opening_message_photos ?? []).length > 0 && (
+            <div className="thumbs">
+              {(order.opening_message_photos ?? []).map((p) => (
+                <button key={p.id} className="thumb-btn" onClick={() => setViewingPhoto(p)} aria-label={`View ${p.filename} larger`}>
+                  <img src={`${API_ORIGIN}${p.url}`} alt={p.filename} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {editingItems && (
         <EditItemsPanel
           order={order}
@@ -260,6 +303,8 @@ export function OrderDetailPage() {
       <OrderChat orderId={order.id} currentUserId={user.id} />
 
       <CustomerNotes customerProfileId={order.customer_profile_id} orderId={order.id} />
+
+      <PhotoLightbox photo={viewingPhoto} onClose={() => setViewingPhoto(null)} />
 
       {showCancelModal && (
         <CancelOrderModal

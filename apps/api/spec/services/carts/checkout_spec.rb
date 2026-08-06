@@ -21,6 +21,15 @@ RSpec.describe Carts::Checkout do
     expect(order.order_status_events.sole).to have_attributes(from_status: nil, to_status: "placed")
   end
 
+  it "posts a system chat message announcing the order was placed, from the customer" do
+    order = described_class.new(cart: cart, fulfillment_method: "pickup").call
+
+    message = order.conversation.messages.sole
+    expect(message.message_type).to eq("system")
+    expect(message.body).to eq("Order placed.")
+    expect(message.sender_user).to eq(customer)
+  end
+
   it "rejects checkout for an empty cart" do
     empty_cart = create(:cart, customer_profile: customer.customer_profile, shop: shop)
     expect { described_class.new(cart: empty_cart, fulfillment_method: "pickup").call }

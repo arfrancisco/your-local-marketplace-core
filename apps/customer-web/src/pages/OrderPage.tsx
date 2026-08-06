@@ -6,6 +6,7 @@ import { OrderChat } from '../OrderChat'
 import { Stars, RatingSummary } from '../components/Ratings'
 import { CancelOrderModal } from '../components/CancelOrderModal'
 import { OrderDetailActionsMenu } from '../components/OrderDetailActionsMenu'
+import { OrderStatusStepper } from '../components/OrderStatusStepper'
 import { groupKeyForStatus, statusBadgeClass } from '../orderStatus'
 import { colorFor, emojiFor } from '../visuals'
 import type { Order, Photo } from '../api/types'
@@ -138,6 +139,14 @@ export function OrderPage() {
         <span className={`payment-badge ${order.payment_status === 'unpaid' ? 'is-unpaid' : 'is-paid'}`}>
           {order.payment_status === 'unpaid' ? 'Unpaid' : 'Paid'}
         </span>
+      </div>
+
+      <div className="card">
+        <OrderStatusStepper
+          status={order.status}
+          fulfillmentMethod={order.fulfillment_method}
+          acceptedAt={order.accepted_at}
+        />
       </div>
 
       <div className="card">

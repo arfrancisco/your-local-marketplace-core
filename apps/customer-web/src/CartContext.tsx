@@ -270,7 +270,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const res = await api.checkout(shop.id, fulfillmentMethod)
       setLines([])
       setIsOpen(false)
-      navigate(`/orders/${res.order.id}`)
+      // Lands on a dedicated confirmation screen first, not the order page
+      // directly — see OrderPlacedPage. "View order" from there is a
+      // deliberate extra tap, not automatic.
+      navigate(`/orders/${res.order.id}/placed`)
     } catch (err) {
       if (err instanceof ApiError && err.details?.unavailable_items) {
         // Race: cart looked fine client-side, but an item went sold-out between

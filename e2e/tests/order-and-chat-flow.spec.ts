@@ -81,8 +81,14 @@ test('vendor opening message, checkout, real-time chat, and status transition', 
     // match both, since this same button serves both a real shop's checkout
     // and a demo one's (see CartModal.tsx).
     await customer.getByRole('button', { name: /^place( demo)? order/i }).click()
-    await customer.waitForURL('**/orders/*')
-    orderId = customer.url().match(/orders\/(\d+)/)![1]
+    // Checkout lands on a dedicated "order placed" confirmation screen first
+    // now, not the order page directly (see OrderPlacedPage.tsx) — follow
+    // its "View order" link to reach the real order page the rest of this
+    // test needs.
+    await customer.waitForURL('**/orders/*/placed')
+    orderId = customer.url().match(/orders\/(\d+)\/placed/)![1]
+    await customer.getByRole('link', { name: /view order/i }).click()
+    await customer.waitForURL(`**/orders/${orderId}`)
   })
 
   await test.step("the shop's opening message shows as a pinned panel on both sides", async () => {
@@ -112,9 +118,12 @@ test('vendor opening message, checkout, real-time chat, and status transition', 
 
   await test.step('vendor accepts the order via an explicit status button, customer sees it', async () => {
     await vendor.click('button:has-text("Accept")')
-    await expect(vendor.locator('.tagline').first()).toHaveText('accepted')
+    // Order status is shown via .order-status-badge on both sides, not
+    // .tagline (that class belongs to vendor-web's unrelated
+    // ShopPreviewPage.tsx) — see orderStatus.ts's statusBadgeClass.
+    await expect(vendor.locator('.order-status-badge').first()).toHaveText('accepted')
 
     await customer.reload() // order status itself isn't pushed live, only chat is (see plan notes)
-    await expect(customer.locator('.tagline').first()).toHaveText(/accepted/i)
+    await expect(customer.locator('.order-status-badge').first()).toHaveText(/accepted/i)
   })
 })

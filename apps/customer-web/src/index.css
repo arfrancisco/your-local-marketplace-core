@@ -320,6 +320,69 @@ h3 { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.25rem; }
 .payment-badge.is-unpaid { background: #fef3c7; color: #7c5700; }
 .payment-badge.is-paid { background: #dcfce7; color: #166534; }
 
+/* Vertical order-status stepper — replaces a single glance-and-move-on
+   badge with a readable progress list. A vertical line drawn through
+   ::after (from the bottom of each marker down to the top of the next)
+   ties the steps together; its color flips to the "done" green once the
+   step above it has actually been passed, so the eye reads exactly how
+   far the order has gotten without counting circles. Colors reuse the
+   same green/blue/red already established elsewhere (order-status-badge,
+   .error) rather than inventing a new palette for this one component. */
+.order-status-stepper {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.stepper-step {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding-bottom: 1.1rem;
+}
+.stepper-step:last-child { padding-bottom: 0; }
+.stepper-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 24px;
+  bottom: 0;
+  left: 11px;
+  width: 2px;
+  background: #ecdfcd;
+}
+.stepper-step.step-done:not(:last-child)::after { background: #86efac; }
+
+.stepper-marker {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  position: relative;
+  z-index: 1;
+}
+.stepper-marker.step-done { background: #166534; color: #fff; }
+.stepper-marker.step-current { background: #1e40af; border: 2px solid #1e40af; }
+.stepper-marker.step-upcoming { background: #fff; border: 2px solid #ecdfcd; }
+.stepper-marker.step-skipped { background: #faf6ef; border: 2px dashed #ecdfcd; }
+.stepper-marker.step-terminal { background: #b91c1c; color: #fff; }
+
+.stepper-label {
+  padding-top: 0.15rem;
+  font-weight: 600;
+  color: #2b2420;
+}
+.stepper-step.step-current .stepper-label { color: #1e40af; }
+.stepper-step.step-upcoming .stepper-label,
+.stepper-step.step-skipped .stepper-label { font-weight: 400; color: #8a7862; }
+.stepper-step.step-skipped .stepper-label { text-decoration: line-through; }
+.stepper-step.step-terminal .stepper-label { color: #b91c1c; }
+.stepper-skip-note { text-decoration: none; font-size: 0.8rem; }
+
 .shop-name { font-weight: 600; font-size: 1.05rem; }
 
 /* Compact shop identity block on the order detail page — same idea as
@@ -355,6 +418,16 @@ h3 { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.25rem; }
   right: 0.75rem;
 }
 .card.order-detail-section { padding-right: 2.75rem; }
+
+/* Order-placed confirmation screen (OrderPlacedPage) — centered and roomy,
+   since it's a single moment to register before moving on, not a dense
+   info card like the order-details page it leads into. */
+.order-placed-card {
+  text-align: center;
+  margin-top: 1rem;
+  padding: 2rem 1.5rem;
+}
+.order-placed-card p { margin: 0 0 1.25rem; }
 
 .kebab-btn {
   width: 32px;

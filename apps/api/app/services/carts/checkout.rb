@@ -51,18 +51,35 @@ module Carts
       end
 
       order = nil
+      conversation = nil
       ActiveRecord::Base.transaction do
         order = build_order
         order.save!
         build_order_items(order)
         order.order_status_events.create!(from_status: nil, to_status: "placed", actor_user: @cart.customer_profile.user)
         @cart.update!(status: "converted")
-        Conversation.create!(order: order)
+        conversation = Conversation.create!(order: order)
       end
+      post_placed_message(conversation)
       order
     end
 
     private
+
+    # Mirrors Orders::TransitionStatus#post_system_message so the chat reads
+    # as a full log of the order from the moment it exists, not just from
+    # "accepted" onward — and so the vendor gets the usual unread-message
+    # flag (Messaging::UnreadOrders) the instant an order comes in, the same
+    # as any later status change. sender_user is the customer (the actor for
+    # this "transition") so the vendor, not the customer, sees it as unread.
+    def post_placed_message(conversation)
+      Messaging::PostMessage.new(
+        conversation: conversation,
+        sender_user: @cart.customer_profile.user,
+        message_type: "system",
+        body: Orders::TransitionStatus::SYSTEM_MESSAGE_TEXT.fetch("placed")
+      ).call
+    end
 
     def build_order
       subtotal = @cart.subtotal_cents
