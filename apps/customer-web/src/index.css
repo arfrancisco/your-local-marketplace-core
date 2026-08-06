@@ -35,6 +35,20 @@ body { margin: 0; position: relative; }
 }
 .verify-banner a { color: inherit; font-weight: 600; }
 
+/* Sage green, matching this app's existing accent color (.link-button,
+   button.link) — deliberately distinct from the amber beta-banner and blue
+   verify-banner above. This one is an invitation, not a status note or a
+   warning, so it gets the warmest of the three. */
+.become-vendor-banner {
+  background: #eaf3ec;
+  border-bottom: 1px solid #c3ddc8;
+  color: #2f5c3d;
+  text-align: center;
+  font-size: 0.85rem;
+  padding: 0.4rem 1rem;
+}
+.become-vendor-banner a { color: inherit; font-weight: 600; }
+
 /* Red/orange, deliberately distinct from the amber beta-banner and blue
    verify-banner above — this one is a warning, not just a status note.
    A demo shop looks identical to a real one, so this has to be unmissable

@@ -157,6 +157,23 @@ function EmailVerificationBanner() {
   )
 }
 
+// Invitation, not a nag — shown to every signed-in customer who isn't a
+// vendor yet, regardless of their own email-verified state (that's the
+// unrelated concern EmailVerificationBanner already covers above). Links
+// into the same "Become a vendor" eligibility flow AccountPage already has
+// (also reachable from HamburgerMenu's drawer) — this is just a more visible
+// entry point into it, not a new flow.
+function BecomeVendorBanner() {
+  const { user } = useAuth()
+  if (!user || user.vendor_profile) return null
+  return (
+    <div className="become-vendor-banner">
+      Got something to sell? Turn your kitchen into a shop —{' '}
+      <Link to="/account">become a vendor</Link>.
+    </div>
+  )
+}
+
 // The bar's flex-1 slot shows one thing at a time: the cart summary whenever
 // there's something in the cart (the task at hand), falling back to the
 // track-your-order reminder only once the cart is empty. Showing both
@@ -188,6 +205,7 @@ export default function App() {
     <>
       <BetaBanner />
       <EmailVerificationBanner />
+      <BecomeVendorBanner />
       <Header />
 
       <main className="container">

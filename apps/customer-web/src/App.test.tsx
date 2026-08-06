@@ -152,3 +152,40 @@ describe('EmailVerificationBanner', () => {
     expect(screen.getByRole('link', { name: /verify now/i })).toHaveAttribute('href', '/account#email-verify')
   })
 })
+
+describe('BecomeVendorBanner', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    vi.mocked(api.listShops).mockResolvedValue({ shops: [] })
+    vi.mocked(api.listOrders).mockResolvedValue({ orders: [] })
+  })
+
+  it('is absent when signed out', async () => {
+    renderApp()
+    await screen.findByRole('link', { name: /prisma kapitmarket/i })
+    expect(screen.queryByText(/turn your kitchen into a shop/i)).not.toBeInTheDocument()
+  })
+
+  it('shows and links to /account for a signed-in customer with no vendor_profile', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
+    renderApp()
+
+    expect(await screen.findByText(/turn your kitchen into a shop/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /become a vendor/i })).toHaveAttribute('href', '/account')
+  })
+
+  it('is absent for a signed-in user who already has a vendor_profile', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({
+      user: baseUser({
+        vendor_profile: { id: 1, display_name: "Lola's Kitchen", verification_status: 'verified' },
+      }),
+    })
+    renderApp()
+
+    await screen.findByRole('link', { name: /prisma kapitmarket/i })
+    expect(screen.queryByText(/turn your kitchen into a shop/i)).not.toBeInTheDocument()
+  })
+})
