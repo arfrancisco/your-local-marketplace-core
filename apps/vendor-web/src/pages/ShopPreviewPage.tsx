@@ -116,17 +116,21 @@ export function ShopPreviewPage() {
             </div>
           )}
           <div className="shop-identity-text">
-            <h1>
-              {shop.name}
-              {shop.verified && <span className="verified-tag">Verified</span>}
-            </h1>
+            <div className="shop-card-top">
+              <h1>{shop.name}</h1>
+              {shop.ratings_count > 0 && (
+                <RatingSummary averageRating={shop.average_rating} ratingsCount={shop.ratings_count} />
+              )}
+            </div>
             {shop.description && <p className="muted shop-description">{shop.description}</p>}
             <p className="tagline">
               {shop.fulfillment_methods.join(' · ')}
               {shop.building ? ` · ${shop.building}` : ''}
             </p>
-            {shop.ratings_count > 0 && (
-              <RatingSummary averageRating={shop.average_rating} ratingsCount={shop.ratings_count} />
+            {shop.verified && (
+              <div className="shop-card-badges">
+                <span className="verified-tag">Verified</span>
+              </div>
             )}
           </div>
         </div>

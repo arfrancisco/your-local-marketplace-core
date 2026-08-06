@@ -899,7 +899,14 @@ button.link {
 .shop-spotlight-cover { width: 100%; height: 190px; object-fit: cover; display: block; }
 .shop-spotlight-cover.tile { font-size: 3.5rem; }
 .shop-spotlight-body { padding: 0.9rem 1rem; }
-.shop-spotlight-name { margin: 0; font-size: 1.15rem; }
+.shop-spotlight-name {
+  margin: 0;
+  font-size: 1.15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
 .shop-spotlight-description {
   margin: 0.2rem 0 0;
   color: #8a7862;
@@ -958,27 +965,28 @@ button.link {
 /* min-width: 0 lets the text column actually shrink, which is what makes
    the ellipsis on a long shop name work inside a flex row. */
 .shop-row-body { flex: 1; min-width: 0; padding: 0.7rem 0.9rem 0.7rem 0; }
-/* A flex row, not a single truncated text run — .shop-row-name-text (the
-   name itself) is the only thing that ellipsizes; the Demo/Verified badges
-   are separate flex items with flex-shrink: 0, so a long name (e.g.
-   "Lettuce Eat Healthy") can no longer push them past the visible width and
-   have the ellipsis silently clip them off along with it. */
 .shop-row-name {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 1.05rem;
   margin: 0;
-}
-.shop-row-name-text {
+  font-size: 1.05rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
 }
-.shop-row-name .demo-tag,
-.shop-row-name .verified-tag {
+/* Shared header row for every shop-card variant (row list + spotlight
+   carousel): name on the left (its own ellipsis, min-width: 0 so it's the
+   only thing that shrinks), rating pinned top-right and never squeezed
+   (flex-shrink: 0) — a long name can no longer fight the rating (or, as
+   before this layout, the Demo/Verified badges) for the same line's width. */
+.shop-card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.shop-card-top .shop-rating-line {
   flex-shrink: 0;
+  margin: 0;
 }
 .shop-row-description {
   margin: 0.15rem 0 0;
@@ -993,13 +1001,23 @@ button.link {
   font-size: 0.8rem;
   color: #8a7862;
 }
-/* Same gold as .stars elsewhere — its own line so it doesn't blend into
-   the muted price/order-count line above it. */
+/* Same gold as .stars elsewhere. */
 .shop-rating-line {
-  margin: 0.15rem 0 0;
   font-size: 0.8rem;
   font-weight: 600;
   color: #d9a441;
+}
+/* Demo/Verified pills together at the bottom of the card, not crowding the
+   name — .demo-tag/.verified-tag's own margin-left is meant for sitting
+   inline after text elsewhere, so it's reset to 0 here in favor of gap. */
+.shop-card-badges {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+}
+.shop-card-badges .demo-tag,
+.shop-card-badges .verified-tag {
+  margin-left: 0;
 }
 
 
@@ -1223,9 +1241,23 @@ button.link {
   font-size: 2.6rem;
 }
 .shop-identity-text { min-width: 0; padding: 1rem 1.25rem 1rem 0; }
-.shop-identity-text h1 { margin: 0 0 0.15rem; font-size: 1.5rem; }
+/* Unlike the list cards' one-line-per-row layout, this is the shop's own
+   page — clipping its name with an ellipsis reads much worse here than in
+   a scrolling list, especially once the fuller "★ 4.2 · 22 reviews" text
+   (wider than the list's compact "★ 4.2") is competing for the same row on
+   a narrow screen. So the name wraps instead of truncating; align-items:
+   flex-start (not baseline) keeps the rating pinned to the first line
+   regardless of how many lines the name wraps to. */
+.shop-identity-text .shop-card-top { align-items: flex-start; margin: 0 0 0.15rem; }
+.shop-identity-text h1 { margin: 0; font-size: 1.5rem; min-width: 0; }
+.shop-identity-text .shop-card-top .rating-summary {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding-top: 0.2rem;
+}
 .shop-description { margin: 0 0 0.3rem; }
 .shop-identity-text .tagline { margin: 0 0 0.2rem; }
+.shop-identity-text .shop-card-badges { margin-top: 0.3rem; }
 
 /* ------------------------------------------------------------------------ */
 /* Item card quantity stepper                                                */

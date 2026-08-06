@@ -859,6 +859,35 @@ h2.section { margin-top: 1.5rem; }
 .shop-identity-text h1 { margin: 0 0 0.15rem; font-size: 1.3rem; }
 .shop-description { margin: 0 0 0.25rem; }
 .shop-identity-text .tagline { margin: 0 0 0.2rem; }
+/* ShopPreviewPage only (ShopDashboardPage's own plain h1, not wrapped in
+   .shop-card-top, is untouched by this) — rating pinned top-right of the
+   name, matching customer-web's real shop page. The name wraps instead of
+   ellipsizing (this is the shop's own page, not a scrolling list row — see
+   the matching comment in customer-web's index.css), so align-items:
+   flex-start keeps the rating pinned to the first line regardless of how
+   many lines the name wraps to. */
+.shop-identity-text .shop-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0 0 0.15rem;
+}
+.shop-identity-text .shop-card-top h1 { margin: 0; min-width: 0; }
+.shop-identity-text .shop-card-top .rating-summary {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding-top: 0.2rem;
+}
+.shop-card-badges {
+  display: flex;
+  gap: 0.35rem;
+}
+.shop-card-badges .demo-tag,
+.shop-card-badges .verified-tag {
+  margin-left: 0;
+}
+.shop-identity-text .shop-card-badges { margin-top: 0.3rem; }
 
 @media (max-width: 640px) {
   .shop-cover { height: 150px; }

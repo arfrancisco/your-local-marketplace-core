@@ -51,18 +51,25 @@ function priceAndOrderStats(shop: Shop): string[] {
   )
 }
 
-// Price/order count on one line, the star rating on its own line below —
-// split out so it can get its own gold color instead of blending into the
-// same muted-gray line as everything else.
-function ShopStatLines({ shop }: { shop: Shop }) {
+// Price/order count only — the star rating moved up into the card's header
+// row (top-right, next to the name), so it's no longer part of this line.
+function ShopStatsLine({ shop }: { shop: Shop }) {
   const stats = priceAndOrderStats(shop)
-  const rating = compactRating(shop)
-  if (stats.length === 0 && !rating) return null
+  if (stats.length === 0) return null
+  return <p className="shop-row-stats">{stats.join(' · ')}</p>
+}
+
+// Demo/Verified pills, together at the bottom of the card rather than
+// crowding the name — keeps the header row (name + rating) short enough to
+// never need to fight a long shop name for space (see the clipping bug this
+// replaced), and reads more like a footnote than an interruption.
+function ShopBadges({ shop }: { shop: Shop }) {
+  if (!shop.demo && !shop.verified) return null
   return (
-    <>
-      {stats.length > 0 && <p className="shop-row-stats">{stats.join(' · ')}</p>}
-      {rating && <p className="shop-rating-line">{rating}</p>}
-    </>
+    <div className="shop-card-badges">
+      {shop.demo && <span className="demo-tag">Demo</span>}
+      {shop.verified && <span className="verified-tag">Verified</span>}
+    </div>
   )
 }
 
@@ -154,22 +161,25 @@ export function ShopSpotlightCarousel({ shops }: { shops: Shop[] }) {
 
   return (
     <ul className="shop-spotlight-track" aria-label="Today's picks" ref={trackRef} onScroll={onTrackScroll}>
-      {shops.map((shop) => (
-        <li key={shop.id} className="shop-spotlight-card">
-          <Link to={`/shops/${shop.slug}`} className="shop-spotlight-link">
-            <ShopCover shop={shop} className="shop-spotlight-cover" />
-            <div className="shop-spotlight-body">
-              <h3 className="shop-spotlight-name">
-                {shop.name}
-                {shop.demo && <span className="demo-tag">Demo</span>}
-                {shop.verified && <span className="verified-tag">Verified</span>}
-              </h3>
-              {shop.description && <p className="shop-spotlight-description">{shop.description}</p>}
-              <ShopStatLines shop={shop} />
-            </div>
-          </Link>
-        </li>
-      ))}
+      {shops.map((shop) => {
+        const rating = compactRating(shop)
+        return (
+          <li key={shop.id} className="shop-spotlight-card">
+            <Link to={`/shops/${shop.slug}`} className="shop-spotlight-link">
+              <ShopCover shop={shop} className="shop-spotlight-cover" />
+              <div className="shop-spotlight-body">
+                <div className="shop-card-top">
+                  <h3 className="shop-spotlight-name">{shop.name}</h3>
+                  {rating && <span className="shop-rating-line">{rating}</span>}
+                </div>
+                {shop.description && <p className="shop-spotlight-description">{shop.description}</p>}
+                <ShopStatsLine shop={shop} />
+                <ShopBadges shop={shop} />
+              </div>
+            </Link>
+          </li>
+        )
+      })}
     </ul>
   )
 }
@@ -254,25 +264,29 @@ export function ShopsPage() {
         <section className="shop-section">
           <h2 className="shop-section-heading">{listLabel}</h2>
           <ul className="shop-rows" aria-label={listLabel}>
-            {shops.map((shop) => (
-              <li key={shop.id} className="shop-row">
-                <Link to={`/shops/${shop.slug}`} className="shop-row-link">
-                  <ShopThumb shop={shop} className="shop-row-thumb" />
-                  <div className="shop-row-body">
-                    <h3 className="shop-row-name">
-                      <span className="shop-row-name-text">{shop.name}</span>
-                      {shop.demo && <span className="demo-tag">Demo</span>}
-                      {shop.verified && <span className="verified-tag">Verified</span>}
-                    </h3>
-                    {shop.description && <p className="shop-row-description">{shop.description}</p>}
-                    {/* Any of the three can be absent (no priced items yet, no
-                        ratings yet, too few completed orders) — only render
-                        a line at all once there's something to show on it. */}
-                    <ShopStatLines shop={shop} />
-                  </div>
-                </Link>
-              </li>
-            ))}
+            {shops.map((shop) => {
+              const rating = compactRating(shop)
+              return (
+                <li key={shop.id} className="shop-row">
+                  <Link to={`/shops/${shop.slug}`} className="shop-row-link">
+                    <ShopThumb shop={shop} className="shop-row-thumb" />
+                    <div className="shop-row-body">
+                      <div className="shop-card-top">
+                        <h3 className="shop-row-name">{shop.name}</h3>
+                        {rating && <span className="shop-rating-line">{rating}</span>}
+                      </div>
+                      {shop.description && <p className="shop-row-description">{shop.description}</p>}
+                      {/* Any of these three can be absent (no priced items yet,
+                          no ratings yet, too few completed orders) — only
+                          render a line/badge row at all once there's something
+                          to show on it. */}
+                      <ShopStatsLine shop={shop} />
+                      <ShopBadges shop={shop} />
+                    </div>
+                  </Link>
+                </li>
+              )
+            })}
           </ul>
         </section>
       )}

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ShopPreviewPage } from './ShopPreviewPage'
 import { api } from '../api/client'
@@ -138,8 +138,8 @@ describe('ShopPreviewPage', () => {
 
     renderAt('/shops/1/preview')
 
-    const heading = await screen.findByRole('heading', { name: /Lola's Kitchen/ })
-    expect(within(heading).getByText('Verified')).toBeInTheDocument()
+    await screen.findByRole('heading', { name: "Lola's Kitchen" })
+    expect(screen.getByText('Verified')).toBeInTheDocument()
   })
 
   it('shows no Verified badge for an unverified shop', async () => {
