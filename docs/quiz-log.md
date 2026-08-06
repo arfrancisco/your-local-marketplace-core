@@ -23,7 +23,7 @@ Nothing here needs hand-editing, but feel free.
 
 | # | Lesson | Taught | Quizzed | Score | Confidence |
 |---|---|---|---|---|---|
-| 1 | Product and its three refusals | - | - | - | - |
+| 1 | Product and its three refusals | 2026-08-06 | - | - | - |
 | 2 | Shape and shipping | - | - | - | - |
 | 3 | Identity and authentication | - | - | - | - |
 | 4 | Authorization | - | - | - | - |
@@ -49,8 +49,14 @@ Score 5/6 on lesson 1. Confidence: solid.
 
 -->
 
-_No sessions yet._
+### 2026-08-06 — Taught: lesson 1
+
+No quiz (Day 1, nothing taught yet to quiz on). Delivered lesson 1 in full:
+the three refusals (no geo, no payment gateway, no courier) and the
+"rules live in the API" corollary, with the ADR 0002 four-layer trace and
+the three misconceptions.
 
 ## Next up
 
-**Lesson 1 — The product and its three refusals.** No quiz on the first day.
+**Day 2 — quiz on lesson 1** (6 questions), then **lesson 2 — how the
+system is shaped and shipped.**
