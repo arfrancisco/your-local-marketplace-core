@@ -3,6 +3,26 @@ import { useCart } from '../CartContext'
 
 const BUMP_MS = 300
 
+// Plain stroked SVG, not the 🛒 emoji this replaces — matches this app's
+// zero-icon-library convention (see e.g. ShopsPage.tsx's SearchIcon) and
+// renders as a flat, consistent white glyph instead of a platform-specific,
+// multi-color emoji drawing.
+function CartIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L22 6H6"
+        stroke="#fff"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="9" cy="21" r="1.5" fill="#fff" />
+      <circle cx="18" cy="21" r="1.5" fill="#fff" />
+    </svg>
+  )
+}
+
 // Persistent cart icon. Lives in the fixed bottom bar (App.tsx's BottomBar,
 // alongside the active-order button) rather than sitting in the top header
 // cluster with the hamburger, so it stays reachable without crowding the
@@ -30,7 +50,7 @@ export function CartButton() {
       onClick={openCart}
       aria-label={count > 0 ? `Cart, ${count} item${count === 1 ? '' : 's'}` : 'Cart, empty'}
     >
-      <span aria-hidden>🛒</span>
+      <CartIcon />
       {count > 0 && <span className="cart-badge">{count}</span>}
     </button>
   )
