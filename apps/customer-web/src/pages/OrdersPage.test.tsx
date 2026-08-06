@@ -135,4 +135,58 @@ describe('OrdersPage', () => {
     expect(unreadCard?.querySelector('.unread-dot')).toBeInTheDocument()
     expect(readCard?.querySelector('.unread-dot')).not.toBeInTheDocument()
   })
+
+  it('shows a Rate badge for a completed, unrated order', async () => {
+    const order = makeOrder({ id: 1, public_reference: 'ORD-DONE0001', status: 'completed', rating: null })
+    vi.mocked(api.listOrders).mockResolvedValue({ orders: [order] })
+
+    renderPage()
+    await userEvent.selectOptions(await screen.findByLabelText('More status filters'), 'done')
+
+    const card = screen.getByText('ORD-DONE0001').closest('li')
+    expect(card?.querySelector('.rate-badge')).toBeInTheDocument()
+  })
+
+  it('hides the Rate badge once the order has a rating', async () => {
+    const order = makeOrder({
+      id: 1,
+      public_reference: 'ORD-DONE0002',
+      status: 'completed',
+      rating: { id: 1, score: 5, comment: null, reviewer_display_name: 'Neighbor', created_at: '2026-08-02T00:00:00Z' },
+    })
+    vi.mocked(api.listOrders).mockResolvedValue({ orders: [order] })
+
+    renderPage()
+    await userEvent.selectOptions(await screen.findByLabelText('More status filters'), 'done')
+
+    const card = screen.getByText('ORD-DONE0002').closest('li')
+    expect(card?.querySelector('.rate-badge')).not.toBeInTheDocument()
+  })
+
+  it('does not show the Rate badge for a non-completed order', async () => {
+    const order = makeOrder({ id: 1, public_reference: 'ORD-PLACED09', status: 'placed', rating: null })
+    vi.mocked(api.listOrders).mockResolvedValue({ orders: [order] })
+
+    renderPage()
+    const card = (await screen.findByText('ORD-PLACED09')).closest('li')
+    expect(card?.querySelector('.rate-badge')).not.toBeInTheDocument()
+  })
+
+  it('shows both the unread dot and the Rate badge together without collision', async () => {
+    const order = makeOrder({
+      id: 1,
+      public_reference: 'ORD-BOTH0001',
+      status: 'completed',
+      rating: null,
+      has_unread_messages: true,
+    })
+    vi.mocked(api.listOrders).mockResolvedValue({ orders: [order] })
+
+    renderPage()
+    await userEvent.selectOptions(await screen.findByLabelText('More status filters'), 'done')
+
+    const card = screen.getByText('ORD-BOTH0001').closest('li')
+    expect(card?.querySelector('.unread-dot')).toBeInTheDocument()
+    expect(card?.querySelector('.rate-badge')).toBeInTheDocument()
+  })
 })

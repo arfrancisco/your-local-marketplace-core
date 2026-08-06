@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, ApiError } from '../api/client'
+import { api } from '../api/client'
 import { useAuth } from '../auth'
 import { OrderChat } from '../OrderChat'
-import { Stars, RatingSummary } from '../components/Ratings'
+import { Stars, RatingSummary, RatingForm } from '../components/Ratings'
 import { CancelOrderModal } from '../components/CancelOrderModal'
 import { OrderDetailActionsMenu } from '../components/OrderDetailActionsMenu'
 import { OrderStatusStepper } from '../components/OrderStatusStepper'
@@ -39,11 +39,6 @@ function PhotoLightbox({ photo, onClose }: { photo: Photo | null; onClose: () =>
 // Rating is only offered once the order is completed, and only once — the API
 // enforces both, this just keeps the form from showing when it can't succeed.
 function RateOrderCard({ order, onRated }: { order: Order; onRated: (updated: Order) => void }) {
-  const [score, setScore] = useState(0)
-  const [comment, setComment] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
   if (order.status !== 'completed') return null
 
   if (order.rating) {
@@ -57,48 +52,10 @@ function RateOrderCard({ order, onRated }: { order: Order; onRated: (updated: Or
     )
   }
 
-  async function onSubmit() {
-    if (score < 1) return
-    setError(null)
-    setSubmitting(true)
-    try {
-      const res = await api.rateOrder(order.id, score, comment.trim() || undefined)
-      onRated({ ...order, rating: res.rating })
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not submit your rating')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   return (
     <div className="card">
       <h2 className="section">Rate this order</h2>
-      <div className="row gap star-picker">
-        {[1, 2, 3, 4, 5].map((value) => (
-          <button
-            key={value}
-            type="button"
-            className="star-btn"
-            aria-label={`${value} star${value === 1 ? '' : 's'}`}
-            aria-pressed={score === value}
-            onClick={() => setScore(value)}
-          >
-            {value <= score ? '★' : '☆'}
-          </button>
-        ))}
-      </div>
-      <textarea
-        value={comment}
-        onChange={(e) => setComment(e.target.value)}
-        placeholder="Anything you'd like to say about this order? (optional)"
-        aria-label="Review comment"
-        rows={3}
-      />
-      {error && <p role="alert" className="error">{error}</p>}
-      <button onClick={onSubmit} disabled={submitting || score < 1}>
-        {submitting ? 'Submitting…' : 'Submit rating'}
-      </button>
+      <RatingForm orderId={order.id} onRated={(rating) => onRated({ ...order, rating })} />
     </div>
   )
 }
