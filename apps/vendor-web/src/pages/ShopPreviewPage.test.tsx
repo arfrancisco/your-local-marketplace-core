@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ShopPreviewPage } from './ShopPreviewPage'
 import { api } from '../api/client'
@@ -35,6 +35,8 @@ const shop: Shop = {
   ratings_count: 2,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
+  demo: false,
+  verified: false,
 }
 
 function item(overrides: Partial<Item> = {}): Item {
@@ -128,5 +130,44 @@ describe('ShopPreviewPage', () => {
 
     expect(await screen.findByText('Adobo Rice Bowl')).toBeInTheDocument()
     expect(screen.getByText('Sold out')).toBeInTheDocument()
+  })
+
+  it('shows the Verified badge when the shop is verified, matching what a customer sees', async () => {
+    vi.mocked(api.getShop).mockResolvedValue({ shop: { ...shop, verified: true } })
+    vi.mocked(api.listItems).mockResolvedValue({ items: [item()] })
+
+    renderAt('/shops/1/preview')
+
+    const heading = await screen.findByRole('heading', { name: /Lola's Kitchen/ })
+    expect(within(heading).getByText('Verified')).toBeInTheDocument()
+  })
+
+  it('shows no Verified badge for an unverified shop', async () => {
+    vi.mocked(api.getShop).mockResolvedValue({ shop: { ...shop, verified: false } })
+    vi.mocked(api.listItems).mockResolvedValue({ items: [item()] })
+
+    renderAt('/shops/1/preview')
+
+    await screen.findByRole('heading', { name: "Lola's Kitchen" })
+    expect(screen.queryByText('Verified')).not.toBeInTheDocument()
+  })
+
+  it('shows the demo-shop disclaimer banner when the shop is a demo shop', async () => {
+    vi.mocked(api.getShop).mockResolvedValue({ shop: { ...shop, demo: true } })
+    vi.mocked(api.listItems).mockResolvedValue({ items: [item()] })
+
+    renderAt('/shops/1/preview')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/this is a demo shop for previewing the app/i)
+  })
+
+  it('shows no demo banner for a real shop', async () => {
+    vi.mocked(api.getShop).mockResolvedValue({ shop: { ...shop, demo: false } })
+    vi.mocked(api.listItems).mockResolvedValue({ items: [item()] })
+
+    renderAt('/shops/1/preview')
+
+    await screen.findByRole('heading', { name: "Lola's Kitchen" })
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })

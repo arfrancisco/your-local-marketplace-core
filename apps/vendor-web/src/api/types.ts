@@ -45,6 +45,13 @@ export interface Shop {
   address?: string | null
   created_at: string
   updated_at: string
+  // Seed/demo data, not a real neighbor's shop — see ShopSerializer. An
+  // order placed against a demo shop is never actually fulfilled, so this
+  // must stay visible everywhere a customer could place an order.
+  demo: boolean
+  // Binary only (no pending/rejected) — see ShopSerializer. Admin-verified
+  // via docs/legal's residency-style workflow, not automatic.
+  verified: boolean
 }
 
 // Matches Order::VENDOR_CANCELLATION_REASONS on the backend.

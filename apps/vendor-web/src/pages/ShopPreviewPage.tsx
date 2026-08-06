@@ -89,6 +89,13 @@ export function ShopPreviewPage() {
         sees, minus the ability to order.
       </div>
 
+      {shop.demo && (
+        <p className="demo-shop-banner" role="alert">
+          This is a demo shop for previewing the app. Orders placed here are
+          not real and will not be prepared or delivered.
+        </p>
+      )}
+
       <div className="shop-hero">
         {shop.cover_photo ? (
           <img className="shop-cover" src={`${API_ORIGIN}${shop.cover_photo.url}`} alt="" />
@@ -109,7 +116,10 @@ export function ShopPreviewPage() {
             </div>
           )}
           <div className="shop-identity-text">
-            <h1>{shop.name}</h1>
+            <h1>
+              {shop.name}
+              {shop.verified && <span className="verified-tag">Verified</span>}
+            </h1>
             {shop.description && <p className="muted shop-description">{shop.description}</p>}
             <p className="tagline">
               {shop.fulfillment_methods.join(' · ')}

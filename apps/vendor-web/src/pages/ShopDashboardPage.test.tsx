@@ -36,6 +36,8 @@ const shopOpen: Shop = {
   ratings_count: 0,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
+  demo: false,
+  verified: false,
 }
 
 const shopClosed: Shop = { ...shopOpen, accepting_orders: false, open: false }

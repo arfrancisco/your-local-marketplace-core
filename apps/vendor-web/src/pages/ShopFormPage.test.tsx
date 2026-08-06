@@ -65,6 +65,8 @@ const existingShop: Shop = {
   opening_message_photos: [],
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
+  demo: false,
+  verified: false,
 }
 
 // jsdom implements none of the image/canvas pipeline the crop export needs.
