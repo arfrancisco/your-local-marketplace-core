@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { api, ApiError } from '../api/client'
 import type { Rating } from '../api/types'
 
 // Presentational bits shared by the shop list, shop page and order page.
@@ -31,6 +33,62 @@ export function RatingSummary({
     <span className="rating-summary">
       ★ {averageRating.toFixed(1)} · {ratingsCount} review{ratingsCount === 1 ? '' : 's'}
     </span>
+  )
+}
+
+// The star-picker/textarea/submit form itself, extracted out of OrderPage's
+// RateOrderCard so it can be reused by RatingNudgeModal (the global pop-up
+// nudge) as well as the order page's own inline card. Purely the form —
+// callers decide when/whether to show it (gating on order.status/rating is
+// still the caller's job, same as before this was split out).
+export function RatingForm({ orderId, onRated }: { orderId: number; onRated: (rating: Rating) => void }) {
+  const [score, setScore] = useState(0)
+  const [comment, setComment] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function onSubmit() {
+    if (score < 1) return
+    setError(null)
+    setSubmitting(true)
+    try {
+      const res = await api.rateOrder(orderId, score, comment.trim() || undefined)
+      onRated(res.rating)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not submit your rating')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <>
+      <div className="row gap star-picker">
+        {[1, 2, 3, 4, 5].map((value) => (
+          <button
+            key={value}
+            type="button"
+            className="star-btn"
+            aria-label={`${value} star${value === 1 ? '' : 's'}`}
+            aria-pressed={score === value}
+            onClick={() => setScore(value)}
+          >
+            {value <= score ? '★' : '☆'}
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        placeholder="Anything you'd like to say about this order? (optional)"
+        aria-label="Review comment"
+        rows={3}
+      />
+      {error && <p role="alert" className="error">{error}</p>}
+      <button onClick={onSubmit} disabled={submitting || score < 1}>
+        {submitting ? 'Submitting…' : 'Submit rating'}
+      </button>
+    </>
   )
 }
 

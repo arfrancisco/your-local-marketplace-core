@@ -94,6 +94,9 @@ export function OrdersPage() {
                       <h2>
                         {order.shop_name}
                         {order.has_unread_messages && <span className="unread-dot" aria-label="Unread update" />}
+                        {order.status === 'completed' && !order.rating && (
+                          <span className="rate-badge" aria-label="Rate this order">Rate</span>
+                        )}
                       </h2>
                       <span className={`order-status-badge ${statusBadgeClass(groupKey)}`}>
                         {order.status.replace(/_/g, ' ')}

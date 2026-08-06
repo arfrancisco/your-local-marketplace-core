@@ -35,6 +35,10 @@ module Orders
       "rejected" => "Order rejected by the vendor."
     }.freeze
 
+    # How long after completion, if still unrated, RatingReminderJob posts a
+    # follow-up nudge into the order's chat (see #call).
+    RATING_REMINDER_DELAY = 24.hours
+
     def initialize(order:, to_status:, actor_user:, reason: nil, reason_code: nil)
       @order = order
       @to_status = to_status
@@ -68,6 +72,7 @@ module Orders
       end
 
       post_system_message
+      RatingReminderJob.set(wait: RATING_REMINDER_DELAY).perform_later(@order.id) if @to_status == "completed"
       @order
     end
 

@@ -33,6 +33,20 @@ RSpec.describe Orders::TransitionStatus do
     expect(order.order_status_events).to be_empty
   end
 
+  it "enqueues RatingReminderJob with a 24-hour delay when completing an order" do
+    ready_order = create(:order, :with_conversation, shop: shop, status: "ready_for_pickup")
+
+    expect {
+      described_class.new(order: ready_order, to_status: "completed", actor_user: vendor_user).call
+    }.to have_enqueued_job(RatingReminderJob).with(ready_order.id).at(a_value_within(5.seconds).of(24.hours.from_now))
+  end
+
+  it "does not enqueue RatingReminderJob on a non-completing transition" do
+    expect {
+      described_class.new(order: order, to_status: "accepted", actor_user: vendor_user).call
+    }.not_to have_enqueued_job(RatingReminderJob)
+  end
+
   it "sets cancelled_at when cancelling" do
     described_class.new(order: order, to_status: "cancelled", actor_user: vendor_user, reason_code: "item_unavailable").call
     expect(order.status).to eq("cancelled")

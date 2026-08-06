@@ -1061,6 +1061,22 @@ button.link {
   vertical-align: middle;
 }
 
+/* An invitation, not an alert — same amber "needs attention but not urgent"
+   tone as .payment-badge.is-unpaid, deliberately not the unread-dot's red.
+   A labeled pill rather than a bare dot so it reads unambiguously next to
+   the unread dot when both are present on the same card. */
+.rate-badge {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #7c5700;
+  font-size: 0.7rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
 /* Fires whenever the cart's item count goes up — a short scale + colour flash
    so an add registers even though the cart itself stays closed. The class is
    removed after the same 300ms in CartButton, so it can re-trigger. */

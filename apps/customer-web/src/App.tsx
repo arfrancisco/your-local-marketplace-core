@@ -7,6 +7,7 @@ import { CartButton } from './components/CartButton'
 import { Footer } from './components/Footer'
 import { useCart } from './CartContext'
 import { HamburgerMenu } from './components/HamburgerMenu'
+import { RatingNudgeModal } from './components/RatingNudgeModal'
 import { ShopsPage } from './pages/ShopsPage'
 import { ShopDetailPage } from './pages/ShopDetailPage'
 import { LoginPage } from './pages/LoginPage'
@@ -207,6 +208,7 @@ export default function App() {
       <BetaBanner />
       <EmailVerificationBanner />
       <BecomeVendorBanner />
+      <RatingNudgeModal />
       <Header />
 
       <main className="container">
