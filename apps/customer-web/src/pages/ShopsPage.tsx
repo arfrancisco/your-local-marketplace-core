@@ -260,7 +260,7 @@ export function ShopsPage() {
                   <ShopThumb shop={shop} className="shop-row-thumb" />
                   <div className="shop-row-body">
                     <h3 className="shop-row-name">
-                      {shop.name}
+                      <span className="shop-row-name-text">{shop.name}</span>
                       {shop.demo && <span className="demo-tag">Demo</span>}
                       {shop.verified && <span className="verified-tag">Verified</span>}
                     </h3>

@@ -958,12 +958,27 @@ button.link {
 /* min-width: 0 lets the text column actually shrink, which is what makes
    the ellipsis on a long shop name work inside a flex row. */
 .shop-row-body { flex: 1; min-width: 0; padding: 0.7rem 0.9rem 0.7rem 0; }
+/* A flex row, not a single truncated text run — .shop-row-name-text (the
+   name itself) is the only thing that ellipsizes; the Demo/Verified badges
+   are separate flex items with flex-shrink: 0, so a long name (e.g.
+   "Lettuce Eat Healthy") can no longer push them past the visible width and
+   have the ellipsis silently clip them off along with it. */
 .shop-row-name {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
   font-size: 1.05rem;
   margin: 0;
+}
+.shop-row-name-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
+}
+.shop-row-name .demo-tag,
+.shop-row-name .verified-tag {
+  flex-shrink: 0;
 }
 .shop-row-description {
   margin: 0.15rem 0 0;
