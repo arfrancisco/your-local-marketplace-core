@@ -4,7 +4,7 @@ import type { FulfillmentMethod, OrderStatus } from '../api/types'
 // colors) but written separately per ADR 0001 — no shared package between
 // the two clients — same convention as this app's CancelOrderModal.
 
-type StepState = 'done' | 'current' | 'upcoming' | 'skipped' | 'terminal'
+type StepState = 'done' | 'current' | 'upcoming' | 'terminal'
 
 interface Step {
   key: OrderStatus
@@ -16,8 +16,8 @@ interface Step {
 // order.rb) that isn't a terminal off-path status — kept in sync by hand,
 // same convention as OrderStatus itself in api/types.ts. ready_for_pickup
 // and out_for_delivery are alternatives for the same stage: only one
-// applies, depending on the order's fulfillment_method, but both are
-// listed so every status has a place to render.
+// applies, depending on the order's fulfillment_method — the other is
+// dropped entirely rather than shown crossed out.
 const HAPPY_PATH: { key: OrderStatus; label: string }[] = [
   { key: 'placed', label: 'Placed' },
   { key: 'accepted', label: 'Accepted' },
@@ -61,12 +61,12 @@ function buildSteps(status: OrderStatus, fulfillmentMethod: FulfillmentMethod, a
   }
 
   const currentStage = STAGE[status]
-  return HAPPY_PATH.map((step) => {
-    const inapplicable =
-      (step.key === 'ready_for_pickup' && fulfillmentMethod !== 'pickup') ||
-      (step.key === 'out_for_delivery' && fulfillmentMethod !== 'delivery')
-    if (inapplicable) return { ...step, state: 'skipped' }
-
+  return HAPPY_PATH.filter((step) => {
+    return (
+      (step.key !== 'ready_for_pickup' || fulfillmentMethod === 'pickup') &&
+      (step.key !== 'out_for_delivery' || fulfillmentMethod === 'delivery')
+    )
+  }).map((step) => {
     const stage = STAGE[step.key]
     if (stage < currentStage) return { ...step, state: 'done' }
     if (stage > currentStage) return { ...step, state: 'upcoming' }
@@ -87,28 +87,38 @@ export function OrderStatusStepper({
   status,
   fulfillmentMethod,
   acceptedAt,
+  paymentStatus,
 }: {
   status: OrderStatus
   fulfillmentMethod: FulfillmentMethod
   acceptedAt: string | null
+  // Payment doesn't correspond to any single lifecycle step (it's arranged
+  // over chat, per ADR 0009, and can lag or lead the order's own status),
+  // so it renders as a standalone badge above the steps rather than as one
+  // of them.
+  paymentStatus?: 'unpaid' | 'marked_paid'
 }) {
   const steps = buildSteps(status, fulfillmentMethod, acceptedAt)
 
   return (
-    <ol className="order-status-stepper">
-      {steps.map((step) => (
-        <li
-          key={step.key}
-          className={`stepper-step step-${step.state}`}
-          aria-current={step.state === 'current' ? 'step' : undefined}
-        >
-          <Marker state={step.state} />
-          <span className="stepper-label">
-            {step.label}
-            {step.state === 'skipped' && <span className="stepper-skip-note"> (not this order's fulfillment)</span>}
-          </span>
-        </li>
-      ))}
-    </ol>
+    <>
+      {paymentStatus && (
+        <span className={`payment-badge ${paymentStatus === 'unpaid' ? 'is-unpaid' : 'is-paid'}`}>
+          {paymentStatus === 'unpaid' ? 'Unpaid' : 'Paid'}
+        </span>
+      )}
+      <ol className="order-status-stepper">
+        {steps.map((step) => (
+          <li
+            key={step.key}
+            className={`stepper-step step-${step.state}`}
+            aria-current={step.state === 'current' ? 'step' : undefined}
+          >
+            <Marker state={step.state} />
+            <span className="stepper-label">{step.label}</span>
+          </li>
+        ))}
+      </ol>
+    </>
   )
 }

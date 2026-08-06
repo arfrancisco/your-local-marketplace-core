@@ -54,8 +54,7 @@ add. Concretely, today, that's:
 
 **Vendor profile and shop**
 - Display name, verification status
-- Shop name, description, address, contact number, opening message, shop
-  photos
+- Shop name, description, address, opening message, shop photos
 - Your payment instructions text and payment QR code image, which you
   provide and control (for example, GCash or bank transfer details) —
   this is your own payment information that you're choosing to publish

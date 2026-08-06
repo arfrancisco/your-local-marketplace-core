@@ -53,7 +53,6 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
   const [description, setDescription] = useState('')
   const [building, setBuilding] = useState('')
   const [address, setAddress] = useState('')
-  const [contact, setContact] = useState('')
   const [methods, setMethods] = useState<FulfillmentMethod[]>(['pickup'])
   // Cropped output, not the file the vendor picked — the raw file only ever
   // lives inside the crop dialog.
@@ -90,7 +89,6 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
       setDescription(s.description ?? '')
       setBuilding(s.building ?? '')
       setAddress(s.address ?? '')
-      setContact(s.contact_number ?? '')
       setMethods(s.fulfillment_methods)
       setOpeningMessage(s.opening_message ?? '')
     })
@@ -137,7 +135,6 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
     fd.append('shop[description]', description)
     fd.append('shop[building]', building)
     fd.append('shop[address]', address)
-    fd.append('shop[contact_number]', contact)
     methods.forEach((m) => fd.append('shop[fulfillment_methods][]', m))
     if (profilePhotoFile) fd.append('shop[profile_photo]', profilePhotoFile)
     if (coverPhotoFile) fd.append('shop[cover_photo]', coverPhotoFile)
@@ -185,7 +182,7 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
         </label>
         <label>
           Building / Tower
-          <input value={building} onChange={(e) => setBuilding(e.target.value)} />
+          <input value={building} onChange={(e) => setBuilding(e.target.value)} required />
           <p className="muted small">
             Shown publicly on your shop page — customers see this, but never your exact unit.
           </p>
@@ -201,10 +198,6 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
             Never shown to customers browsing your shop. Share it privately in your opening
             message if a customer needs it to pick up or receive a delivery.
           </p>
-        </label>
-        <label>
-          Contact number
-          <input value={contact} onChange={(e) => setContact(e.target.value)} />
         </label>
 
         <div className="tour-anchor">

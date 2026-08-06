@@ -19,7 +19,6 @@ export interface Shop {
   name: string
   slug: string
   description: string | null
-  contact_number: string | null
   // Public-safe location label only ("Tower B") — the vendor's exact unit
   // is never sent to this app; it's private to the vendor themselves and to
   // an order's two participants (see the API's ShopSerializer).

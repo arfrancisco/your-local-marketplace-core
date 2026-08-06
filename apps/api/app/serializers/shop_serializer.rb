@@ -18,7 +18,6 @@ module ShopSerializer
       name: shop.name,
       slug: shop.slug,
       description: shop.description,
-      contact_number: shop.contact_number,
       building: shop.building,
       fulfillment_methods: shop.fulfillment_methods,
       status: shop.status,

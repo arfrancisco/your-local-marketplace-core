@@ -23,7 +23,6 @@ const shop: Shop = {
   name: "Lola's Kitchen",
   slug: 'lolas-kitchen',
   description: 'Home-cooked meals from unit 12F.',
-  contact_number: null,
   building: 'Tower A',
   address: 'Unit 12F',
   fulfillment_methods: ['pickup'],

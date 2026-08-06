@@ -167,6 +167,8 @@ body { margin: 0; position: relative; }
 h1 { font-size: 1.9rem; font-weight: 600; letter-spacing: -0.01em; margin: 0.3rem 0; }
 h2 { font-size: 1.3rem; font-weight: 600; }
 h2.section { margin-top: 1.5rem; }
+.order-reference { font-size: 0.9rem; font-weight: 400; }
+.order-page-header { margin-bottom: 1rem; }
 h3 { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.25rem; }
 
 .search-bar {
@@ -307,9 +309,9 @@ h3 { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.25rem; }
 }
 .button:hover { background: #fff; }
 
-/* Order detail page: tags live above the card (not inside it) so more can
-   be added later without crowding it, same reasoning as vendor-web. */
-.order-tags { flex-wrap: wrap; margin-bottom: 0.6rem; }
+/* Payment status pill. Rendered inside the status-stepper card (payment is
+   arranged over chat, per ADR 0009, so it doesn't map to any one lifecycle
+   step) rather than in a separate tags row. */
 .payment-badge {
   display: inline-block;
   padding: 0.2rem 0.6rem;
@@ -319,6 +321,7 @@ h3 { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.25rem; }
 }
 .payment-badge.is-unpaid { background: #fef3c7; color: #7c5700; }
 .payment-badge.is-paid { background: #dcfce7; color: #166534; }
+.payment-badge:has(+ .order-status-stepper) { display: block; width: fit-content; margin-bottom: 0.75rem; }
 
 /* Vertical order-status stepper — replaces a single glance-and-move-on
    badge with a readable progress list. A vertical line drawn through
@@ -368,7 +371,6 @@ h3 { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.25rem; }
 .stepper-marker.step-done { background: #166534; color: #fff; }
 .stepper-marker.step-current { background: #1e40af; border: 2px solid #1e40af; }
 .stepper-marker.step-upcoming { background: #fff; border: 2px solid #ecdfcd; }
-.stepper-marker.step-skipped { background: #faf6ef; border: 2px dashed #ecdfcd; }
 .stepper-marker.step-terminal { background: #b91c1c; color: #fff; }
 
 .stepper-label {
@@ -377,11 +379,8 @@ h3 { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.25rem; }
   color: #2b2420;
 }
 .stepper-step.step-current .stepper-label { color: #1e40af; }
-.stepper-step.step-upcoming .stepper-label,
-.stepper-step.step-skipped .stepper-label { font-weight: 400; color: #8a7862; }
-.stepper-step.step-skipped .stepper-label { text-decoration: line-through; }
+.stepper-step.step-upcoming .stepper-label { font-weight: 400; color: #8a7862; }
 .stepper-step.step-terminal .stepper-label { color: #b91c1c; }
-.stepper-skip-note { text-decoration: none; font-size: 0.8rem; }
 
 .shop-name { font-weight: 600; font-size: 1.05rem; }
 

@@ -19,7 +19,6 @@ export interface Shop {
   name: string
   slug: string
   description: string | null
-  contact_number: string | null
   // Public-safe location label ("Tower B") — always present, safe on any
   // shop payload. `address` (the exact unit) is vendor-only, see below.
   building: string | null

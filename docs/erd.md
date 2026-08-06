@@ -67,7 +67,7 @@ exclusive role column.
 
 **shops**
 - `id`, `vendor_profile_id`, `name`, `slug` (unique)
-- `description`, `contact_number`
+- `description`
 - `address` (descriptive text — unit/building), **no lat/lng, no
   service_radius**
 - `fulfillment_methods` (pickup and/or vendor delivery)

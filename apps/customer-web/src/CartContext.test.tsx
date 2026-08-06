@@ -11,7 +11,7 @@ import type { Item, Shop } from './api/types'
 
 const shop: Shop = {
   id: 1, name: "Lola's Kitchen", slug: 'lolas-kitchen', description: null,
-  contact_number: null, building: null, fulfillment_methods: ['pickup'], open: true,
+  building: null, fulfillment_methods: ['pickup'], open: true,
   profile_photo: null, cover_photo: null, average_rating: null, ratings_count: 0,
   price_range_cents: null, completed_orders_count: 0, demo: false, verified: false,
 }
@@ -23,7 +23,7 @@ const item: Item = {
 
 const shopB: Shop = {
   id: 2, name: 'Halo Stop', slug: 'halo-stop', description: null,
-  contact_number: null, building: null, fulfillment_methods: ['pickup'], open: true,
+  building: null, fulfillment_methods: ['pickup'], open: true,
   profile_photo: null, cover_photo: null, average_rating: null, ratings_count: 0,
   price_range_cents: null, completed_orders_count: 0, demo: false, verified: false,
 }

@@ -77,14 +77,13 @@ export function registerMutateTools(server: McpServer) {
 
   registerMutateTool(
     server, 'update_shop',
-    'Updates a shop\'s name, description, status, accepting_orders, contact_number, or address.',
+    'Updates a shop\'s name, description, status, accepting_orders, or address.',
     {
       shop_id: z.number(),
       name: z.string().optional(),
       description: z.string().optional(),
       status: z.string().optional(),
       accepting_orders: z.boolean().optional(),
-      contact_number: z.string().optional(),
       address: z.string().optional(),
     },
     (a) => `update shop ${a.shop_id} with ${JSON.stringify(a)}`,

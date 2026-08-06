@@ -180,7 +180,7 @@ describe('OrderDetailPage cancellation', () => {
     await userEvent.click(screen.getByRole('button', { name: /cancel order/i }))
 
     expect(api.transitionOrder).toHaveBeenCalledWith(42, 'cancelled', { reason_code: 'item_unavailable', reason: undefined })
-    expect(await screen.findByText('cancelled')).toBeInTheDocument()
+    expect(await screen.findByText('Cancelled')).toBeInTheDocument()
     expect(screen.queryByLabelText('Reason')).not.toBeInTheDocument()
   })
 
@@ -194,7 +194,7 @@ describe('OrderDetailPage cancellation', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Accept' }))
 
     expect(api.transitionOrder).toHaveBeenCalledWith(42, 'accepted')
-    expect(await screen.findByText('accepted')).toBeInTheDocument()
+    expect(await screen.findByText('Accepted')).toBeInTheDocument()
   })
 })
 
@@ -233,7 +233,7 @@ describe('OrderDetailPage item edits', () => {
       order: { ...editableOrder, status: 'out_for_delivery', can_transition_to: ['completed'] },
     })
     renderPage()
-    await screen.findByText('out for delivery')
+    await screen.findByText(editableOrder.public_reference)
     expect(screen.queryByRole('button', { name: 'Order actions menu' })).not.toBeInTheDocument()
   })
 

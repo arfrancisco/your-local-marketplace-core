@@ -42,7 +42,7 @@ module Api
         end
 
         def shop_params
-          params.require(:shop).permit(:name, :description, :status, :accepting_orders, :contact_number, :address)
+          params.require(:shop).permit(:name, :description, :status, :accepting_orders, :address)
         end
 
         # Adds the vendor's own verification status on top of the shared

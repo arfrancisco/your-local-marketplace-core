@@ -185,7 +185,7 @@ describe('OrderPage cancellation', () => {
     await userEvent.click(screen.getByRole('button', { name: /cancel order/i }))
 
     expect(api.cancelOrder).toHaveBeenCalledWith(7, { reason_code: 'changed_mind', reason: undefined })
-    expect(await screen.findByText('cancelled')).toBeInTheDocument()
+    expect(await screen.findByText('Cancelled')).toBeInTheDocument()
     expect(screen.queryByLabelText('Reason')).not.toBeInTheDocument()
   })
 })

@@ -51,7 +51,6 @@ const existingShop: Shop = {
   name: 'Tita Nena Kitchen',
   slug: 'tita-nena-kitchen',
   description: 'Home cooking',
-  contact_number: '0917',
   building: 'Astra',
   address: 'Unit 3B',
   fulfillment_methods: ['pickup'],
@@ -167,6 +166,7 @@ describe('ShopFormPage photo cropping', () => {
     expect(screen.getByAltText(/cropped profile picture preview/i)).toBeInTheDocument()
 
     await user.type(screen.getByLabelText('Name'), 'Tita Nena Kitchen')
+    await user.type(screen.getByLabelText(/building/i), 'Astra')
     await user.click(screen.getByRole('button', { name: /save shop/i }))
 
     await waitFor(() => expect(api.createShop).toHaveBeenCalled())
@@ -192,6 +192,7 @@ describe('ShopFormPage photo cropping', () => {
     expect(screen.queryByAltText(/cropped profile picture preview/i)).not.toBeInTheDocument()
 
     await user.type(screen.getByLabelText('Name'), 'Tita Nena Kitchen')
+    await user.type(screen.getByLabelText(/building/i), 'Astra')
     await user.click(screen.getByRole('button', { name: /save shop/i }))
 
     await waitFor(() => expect(api.createShop).toHaveBeenCalled())

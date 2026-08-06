@@ -55,7 +55,6 @@ describe('OnboardingPage', () => {
           name: 'New Shop',
           slug: 'new-shop',
           description: null,
-          contact_number: null,
           address: null,
           fulfillment_methods: ['pickup'],
           status: 'draft',
@@ -76,6 +75,7 @@ describe('OnboardingPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /get started/i }))
     await userEvent.type(await screen.findByLabelText('Name'), 'New Shop')
+    await userEvent.type(screen.getByLabelText(/building/i), 'Astra')
     // Move past the two form callouts so they don't obscure the submit button.
     await userEvent.click(screen.getByRole('button', { name: 'Got it' }))
     await userEvent.click(screen.getByRole('button', { name: 'Got it' }))

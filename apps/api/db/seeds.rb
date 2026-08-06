@@ -272,7 +272,6 @@ DEMO_SHOPS.each_with_index do |data, i|
   building_part, unit_part = data[:address].to_s.split(",", 2).map(&:strip)
   shop.building = building_part
   shop.address = unit_part.presence || building_part
-  shop.contact_number = owner.mobile_number
   shop.fulfillment_methods = data[:fulfillment]
   shop.save!
   shop.open! unless shop.open?

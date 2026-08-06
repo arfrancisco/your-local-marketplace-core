@@ -6,7 +6,7 @@ RSpec.describe "Api::V1::Vendor Shops", type: :request do
 
   let(:valid_params) do
     { shop: { name: "Corner Kitchen", description: "Home food", building: "Astra",
-              address: "Unit 12F", contact_number: "+639170001234",
+              address: "Unit 12F",
               fulfillment_methods: %w[pickup delivery] } }
   end
 

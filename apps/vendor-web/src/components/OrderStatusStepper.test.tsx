@@ -3,22 +3,20 @@ import { render, screen } from '@testing-library/react'
 import { OrderStatusStepper } from './OrderStatusStepper'
 
 describe('OrderStatusStepper', () => {
-  it('shows the pickup step, not the delivery step, as current for a pickup order', () => {
+  it('shows the pickup step as current and drops the delivery step entirely for a pickup order', () => {
     render(<OrderStatusStepper status="ready_for_pickup" fulfillmentMethod="pickup" acceptedAt="2026-08-01T00:00:00Z" />)
 
     const readyStep = screen.getByText('Ready for pickup').closest('li')
-    const deliveryStep = screen.getByText('Out for delivery').closest('li')
     expect(readyStep).toHaveClass('step-current')
-    expect(deliveryStep).toHaveClass('step-skipped')
+    expect(screen.queryByText('Out for delivery')).not.toBeInTheDocument()
   })
 
-  it('shows the delivery step, not the pickup step, as current for a delivery order', () => {
+  it('shows the delivery step as current and drops the pickup step entirely for a delivery order', () => {
     render(<OrderStatusStepper status="out_for_delivery" fulfillmentMethod="delivery" acceptedAt="2026-08-01T00:00:00Z" />)
 
-    const readyStep = screen.getByText('Ready for pickup').closest('li')
     const deliveryStep = screen.getByText('Out for delivery').closest('li')
-    expect(readyStep).toHaveClass('step-skipped')
     expect(deliveryStep).toHaveClass('step-current')
+    expect(screen.queryByText('Ready for pickup')).not.toBeInTheDocument()
   })
 
   it('marks earlier steps done and later steps upcoming around the current one', () => {

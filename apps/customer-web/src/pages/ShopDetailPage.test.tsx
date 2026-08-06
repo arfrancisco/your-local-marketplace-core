@@ -12,7 +12,7 @@ import type { Shop } from '../api/types'
 const { shop, item, user } = vi.hoisted(() => ({
   shop: {
     id: 1, name: "Lola's Kitchen", slug: 'lolas-kitchen', description: null,
-    contact_number: null, building: null, fulfillment_methods: ['pickup'] as Shop['fulfillment_methods'], open: true,
+    building: null, fulfillment_methods: ['pickup'] as Shop['fulfillment_methods'], open: true,
     profile_photo: null, cover_photo: null,
     average_rating: null, ratings_count: 0,
     price_range_cents: null, completed_orders_count: 0, demo: false, verified: false,

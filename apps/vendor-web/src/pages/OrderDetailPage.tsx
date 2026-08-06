@@ -8,7 +8,6 @@ import { CustomerSummary } from '../components/CustomerSummary'
 import { EditItemsPanel } from '../components/EditItemsPanel'
 import { OrderDetailActionsMenu } from '../components/OrderDetailActionsMenu'
 import { OrderStatusStepper } from '../components/OrderStatusStepper'
-import { groupKeyForStatus, statusBadgeClass } from '../orderStatus'
 import type { Order, OrderStatus, Photo, VendorCustomerNote } from '../api/types'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
@@ -221,26 +220,11 @@ export function OrderDetailPage() {
         <Link className="button" to="/shops">← Back to dashboard</Link>
       </div>
 
-      {/* Tags live above the card, not inside it, so more can be added here
-          later (e.g. a payment-status flag) without crowding the customer
-          line the way a growing badge list would. */}
-      <div className="row gap order-tags">
-        <span className={`order-status-badge ${statusBadgeClass(groupKeyForStatus(order.status))}`}>
-          {order.status.replace(/_/g, ' ')}
-        </span>
-        <span className={`payment-badge ${order.payment_status === 'unpaid' ? 'is-unpaid' : 'is-paid'}`}>
-          {order.payment_status === 'unpaid' ? 'Unpaid' : 'Paid'}
-        </span>
-        {!order.customer_is_resident && <span className="non-resident-badge">Not a resident</span>}
-      </div>
-
-      <div className="card">
-        <OrderStatusStepper
-          status={order.status}
-          fulfillmentMethod={order.fulfillment_method}
-          acceptedAt={order.accepted_at}
-        />
-      </div>
+      {!order.customer_is_resident && (
+        <div className="row gap order-tags">
+          <span className="non-resident-badge">Not a resident</span>
+        </div>
+      )}
 
       <div className="card">
         <CustomerSummary
@@ -249,6 +233,15 @@ export function OrderDetailPage() {
           unit={order.customer_unit}
           isResident={order.customer_is_resident}
           showResidentBadge={false}
+        />
+      </div>
+
+      <div className="card">
+        <OrderStatusStepper
+          status={order.status}
+          fulfillmentMethod={order.fulfillment_method}
+          acceptedAt={order.accepted_at}
+          paymentStatus={order.payment_status}
         />
       </div>
 

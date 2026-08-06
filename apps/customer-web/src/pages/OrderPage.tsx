@@ -7,7 +7,6 @@ import { Stars, RatingSummary } from '../components/Ratings'
 import { CancelOrderModal } from '../components/CancelOrderModal'
 import { OrderDetailActionsMenu } from '../components/OrderDetailActionsMenu'
 import { OrderStatusStepper } from '../components/OrderStatusStepper'
-import { groupKeyForStatus, statusBadgeClass } from '../orderStatus'
 import { colorFor, emojiFor } from '../visuals'
 import type { Order, Photo } from '../api/types'
 
@@ -127,26 +126,9 @@ export function OrderPage() {
 
   return (
     <div>
-      <div className="row spread">
-        <h1>Order {order.public_reference}</h1>
+      <div className="row spread order-page-header">
+        <h1>Your order</h1>
         <Link className="button" to="/orders">← Your orders</Link>
-      </div>
-
-      <div className="row gap order-tags">
-        <span className={`order-status-badge ${statusBadgeClass(groupKeyForStatus(order.status))}`}>
-          {order.status.replace(/_/g, ' ')}
-        </span>
-        <span className={`payment-badge ${order.payment_status === 'unpaid' ? 'is-unpaid' : 'is-paid'}`}>
-          {order.payment_status === 'unpaid' ? 'Unpaid' : 'Paid'}
-        </span>
-      </div>
-
-      <div className="card">
-        <OrderStatusStepper
-          status={order.status}
-          fulfillmentMethod={order.fulfillment_method}
-          acceptedAt={order.accepted_at}
-        />
       </div>
 
       <div className="card">
@@ -166,7 +148,18 @@ export function OrderPage() {
         </div>
       </div>
 
-      <h2 className="section">Order details</h2>
+      <div className="card">
+        <OrderStatusStepper
+          status={order.status}
+          fulfillmentMethod={order.fulfillment_method}
+          acceptedAt={order.accepted_at}
+          paymentStatus={order.payment_status}
+        />
+      </div>
+
+      <h2 className="section">
+        Order details <span className="muted order-reference">{order.public_reference}</span>
+      </h2>
       <div className="card order-detail-section">
         {canCancel && <OrderDetailActionsMenu onCancelOrder={() => setShowCancelModal(true)} />}
         <ul className="list">

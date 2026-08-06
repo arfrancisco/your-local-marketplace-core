@@ -25,7 +25,6 @@ const shopOpen: Shop = {
   name: "Lola's Kitchen",
   slug: 'lolas-kitchen',
   description: null,
-  contact_number: null,
   building: null,
   fulfillment_methods: ['pickup'],
   status: 'active',

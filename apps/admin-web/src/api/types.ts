@@ -62,7 +62,6 @@ export interface AdminShop {
   name: string
   slug: string
   description: string | null
-  contact_number: string | null
   address: string | null
   fulfillment_methods: string[]
   status: 'draft' | 'active' | 'suspended'

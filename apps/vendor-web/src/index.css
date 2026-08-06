@@ -40,7 +40,7 @@ body { margin: 0; }
   padding: 1rem 1.25rem;
   margin-bottom: 1rem;
 }
-.card.narrow { max-width: 420px; }
+.card.narrow { max-width: 420px; margin-left: auto; margin-right: auto; }
 .card.dimmed { opacity: 0.55; }
 /* Private customer notes — a warm yellow, distinct from the plain white
    Chat card right above it, plus some top spacing so it doesn't sit flush
@@ -1016,9 +1016,11 @@ h2.section { margin-top: 1.5rem; }
   color: #991b1b;
 }
 
-/* Payment status pill, alongside the order-status badge in .order-tags —
-   unpaid reuses the "needs action" amber (money not yet collected is still
-   something to act on); paid reuses the "done"/success green. */
+/* Payment status pill. Rendered inside the status-stepper card (payment is
+   arranged over chat, per ADR 0009, so it doesn't map to any one lifecycle
+   step) — unpaid reuses the "needs action" amber (money not yet collected is
+   still something to act on); paid reuses the "done"/success green. Also
+   used standalone in OrderList's compact row layout. */
 .payment-badge {
   display: inline-block;
   padding: 0.2rem 0.6rem;
@@ -1026,6 +1028,7 @@ h2.section { margin-top: 1.5rem; }
   font-size: 0.85rem;
   font-weight: 700;
 }
+.payment-badge:has(+ .order-status-stepper) { display: block; width: fit-content; margin-bottom: 0.75rem; }
 .payment-badge.is-unpaid { background: #fef3c7; color: #7c5700; }
 .payment-badge.is-paid { background: #dcfce7; color: #166534; }
 
@@ -1078,7 +1081,6 @@ h2.section { margin-top: 1.5rem; }
 .stepper-marker.step-done { background: #166534; color: #fff; }
 .stepper-marker.step-current { background: #1e40af; border: 2px solid #1e40af; }
 .stepper-marker.step-upcoming { background: #fff; border: 2px solid #e5e7eb; }
-.stepper-marker.step-skipped { background: #f9fafb; border: 2px dashed #e5e7eb; }
 .stepper-marker.step-terminal { background: #b91c1c; color: #fff; }
 
 .stepper-label {
@@ -1087,11 +1089,8 @@ h2.section { margin-top: 1.5rem; }
   color: #1c2024;
 }
 .stepper-step.step-current .stepper-label { color: #1e40af; }
-.stepper-step.step-upcoming .stepper-label,
-.stepper-step.step-skipped .stepper-label { font-weight: 400; color: #6b7280; }
-.stepper-step.step-skipped .stepper-label { text-decoration: line-through; }
+.stepper-step.step-upcoming .stepper-label { font-weight: 400; color: #6b7280; }
 .stepper-step.step-terminal .stepper-label { color: #b91c1c; }
-.stepper-skip-note { text-decoration: none; font-size: 0.8rem; }
 
 /* Filter pill row wraps at narrow widths instead of overflowing/clipping —
    confirmed via live screenshots, not just unit tests. */
