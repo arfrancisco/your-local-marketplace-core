@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, within, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ItemsPage } from './ItemsPage'
@@ -120,6 +120,46 @@ describe('ItemsPage', () => {
 
     await openMenuFor('Lumpia')
     expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument()
+  })
+
+  it('edits an item via a modal, pre-filled with its current values — no navigation', async () => {
+    vi.mocked(api.listItems).mockResolvedValue({
+      items: [{ ...baseItem, id: 1, name: 'Lumpia', description: 'Crispy', price_cents: 15000, tags: [{ id: 7, name: 'savory', slug: 'savory' }] }],
+    })
+    vi.mocked(api.updateItem).mockResolvedValue({
+      item: { ...baseItem, id: 1, name: 'Lumpia Deluxe', description: 'Crispy', price_cents: 18000, tags: [{ id: 7, name: 'savory', slug: 'savory' }] },
+    })
+
+    renderAt('/shops/5/items')
+    await openMenuFor('Lumpia')
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Edit' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'Edit item' })
+    expect(within(dialog).getByLabelText(/^Name/)).toHaveValue('Lumpia')
+    expect(within(dialog).getByLabelText('Price')).toHaveValue(150)
+
+    await userEvent.clear(within(dialog).getByLabelText(/^Name/))
+    await userEvent.type(within(dialog).getByLabelText(/^Name/), 'Lumpia Deluxe')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save item' }))
+
+    expect(api.updateItem).toHaveBeenCalledWith(1, expect.any(FormData))
+    expect(await screen.findByText('Lumpia Deluxe')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Edit item' })).not.toBeInTheDocument()
+  })
+
+  it('closing the edit modal without saving leaves the item unchanged', async () => {
+    vi.mocked(api.listItems).mockResolvedValue({ items: [{ ...baseItem, id: 1, name: 'Lumpia' }] })
+
+    renderAt('/shops/5/items')
+    await openMenuFor('Lumpia')
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Edit' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'Edit item' })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Edit item' })).not.toBeInTheDocument()
+    expect(api.updateItem).not.toHaveBeenCalled()
+    expect(screen.getByText('Lumpia')).toBeInTheDocument()
   })
 
   it('lays the items out as a card per item, with name/price/tags visible directly', async () => {
@@ -336,5 +376,93 @@ describe('ItemsPage', () => {
 
     const names = (await screen.findAllByRole('heading', { level: 3 })).map((h) => h.textContent)
     expect(names).toEqual(['Turon', 'Halo-halo', 'Lumpia'])
+  })
+})
+
+describe('ItemsPage onboarding tour', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(api.listItems).mockResolvedValue({ items: [] })
+  })
+
+  it('shows no tooltip until the "?" tour button is clicked', async () => {
+    renderAt('/shops/5/items')
+
+    await screen.findByRole('button', { name: 'Add item' })
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('the "?" tour button opens a callout anchored on the add-item button', async () => {
+    renderAt('/shops/5/items')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Tour this page' }))
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/add your first item/i)
+  })
+
+  it('"Got it" on the FAB callout opens the add-item modal and continues the tour on the Name field', async () => {
+    renderAt('/shops/5/items')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Tour this page' }))
+    await screen.findByRole('tooltip')
+    await userEvent.click(screen.getByRole('button', { name: 'Got it' }))
+
+    expect(await screen.findByLabelText(/^Name/)).toBeInTheDocument()
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/start with a name and price/i)
+  })
+
+  it('"Got it" on the Name-field callout just dismisses it, without submitting the form', async () => {
+    renderAt('/shops/5/items')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Tour this page' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Got it' }))
+    await screen.findByRole('tooltip')
+    await userEvent.click(screen.getByRole('button', { name: 'Got it' }))
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/^Name/)).toBeInTheDocument()
+    expect(api.createItem).not.toHaveBeenCalled()
+  })
+
+  it('the × on the Name-field callout ends the tour but leaves the modal open', async () => {
+    renderAt('/shops/5/items')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Tour this page' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Got it' }))
+    await screen.findByRole('tooltip')
+    await userEvent.click(screen.getByRole('button', { name: 'Skip tour' }))
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/^Name/)).toBeInTheDocument()
+  })
+
+  it('creating an item while the tour is open continues the tour on the item list, pointing at the kebab menu', async () => {
+    vi.mocked(api.createItem).mockResolvedValue({ item: { ...baseItem, id: 2, name: 'Turon' } })
+
+    renderAt('/shops/5/items')
+    await userEvent.click(await screen.findByRole('button', { name: 'Tour this page' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Add item' }))
+    await screen.findByLabelText(/^Name/)
+
+    await userEvent.type(screen.getByLabelText(/^Name/), 'Turon')
+    await userEvent.type(screen.getByLabelText('Price'), '50')
+    await userEvent.click(screen.getByRole('button', { name: 'Add item' }))
+
+    await waitFor(() => expect(screen.queryByLabelText(/^Name/)).not.toBeInTheDocument())
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/your item is live/i)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Got it' }))
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('the × on the FAB callout closes it too, with no navigation', async () => {
+    renderAt('/shops/5/items')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Tour this page' }))
+    await screen.findByRole('tooltip')
+    await userEvent.click(screen.getByRole('button', { name: 'Skip tour' }))
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Add item' })).toBeInTheDocument()
   })
 })

@@ -5,6 +5,9 @@ import type { Item } from '../api/types'
 import { colorFor, emojiFor } from '../visuals'
 import { ItemActionsMenu } from '../components/ItemActionsMenu'
 import { ArchiveItemModal } from '../components/ArchiveItemModal'
+import { ItemFormFields } from '../components/ItemFormFields'
+import { TourCallout } from '../components/TourCallout'
+import { HelpTourButton } from '../components/HelpTourButton'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
 
@@ -15,6 +18,12 @@ function formatPrice(cents: number, currency: string) {
 export function ItemsPage() {
   const { id } = useParams()
   const shopId = Number(id)
+  const [tourOpen, setTourOpen] = useState(false)
+  // Opt-in tour stops, in order: 0 = the "+" FAB callout, 1 = a callout on
+  // the Name field once the add-item modal is open, 2 = (after the item is
+  // actually created) a closing callout on the item list itself pointing at
+  // the per-item kebab menu/drag handle.
+  const [tourStep, setTourStep] = useState(0)
 
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
@@ -30,10 +39,73 @@ export function ItemsPage() {
   const [showArchived, setShowArchived] = useState(false)
   const [archivingItem, setArchivingItem] = useState<Item | null>(null)
 
+  const [editingItem, setEditingItem] = useState<Item | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editPrice, setEditPrice] = useState('')
+  const [editTags, setEditTags] = useState('')
+  const [editStockCount, setEditStockCount] = useState('')
+  const [editFiles, setEditFiles] = useState<FileList | null>(null)
+  const [editError, setEditError] = useState<string | null>(null)
+  const [editSaving, setEditSaving] = useState(false)
+
   useEffect(() => {
     setLoading(true)
     api.listItems(shopId, showArchived).then((res) => setItems(res.items)).finally(() => setLoading(false))
   }, [shopId, showArchived])
+
+  function openTour() {
+    setTourOpen(true)
+    setTourStep(0)
+  }
+
+  function closeTour() {
+    setTourOpen(false)
+    setTourStep(0)
+  }
+
+  function openEdit(item: Item) {
+    setEditingItem(item)
+    setEditName(item.name)
+    setEditDescription(item.description ?? '')
+    setEditPrice((item.price_cents / 100).toFixed(2))
+    setEditTags(item.tags.map((t) => t.name).join(', '))
+    setEditStockCount(item.stock_count === null ? '' : String(item.stock_count))
+    setEditFiles(null)
+    setEditError(null)
+  }
+
+  function closeEdit() {
+    setEditingItem(null)
+  }
+
+  async function onEditSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (!editingItem) return
+    setEditError(null)
+    setEditSaving(true)
+    const fd = new FormData()
+    fd.append('item[name]', editName)
+    fd.append('item[description]', editDescription)
+    fd.append('item[price_cents]', String(Math.round(parseFloat(editPrice || '0') * 100)))
+    editTags
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .forEach((t) => fd.append('item[tags][]', t))
+    if (editStockCount.trim() !== '') fd.append('item[stock_count]', editStockCount.trim())
+    if (editFiles) Array.from(editFiles).forEach((f) => fd.append('item[photos][]', f))
+
+    try {
+      const res = await api.updateItem(editingItem.id, fd)
+      setItems((prev) => prev.map((i) => (i.id === res.item.id ? res.item : i)))
+      setEditingItem(null)
+    } catch (err) {
+      setEditError(err instanceof ApiError ? err.message : 'Could not save item')
+    } finally {
+      setEditSaving(false)
+    }
+  }
 
   async function toggleEnabled(item: Item) {
     const res = item.enabled ? await api.disableItem(item.id) : await api.enableItem(item.id)
@@ -162,6 +234,9 @@ export function ItemsPage() {
       setStockCount('')
       setFiles(null)
       setAddOpen(false)
+      // If a tour is in progress, its last stop lives on the item list —
+      // point it there now that there's a real item to point at.
+      if (tourOpen) setTourStep(2)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not add item')
     } finally {
@@ -173,6 +248,7 @@ export function ItemsPage() {
 
   return (
     <div>
+      <HelpTourButton onClick={openTour} label="Tour this page" />
       <p className="back-link">
         <Link className="button" to="/shops">← Back to dashboard</Link>
       </p>
@@ -188,6 +264,7 @@ export function ItemsPage() {
           {showArchived ? 'No archived items.' : 'No items yet. Add your first one below.'}
         </p>
       ) : (
+        <div className={!showArchived ? 'tour-anchor' : undefined}>
         <ul className="list">
           {items.map((item, index) => (
             <li
@@ -261,7 +338,7 @@ export function ItemsPage() {
               {!showArchived && (
                 <ItemActionsMenu
                   item={item}
-                  shopId={shopId}
+                  onEditRequest={() => openEdit(item)}
                   onToggleEnabled={() => toggleEnabled(item)}
                   onArchiveRequest={() => setArchivingItem(item)}
                 />
@@ -269,17 +346,40 @@ export function ItemsPage() {
             </li>
           ))}
         </ul>
+        {!showArchived && tourOpen && tourStep === 2 && (
+          <TourCallout
+            message="Nice — your item is live. Tap the ⋮ menu on any item to edit, hide, or archive it, or drag ⠿ to reorder."
+            placement="bottom"
+            onNext={closeTour}
+            onSkip={closeTour}
+          />
+        )}
+        </div>
       )}
 
       {!showArchived && !addOpen && (
-        <button
-          type="button"
-          className="add-item-fab"
-          onClick={() => setAddOpen(true)}
-          aria-label="Add item"
-        >
-          +
-        </button>
+        <div className="add-item-fab-anchor tour-anchor">
+          <button
+            type="button"
+            className="add-item-fab"
+            onClick={() => setAddOpen(true)}
+            aria-label="Add item"
+          >
+            +
+          </button>
+          {tourOpen && tourStep === 0 && (
+            <TourCallout
+              message="Add your first item — customers can't order from an empty shop."
+              nextLabel="Got it"
+              placement="top"
+              onNext={() => {
+                setAddOpen(true)
+                setTourStep(1)
+              }}
+              onSkip={closeTour}
+            />
+          )}
+        </div>
       )}
 
       {addOpen && (
@@ -300,38 +400,71 @@ export function ItemsPage() {
             </button>
             <form onSubmit={onCreate}>
               <h2>Add item</h2>
-              <label>
-                Name (shown to customers, and matched when they search)
-                <input value={name} onChange={(e) => setName(e.target.value)} required />
-              </label>
-              <label>
-                Description (shown on the item — not used for search)
-                <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
-              </label>
-              <label>
-                Price
-                <input type="number" step="0.01" min="0.01" value={price} onChange={(e) => setPrice(e.target.value)} required />
-              </label>
-              <label>
-                Tags (comma separated — also matched when customers search, e.g. "vegan" or "spicy")
-                <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="rice meal, savory" />
-              </label>
-              <label>
-                Stock count (optional — leave blank if you don't track stock)
-                <input
-                  type="number"
-                  step="1"
-                  min="0"
-                  value={stockCount}
-                  onChange={(e) => setStockCount(e.target.value)}
-                />
-              </label>
-              <label>
-                Photos (up to 3)
-                <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => setFiles(e.target.files)} />
-              </label>
+              <ItemFormFields
+                name={name}
+                onNameChange={setName}
+                description={description}
+                onDescriptionChange={setDescription}
+                price={price}
+                onPriceChange={setPrice}
+                tags={tags}
+                onTagsChange={setTags}
+                stockCount={stockCount}
+                onStockCountChange={setStockCount}
+                onFilesChange={setFiles}
+                nameFieldAddon={
+                  tourOpen &&
+                  tourStep === 1 && (
+                    <TourCallout
+                      message="Start with a name and price — that's all you need. Everything else here is optional."
+                      placement="bottom"
+                      onNext={() => setTourStep(2)}
+                      onSkip={closeTour}
+                    />
+                  )
+                }
+              />
               {error && <p role="alert" className="error">{error}</p>}
               <button type="submit" disabled={saving}>{saving ? 'Adding…' : 'Add item'}</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editingItem && (
+        <div className="modal-backdrop" onClick={closeEdit}>
+          <div
+            className="modal add-item-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Edit item"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="modal-close"
+              aria-label="Close"
+              onClick={closeEdit}
+            >
+              ×
+            </button>
+            <form onSubmit={onEditSubmit}>
+              <h2>Edit item</h2>
+              <ItemFormFields
+                name={editName}
+                onNameChange={setEditName}
+                description={editDescription}
+                onDescriptionChange={setEditDescription}
+                price={editPrice}
+                onPriceChange={setEditPrice}
+                tags={editTags}
+                onTagsChange={setEditTags}
+                stockCount={editStockCount}
+                onStockCountChange={setEditStockCount}
+                onFilesChange={setEditFiles}
+                existingPhotos={editingItem.photos}
+              />
+              {editError && <p role="alert" className="error">{editError}</p>}
+              <button type="submit" disabled={editSaving}>{editSaving ? 'Saving…' : 'Save item'}</button>
             </form>
           </div>
         </div>

@@ -52,17 +52,6 @@ async function crossIntoVendorWeb(page: Page) {
   await page.goto(`${VENDOR_BASE}/onboarding`)
 }
 
-// Dismisses however many tour callouts remain (each says "Got it" except
-// the final one, which says "Done") — no fixed count assumed, so this
-// doesn't need updating if the tour's stop count or labels ever change.
-async function clickThroughTour(page: Page) {
-  for (let i = 0; i < 8; i++) {
-    const next = page.getByRole('button', { name: /^(Got it|Done)$/ })
-    if (!(await next.isVisible().catch(() => false))) break
-    await next.click()
-  }
-}
-
 // Registers a resident customer (eligible on that front), verifies email
 // (screen 2 is mandatory now — see registration-and-verification.spec.ts's
 // header comment), and completes the required profile screen — leaves the
@@ -105,7 +94,7 @@ async function registerEligibleResident(page: Page, email: string) {
 // (`email_not_verified`) still exists and is still unit-tested at the
 // service level.
 
-test('full upgrade flow: register with verified email, become a vendor, onboarding tour to a real shop', async ({ page }) => {
+test('full upgrade flow: register with verified email, become a vendor, no forced tour stops along the way', async ({ page }) => {
   const email = uniqueEmail('vendorupgrade')
 
   await test.step('register as an eligible resident, email verified as part of registration', async () => {
@@ -118,51 +107,71 @@ test('full upgrade flow: register with verified email, become a vendor, onboardi
     await crossIntoVendorWeb(page)
   })
 
-  await test.step('onboarding: welcome screen explains there is no in-app payment', async () => {
+  await test.step('onboarding: static splash explains there is no in-app payment, links straight to shop creation', async () => {
     await expect(page.getByText(/no payment in this app/i)).toBeVisible()
-    await page.getByRole('button', { name: 'Get started' }).click()
+    await page.getByRole('link', { name: 'Get started' }).click()
   })
 
-  await test.step('onboarding: create the first shop with the payment callout visible', async () => {
-    await expect(page.getByText(/this is how you get paid/i)).toBeVisible()
+  await test.step('create the first shop without touching any tour callout — tours are opt-in now, so none appear unprompted', async () => {
     await page.getByLabel('Name', { exact: true }).fill("Ana's Kitchen")
+    // Required field — a bare click on "Save shop" with this left blank
+    // just triggers native HTML validation and silently never submits.
+    await page.getByLabel(/^Building/).fill('Kiran')
     // Placeholder, not getByLabel('Message') — a label wrapping a text
     // control's accessible name includes that control's current value, so
     // this stops matching once the field is non-empty (see
     // order-and-chat-flow.spec.ts, which hits this for real on a reused shop).
     await page.getByPlaceholder('e.g. GCash to 0917-xxx-xxxx. Please send proof of payment here.').fill('GCash to 0917-555-0000. Please send proof of payment here.')
     await page.getByRole('button', { name: 'Save shop' }).click()
-  })
-
-  await test.step('onboarding: dashboard tour ends on a fully usable /shops', async () => {
-    // Click through however many "Got it" tour callouts remain, ending on a
-    // plain, fully-functional shops page — no fixed count assumed here so
-    // this doesn't need updating if the tour's stop count ever changes.
-    await clickThroughTour(page)
+    // Straight to the real dashboard — no forced hand-off through preview or
+    // any tour stage.
     await page.waitForURL('**/shops')
     await expect(page.getByText("Ana's Kitchen")).toBeVisible()
   })
+
+  await test.step('the dashboard\'s "?" tour is opt-in: opens on click, closes on ×, never navigates', async () => {
+    await page.getByRole('button', { name: 'Tour your dashboard' }).click()
+    await expect(page.getByText(/this is your dashboard from here on/i)).toBeVisible()
+    await page.getByRole('button', { name: 'Skip tour' }).click()
+    await expect(page.getByRole('tooltip')).not.toBeVisible()
+    await expect(page).toHaveURL(`${VENDOR_BASE}/shops`)
+  })
+
+  await test.step('add the first item via the inventory page, with no forced hand-off afterward', async () => {
+    await page.getByRole('button', { name: /shop actions menu/i }).click()
+    await page.getByRole('menuitem', { name: 'Inventory' }).click()
+
+    await page.getByRole('button', { name: 'Add item' }).click()
+    await page.getByLabel(/^Name/).fill('Adobo Rice Bowl')
+    await page.getByLabel('Price').fill('180')
+    await page.getByRole('button', { name: 'Add item' }).click()
+
+    await expect(page.getByText('Adobo Rice Bowl')).toBeVisible()
+    await expect(page).toHaveURL(/\/items$/)
+  })
 })
 
-test('a vendor with an existing shop skips onboarding entirely', async ({ page }) => {
-  // Reuses the flow above once, then confirms a second /shops visit for the
-  // same now-vendor account goes straight to the real dashboard, not back
-  // into onboarding — onboarding is derived from "zero shops", not a flag.
+test('/onboarding is a static splash, independent of whether the vendor already has a shop', async ({ page }) => {
   const email = uniqueEmail('returningvendor')
   await registerEligibleResident(page, email)
 
   await page.goto(`${CUSTOMER_BASE}/account`)
   await crossIntoVendorWeb(page)
 
-  await page.getByRole('button', { name: 'Get started' }).click()
+  // Before creating any shop, /onboarding is just the static splash.
+  await expect(page.getByText(/no payment in this app/i)).toBeVisible()
+  await page.getByRole('link', { name: 'Get started' }).click()
+
   await page.getByLabel('Name', { exact: true }).fill('Returning Vendor Shop')
+  await page.getByLabel(/^Building/).fill('Kiran')
   await page.getByPlaceholder('e.g. GCash to 0917-xxx-xxxx. Please send proof of payment here.').fill('Bank transfer to 1234-5678.')
   await page.getByRole('button', { name: 'Save shop' }).click()
-  await clickThroughTour(page)
   await page.waitForURL('**/shops')
-
-  // Now visit /shops fresh — should stay there, not bounce to /onboarding.
-  await page.goto(`${VENDOR_BASE}/shops`)
-  await expect(page).toHaveURL(`${VENDOR_BASE}/shops`)
   await expect(page.getByText('Returning Vendor Shop')).toBeVisible()
+
+  // Visiting /onboarding again, now that a shop exists, shows the exact same
+  // splash — it never branched on shop count to begin with.
+  await page.goto(`${VENDOR_BASE}/onboarding`)
+  await expect(page.getByText(/no payment in this app/i)).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Get started' })).toBeVisible()
 })

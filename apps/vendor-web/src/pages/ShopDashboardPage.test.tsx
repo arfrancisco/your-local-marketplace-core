@@ -99,6 +99,7 @@ describe('ShopDashboardPage', () => {
     )
     expect(screen.getByRole('menuitem', { name: 'Inventory' })).toHaveAttribute('href', '/shops/1/items')
     expect(screen.getByRole('menuitem', { name: 'Reviews' })).toHaveAttribute('href', '/shops/1/reviews')
+    expect(screen.getByRole('menuitem', { name: 'Preview shop' })).toHaveAttribute('href', '/shops/1/preview')
   })
 
   it('offers no "New shop" link, since a vendor can only ever own one shop', async () => {
@@ -151,5 +152,69 @@ describe('ShopDashboardPage', () => {
 
     expect(api.openShop).toHaveBeenCalledWith(1)
     expect(await screen.findByRole('button', { name: /shop is open/i })).toBeInTheDocument()
+  })
+})
+
+describe('ShopDashboardPage onboarding tour', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(api.listVendorOrders).mockResolvedValue({ orders: [] })
+    vi.mocked(api.listShops).mockResolvedValue({ shops: [shopOpen] })
+  })
+
+  function renderDashboard() {
+    render(
+      <MemoryRouter>
+        <ShopDashboardPage />
+      </MemoryRouter>,
+    )
+  }
+
+  async function openTour() {
+    await userEvent.click(await screen.findByRole('button', { name: 'Tour your dashboard' }))
+  }
+
+  it('shows no tooltip until the "?" tour button is clicked', async () => {
+    renderDashboard()
+
+    await screen.findByRole('heading', { name: "Lola's Kitchen" })
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('walks through all four stops, closing after the last one', async () => {
+    renderDashboard()
+    await openTour()
+
+    for (let i = 0; i < 4; i++) {
+      await userEvent.click(await screen.findByRole('button', { name: 'Got it' }))
+    }
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('the × on a callout closes the whole tour immediately', async () => {
+    renderDashboard()
+    await openTour()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Skip tour' }))
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('opens on a centered welcome message, not pointing at anything', async () => {
+    renderDashboard()
+    await openTour()
+
+    expect(screen.getByText(/this is your dashboard from here on/i)).toBeInTheDocument()
+  })
+
+  it('reopening the tour after closing it restarts at the first stop', async () => {
+    renderDashboard()
+    await openTour()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Skip tour' }))
+    await openTour()
+
+    expect(screen.getByText(/this is your dashboard from here on/i)).toBeInTheDocument()
   })
 })

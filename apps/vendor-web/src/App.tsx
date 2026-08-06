@@ -11,7 +11,6 @@ import { ShopPreviewPage } from './pages/ShopPreviewPage'
 import { ShopReviewsPage } from './pages/ShopReviewsPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { ItemsPage } from './pages/ItemsPage'
-import { ItemEditPage } from './pages/ItemEditPage'
 import { OrderDetailPage } from './pages/OrderDetailPage'
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -93,7 +92,6 @@ export default function App() {
           <Route path="/shops/:id/preview" element={<RequireAuth><ShopPreviewPage /></RequireAuth>} />
           <Route path="/shops/:id/reviews" element={<RequireAuth><ShopReviewsPage /></RequireAuth>} />
           <Route path="/shops/:id/items" element={<RequireAuth><ItemsPage /></RequireAuth>} />
-          <Route path="/shops/:id/items/:itemId/edit" element={<RequireAuth><ItemEditPage /></RequireAuth>} />
           <Route path="/orders/:id" element={<RequireAuth><OrderDetailPage /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/shops" replace />} />
         </Routes>

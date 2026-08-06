@@ -8,6 +8,8 @@ import { CustomerSummary } from '../components/CustomerSummary'
 import { EditItemsPanel } from '../components/EditItemsPanel'
 import { OrderDetailActionsMenu } from '../components/OrderDetailActionsMenu'
 import { OrderStatusStepper } from '../components/OrderStatusStepper'
+import { TourCallout } from '../components/TourCallout'
+import { HelpTourButton } from '../components/HelpTourButton'
 import type { Order, OrderStatus, Photo, VendorCustomerNote } from '../api/types'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
@@ -170,6 +172,8 @@ export function OrderDetailPage() {
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [editingItems, setEditingItems] = useState(false)
   const [viewingPhoto, setViewingPhoto] = useState<Photo | null>(null)
+  const [tourOpen, setTourOpen] = useState(false)
+  const [tourStep, setTourStep] = useState(0)
 
   useEffect(() => {
     api.getOrder(orderId).then((res) => setOrder(res.order)).finally(() => setLoading(false))
@@ -213,8 +217,37 @@ export function OrderDetailPage() {
   const canEditItems = ITEM_EDITABLE_STATUSES.includes(order.status) && !editingItems
   const canCancel = order.can_transition_to.includes('cancelled')
 
+  // Which optional tour stops actually apply — an order can have a
+  // transition button, a "Mark as paid" button, both, or (once terminal
+  // and paid) neither, in which case hasActions is false and the "?"
+  // button doesn't render at all.
+  const tourStops: Array<'transitions' | 'markPaid'> = [
+    ...(visibleTransitions.length > 0 ? (['transitions'] as const) : []),
+    ...(order.payment_status === 'unpaid' ? (['markPaid'] as const) : []),
+  ]
+  const showTour = tourOpen && tourStep < tourStops.length
+
+  function openTour() {
+    setTourOpen(true)
+    setTourStep(0)
+  }
+
+  function advanceTour() {
+    setTourStep((s) => {
+      const next = s + 1
+      if (next >= tourStops.length) setTourOpen(false)
+      return next
+    })
+  }
+
+  function closeTour() {
+    setTourOpen(false)
+    setTourStep(0)
+  }
+
   return (
     <div className="order-detail-page">
+      {hasActions && <HelpTourButton onClick={openTour} label="Tour the order actions" />}
       <div className="row spread">
         <h1>{order.public_reference}</h1>
         <Link className="button" to="/shops">← Back to dashboard</Link>
@@ -312,27 +345,45 @@ export function OrderDetailPage() {
 
       {hasActions && (
         <div className="order-actions-bar">
-          {order.payment_status === 'unpaid' && (
-            <button className="button-success" onClick={onMarkPaid} disabled={markingPaid}>
-              {markingPaid ? 'Marking…' : 'Mark as paid'}
-            </button>
-          )}
-          {visibleTransitions.map((status) => (
-            <button
-              key={status}
-              disabled={transitioning}
-              className={
-                status === 'rejected'
-                  ? 'button-danger'
-                  : status === 'preparing'
-                    ? 'button-progress'
-                    : undefined
-              }
-              onClick={() => onTransition(status)}
-            >
-              {TRANSITION_LABELS[status]}
-            </button>
-          ))}
+          <div className="order-actions-bar-inner tour-anchor">
+            {order.payment_status === 'unpaid' && (
+              <button className="button-success" onClick={onMarkPaid} disabled={markingPaid}>
+                {markingPaid ? 'Marking…' : 'Mark as paid'}
+              </button>
+            )}
+            {visibleTransitions.map((status) => (
+              <button
+                key={status}
+                disabled={transitioning}
+                className={
+                  status === 'rejected'
+                    ? 'button-danger'
+                    : status === 'preparing'
+                      ? 'button-progress'
+                      : undefined
+                }
+                onClick={() => onTransition(status)}
+              >
+                {TRANSITION_LABELS[status]}
+              </button>
+            ))}
+            {showTour && tourStops[tourStep] === 'transitions' && (
+              <TourCallout
+                message="Nothing here moves on its own — you click one of these buttons to advance the order, one stage at a time."
+                placement="top"
+                onNext={advanceTour}
+                onSkip={closeTour}
+              />
+            )}
+            {showTour && tourStops[tourStep] === 'markPaid' && (
+              <TourCallout
+                message={'"Mark as paid" is just a personal note to yourself — there\'s no payment processing in this app. This only records that you\'ve confirmed payment outside of it.'}
+                placement="top"
+                onNext={advanceTour}
+                onSkip={closeTour}
+              />
+            )}
+          </div>
         </div>
       )}
     </div>

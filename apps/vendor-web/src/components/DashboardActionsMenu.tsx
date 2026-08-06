@@ -54,6 +54,14 @@ export function DashboardActionsMenu({ shopId }: Props) {
           <Link role="menuitem" to={`/shops/${shopId}/reviews`} onClick={() => setOpen(false)}>
             Reviews
           </Link>
+          <Link
+            role="menuitem"
+            to={`/shops/${shopId}/preview`}
+            state={{ from: 'dashboard' }}
+            onClick={() => setOpen(false)}
+          >
+            Preview shop
+          </Link>
         </div>
       )}
     </div>

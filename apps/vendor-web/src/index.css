@@ -289,22 +289,11 @@ button:disabled { opacity: 0.6; cursor: default; }
 .opening-message { background: #fef3c7; border: 1px solid #fde68a; }
 .opening-message-text { white-space: pre-wrap; margin: 0 0 0.5rem; }
 
-/* Vendor onboarding tour — welcome screen + sequential field callouts over
-   the real ShopFormPage/ShopDashboardPage (their `onboardingMode`
-   prop, TourCallout component). */
+/* Vendor onboarding: static welcome splash + each page's own opt-in "?"
+   tour (HelpTourButton, TourCallout). */
 .onboarding-welcome { max-width: 480px; margin: 1.5rem auto; }
 .onboarding-welcome ul { padding-left: 1.2rem; margin: 0.75rem 0 1.25rem; }
 .onboarding-welcome li { margin-bottom: 0.65rem; line-height: 1.4; }
-
-.tour-skip {
-  background: none;
-  border: none;
-  color: #6b7280;
-  text-decoration: underline;
-  cursor: pointer;
-  font-size: 0.85rem;
-  padding: 0;
-}
 
 /* Wraps whatever field/element a callout points at; the callout itself is
    absolutely positioned against it. */
@@ -312,7 +301,11 @@ button:disabled { opacity: 0.6; cursor: default; }
 
 .tour-callout {
   position: absolute;
-  z-index: 40;
+  /* Above .order-actions-bar's fixed bottom bar (also z-index: 40) — the
+     order-demo tour anchors a callout right above that bar, and equal
+     z-index there falls back to DOM order, which put the bar on top and
+     silently ate clicks meant for the callout underneath it. */
+  z-index: 50;
   left: 0;
   width: 250px;
   max-width: 80vw;
@@ -338,6 +331,16 @@ button:disabled { opacity: 0.6; cursor: default; }
 }
 .tour-callout.bottom::before { top: -5px; }
 .tour-callout.top::before { bottom: -5px; }
+/* Not anchored to any particular element — fixed in the middle of the
+   viewport, with no arrow, instead of grown off a `.tour-anchor` parent. */
+.tour-callout.centered {
+  position: fixed;
+  z-index: 60;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+.tour-callout.centered::before { display: none; }
 .tour-callout-close {
   position: absolute;
   top: 0.2rem;
@@ -358,6 +361,31 @@ button:disabled { opacity: 0.6; cursor: default; }
   padding: 0.3rem 0.75rem;
   font-size: 0.8rem;
   cursor: pointer;
+}
+
+/* Lower-left "?" tour trigger (HelpTourButton.tsx) — every page with an
+   optional in-page tour gets one. Deliberate left-mirror of
+   .add-item-fab-anchor/.add-item-fab (ItemsPage's "+" FAB): same fixed-
+   corner formula, flush to the viewport edge on narrow screens but pinned
+   1rem inside .container's 760px column on wide ones, so the two read as a
+   matched pair sitting at opposite corners. Kept as its own class rather
+   than reusing .add-item-fab-anchor/.add-item-fab — duplicating a few
+   lines of CSS is cheaper than tying an unrelated page's trigger to a
+   class name that means "add item" specifically. */
+.help-tour-anchor {
+  position: fixed;
+  bottom: 1.25rem;
+  left: max(1rem, calc((100vw - 760px) / 2 + 1rem));
+  z-index: 40;
+}
+.help-tour-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  font-size: 1.6rem;
+  line-height: 1;
+  padding: 0;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
 }
 
 /* Inventory list — vendor item cards on ItemsPage. Reuses the same card/
@@ -488,7 +516,7 @@ button:disabled { opacity: 0.6; cursor: default; }
   border-radius: 8px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
   z-index: 20;
-  min-width: 140px;
+  min-width: 180px;
   padding: 0.25rem;
   display: flex;
   flex-direction: column;
@@ -497,14 +525,23 @@ button:disabled { opacity: 0.6; cursor: default; }
   display: block;
   width: 100%;
   text-align: left;
-  padding: 0.45rem 0.6rem;
+  padding: 0.6rem 0.7rem;
   border: none;
   background: none;
   border-radius: 6px;
   font: inherit;
+  line-height: 1.3;
   color: inherit;
   text-decoration: none;
   cursor: pointer;
+}
+/* A menu of several plain nav links with no separation between them reads
+   as one solid block of text — a hairline between rows (not a border on
+   the dropdown itself, which already has its own outer border) makes each
+   destination read as its own distinct row, DashboardActionsMenu's five
+   entries especially. */
+.item-actions-dropdown [role='menuitem'] + [role='menuitem'] {
+  border-top: 1px solid #f0f1f3;
 }
 .item-actions-dropdown [role='menuitem']:hover { background: #f3f4f6; }
 .item-actions-dropdown [role='menuitem'].menu-item-danger { color: #b91c1c; }
@@ -844,6 +881,19 @@ h2.section { margin-top: 1.5rem; }
   align-self: flex-start;
   padding: 1rem 1.1rem 0 0;
 }
+/* The kebab menu sits at the card's right edge, so the dashboard tour's
+   callout pointing at it (see ShopDashboardPage.tsx) would run off-screen
+   on a narrow viewport with the usual left-aligned growth (see
+   .tour-callout) — grow it leftward from the anchor's right edge instead,
+   same fix as .add-item-fab-anchor's callout. */
+.shop-identity-actions .tour-callout {
+  left: auto;
+  right: 0;
+}
+.shop-identity-actions .tour-callout::before {
+  left: auto;
+  right: 1.1rem;
+}
 .shop-avatar {
   width: 100px;
   height: 100px;
@@ -898,24 +948,40 @@ h2.section { margin-top: 1.5rem; }
   .shop-identity-actions { padding: 0.85rem 1rem 0 0; }
 }
 
-/* ShopDashboardPage's top bar — only rendered during onboarding, for the
-   "Skip tour" link above the cover-photo hero. The kebab menu itself now
-   lives inside .shop-identity (see .shop-identity-actions above). */
-.dashboard-topbar {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
-}
-
 /* Floating "add item" button (ItemsPage) + the modal it opens, replacing the
    old always-visible inline form at the bottom of the inventory page. */
-.add-item-fab {
+/* Wraps the FAB itself so the onboarding tour's callout (an absolutely-
+   positioned sibling, not a child — a <button> can't validly contain
+   another interactive element) has something positioned to anchor to.
+   Carries the fixed placement that used to live directly on .add-item-fab;
+   the button itself is unpositioned now, sized/shaped only. */
+.add-item-fab-anchor {
   position: fixed;
   bottom: 1.25rem;
-  right: 1rem;
+  /* Flush 1rem from the viewport edge on narrow screens (where .container
+     fills the viewport, same as before) — but on a wide viewport, .container
+     stops growing past 760px and stays centered, so pinning to the raw
+     viewport edge left the button drifting further and further from the
+     actual page content. This keeps it 1rem inside that column's right
+     edge instead, however wide the viewport gets. */
+  right: max(1rem, calc((100vw - 760px) / 2 + 1rem));
   z-index: 40;
+}
+/* The FAB sits at the viewport's right edge, so the tour callout's usual
+   left-aligned growth (see .tour-callout) would run straight off-screen —
+   grow it leftward from the anchor's right edge instead. */
+.add-item-fab-anchor .tour-callout {
+  left: auto;
+  right: 0;
+}
+/* The little pointer triangle is normally offset from the box's *left*
+   edge (see .tour-callout::before) — mirror it to the right edge here too,
+   so it still points down at the FAB instead of at empty space. */
+.add-item-fab-anchor .tour-callout::before {
+  left: auto;
+  right: 1.1rem;
+}
+.add-item-fab {
   width: 52px;
   height: 52px;
   border-radius: 50%;
@@ -1033,19 +1099,32 @@ h2.section { margin-top: 1.5rem; }
   right: 0;
   bottom: 0;
   z-index: 40;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
+}
+/* The bar's background stays full-bleed above, but the buttons themselves
+   match .container's content width — left-aligned flex children of a
+   full-width fixed bar just pin to the raw viewport edge, drifting further
+   and further from the (centered, capped-width) order card above them as
+   the viewport gets wider. */
+.order-actions-bar-inner {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
+  max-width: 760px;
+  margin: 0 auto;
   padding: 0.65rem 1rem;
-  background: #fff;
-  border-top: 1px solid #e5e7eb;
-  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
 }
 .order-actions-bar button {
   padding: 0.35rem 0.65rem;
   font-size: 0.9rem;
 }
+/* .order-actions-bar already occupies the page's bottom edge — lift the
+   help-tour button above it instead of the usual 1.25rem so it doesn't sit
+   on top of the real action buttons. */
+.order-detail-page .help-tour-anchor { bottom: 5.25rem; }
 .order-status-badge.status-needs-action { background: #fef3c7; color: #7c5700; }
 .order-status-badge.status-in-progress { background: #dbeafe; color: #1e40af; }
 .order-status-badge.status-ready { background: #ccfbf1; color: #0f766e; }

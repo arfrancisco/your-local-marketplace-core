@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Item, Rating, Shop } from '../api/types'
 import { colorFor, emojiFor } from '../visuals'
 import { RatingList, RatingSummary } from '../components/Ratings'
+import { TourCallout } from '../components/TourCallout'
+import { HelpTourButton } from '../components/HelpTourButton'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
 const REVIEWS_PER_PAGE = 5
@@ -36,6 +38,13 @@ function BackArrowIcon() {
 // between apps).
 export function ShopPreviewPage() {
   const { id } = useParams()
+  const location = useLocation()
+  // Where "Preview shop" was clicked from — the dashboard's kebab menu and
+  // the edit form's own "Preview shop" link both lead here, and the useful
+  // back target is different for each. Defaults to the edit form (also
+  // covers a direct URL visit/refresh, where there's no real "from" at all).
+  const from = (location.state as { from?: 'dashboard' | 'edit' } | null)?.from ?? 'edit'
+  const [tourOpen, setTourOpen] = useState(false)
   const [shop, setShop] = useState<Shop | null>(null)
   const [items, setItems] = useState<Item[]>([])
   const [ratings, setRatings] = useState<Rating[]>([])
@@ -81,8 +90,13 @@ export function ShopPreviewPage() {
 
   return (
     <div>
+      <HelpTourButton onClick={() => setTourOpen(true)} label="Tour this preview" />
       <p className="back-link">
-        <Link className="button" to={`/shops/${id}/edit`}>← Back to editing</Link>
+        {from === 'dashboard' ? (
+          <Link className="button" to="/shops">← Back to dashboard</Link>
+        ) : (
+          <Link className="button" to={`/shops/${id}/edit`}>← Back to editing</Link>
+        )}
       </p>
       <div className="preview-banner">
         This is a preview of your shop's page — it's exactly what a customer
@@ -96,7 +110,7 @@ export function ShopPreviewPage() {
         </p>
       )}
 
-      <div className="shop-hero">
+      <div className="shop-hero tour-anchor">
         {shop.cover_photo ? (
           <img className="shop-cover" src={`${API_ORIGIN}${shop.cover_photo.url}`} alt="" />
         ) : (
@@ -134,9 +148,16 @@ export function ShopPreviewPage() {
             )}
           </div>
         </div>
+        {tourOpen && (
+          <TourCallout
+            message="This is exactly what a customer sees when they find your shop."
+            onNext={() => setTourOpen(false)}
+            onSkip={() => setTourOpen(false)}
+          />
+        )}
       </div>
 
-      <h2 className="section">Menu</h2>
+      <h2 className="section">Catalog</h2>
       {items.length === 0 && <p>No items listed yet.</p>}
       <ul className="list">
         {items.map((item) => (

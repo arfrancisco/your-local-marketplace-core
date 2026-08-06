@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import type { Item } from '../api/types'
 
 interface Props {
   item: Item
-  shopId: number
+  onEditRequest: () => void
   onToggleEnabled: () => void
   onArchiveRequest: () => void
 }
@@ -15,7 +14,7 @@ interface Props {
 // collision detection). Archive itself just requests the confirmation
 // modal (ArchiveItemModal) rather than acting directly — everything else
 // here is a single click.
-export function ItemActionsMenu({ item, shopId, onToggleEnabled, onArchiveRequest }: Props) {
+export function ItemActionsMenu({ item, onEditRequest, onToggleEnabled, onArchiveRequest }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -49,9 +48,16 @@ export function ItemActionsMenu({ item, shopId, onToggleEnabled, onArchiveReques
       </button>
       {open && (
         <div className="item-actions-dropdown" role="menu">
-          <Link role="menuitem" to={`/shops/${shopId}/items/${item.id}/edit`} onClick={() => setOpen(false)}>
+          <button
+            role="menuitem"
+            type="button"
+            onClick={() => {
+              setOpen(false)
+              onEditRequest()
+            }}
+          >
             Edit
-          </Link>
+          </button>
           <button
             role="menuitem"
             type="button"

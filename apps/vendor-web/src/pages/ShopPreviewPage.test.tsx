@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ShopPreviewPage } from './ShopPreviewPage'
 import { api } from '../api/client'
@@ -58,9 +59,9 @@ function item(overrides: Partial<Item> = {}): Item {
   }
 }
 
-function renderAt(path: string) {
+function renderAt(path: string, state?: { from?: 'dashboard' | 'edit' }) {
   return render(
-    <MemoryRouter initialEntries={[path]}>
+    <MemoryRouter initialEntries={[{ pathname: path, state }]}>
       <Routes>
         <Route path="/shops/:id/preview" element={<ShopPreviewPage />} />
       </Routes>
@@ -74,7 +75,17 @@ describe('ShopPreviewPage', () => {
     vi.mocked(api.listShopRatings).mockResolvedValue({ ratings: [] })
   })
 
-  it('links back to editing this shop, not the dashboard', async () => {
+  it('links back to editing this shop when opened from the edit form', async () => {
+    vi.mocked(api.getShop).mockResolvedValue({ shop })
+    vi.mocked(api.listItems).mockResolvedValue({ items: [item()] })
+
+    renderAt('/shops/1/preview', { from: 'edit' })
+
+    const link = await screen.findByRole('link', { name: /back to editing/i })
+    expect(link).toHaveAttribute('href', '/shops/1/edit')
+  })
+
+  it('defaults to linking back to editing when opened directly, with no "from" state', async () => {
     vi.mocked(api.getShop).mockResolvedValue({ shop })
     vi.mocked(api.listItems).mockResolvedValue({ items: [item()] })
 
@@ -82,6 +93,17 @@ describe('ShopPreviewPage', () => {
 
     const link = await screen.findByRole('link', { name: /back to editing/i })
     expect(link).toHaveAttribute('href', '/shops/1/edit')
+  })
+
+  it('links back to the dashboard instead when opened from there — no detour through the edit form', async () => {
+    vi.mocked(api.getShop).mockResolvedValue({ shop })
+    vi.mocked(api.listItems).mockResolvedValue({ items: [item()] })
+
+    renderAt('/shops/1/preview', { from: 'dashboard' })
+
+    const link = await screen.findByRole('link', { name: /back to dashboard/i })
+    expect(link).toHaveAttribute('href', '/shops')
+    expect(screen.queryByRole('link', { name: /back to editing/i })).not.toBeInTheDocument()
   })
 
   it('renders the shop as a customer would see it, read-only', async () => {
@@ -169,5 +191,44 @@ describe('ShopPreviewPage', () => {
 
     await screen.findByRole('heading', { name: "Lola's Kitchen" })
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})
+
+describe('ShopPreviewPage onboarding tour', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(api.listShopRatings).mockResolvedValue({ ratings: [] })
+    vi.mocked(api.getShop).mockResolvedValue({ shop })
+    vi.mocked(api.listItems).mockResolvedValue({ items: [item()] })
+  })
+
+  it('shows no tooltip until the "?" tour button is clicked', async () => {
+    renderAt('/shops/1/preview')
+
+    await screen.findByRole('heading', { name: "Lola's Kitchen" })
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('the "?" tour button opens a single callout, closed by its "Got it"', async () => {
+    renderAt('/shops/1/preview')
+    await screen.findByRole('heading', { name: "Lola's Kitchen" })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Tour this preview' }))
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/exactly what a customer sees/i)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Got it' }))
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('the × on the callout closes it too, with no navigation', async () => {
+    renderAt('/shops/1/preview')
+    await screen.findByRole('heading', { name: "Lola's Kitchen" })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Tour this preview' }))
+    await screen.findByRole('tooltip')
+    await userEvent.click(screen.getByRole('button', { name: 'Skip tour' }))
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: "Lola's Kitchen" })).toBeInTheDocument()
   })
 })

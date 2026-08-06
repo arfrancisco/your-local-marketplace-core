@@ -296,3 +296,76 @@ describe('OrderDetailPage item edits', () => {
     expect(api.updateOrderItems).not.toHaveBeenCalled()
   })
 })
+
+describe('OrderDetailPage onboarding tour', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(api.listCustomerNotes).mockResolvedValue({ customer_notes: [] })
+  })
+
+  it('shows no "?" tour button when the order has no available actions', async () => {
+    vi.mocked(api.getOrder).mockResolvedValue({
+      order: { ...order, status: 'completed', payment_status: 'marked_paid', can_transition_to: [] },
+    })
+    renderPage()
+
+    await screen.findByText(order.public_reference)
+    expect(screen.queryByRole('button', { name: 'Tour the order actions' })).not.toBeInTheDocument()
+  })
+
+  it('when only "Mark as paid" applies, the tour opens directly on that callout', async () => {
+    vi.mocked(api.getOrder).mockResolvedValue({
+      order: { ...order, payment_status: 'unpaid', can_transition_to: [] },
+    })
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Tour the order actions' }))
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/personal note to yourself/i)
+    await userEvent.click(screen.getByRole('button', { name: 'Got it' }))
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('when only a transition applies, the tour opens directly on that callout', async () => {
+    vi.mocked(api.getOrder).mockResolvedValue({
+      order: { ...order, payment_status: 'marked_paid', can_transition_to: ['accepted'] },
+    })
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Tour the order actions' }))
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/click one of these buttons/i)
+    await userEvent.click(screen.getByRole('button', { name: 'Got it' }))
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('walks through both callouts, in order, when both stops apply', async () => {
+    vi.mocked(api.getOrder).mockResolvedValue({
+      order: { ...order, payment_status: 'unpaid', can_transition_to: ['accepted'] },
+    })
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Tour the order actions' }))
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/click one of these buttons/i)
+    await userEvent.click(screen.getByRole('button', { name: 'Got it' }))
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/personal note to yourself/i)
+    await userEvent.click(screen.getByRole('button', { name: 'Got it' }))
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('the × on a callout closes the whole tour immediately, not just the current step', async () => {
+    vi.mocked(api.getOrder).mockResolvedValue({
+      order: { ...order, payment_status: 'unpaid', can_transition_to: ['accepted'] },
+    })
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Tour the order actions' }))
+    await screen.findByRole('tooltip')
+    await userEvent.click(screen.getByRole('button', { name: 'Skip tour' }))
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+})

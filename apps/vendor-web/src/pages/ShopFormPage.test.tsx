@@ -258,3 +258,74 @@ describe('ShopFormPage back navigation', () => {
     expect(screen.queryByRole('link', { name: /preview shop/i })).not.toBeInTheDocument()
   })
 })
+
+describe('ShopFormPage onboarding tour', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(api.listShops).mockResolvedValue({ shops: [] })
+    vi.mocked(api.createShop).mockResolvedValue({ shop: existingShop })
+  })
+
+  function renderForm() {
+    render(
+      <MemoryRouter>
+        <ShopFormPage />
+      </MemoryRouter>,
+    )
+  }
+
+  async function openTour(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(await screen.findByRole('button', { name: 'Tour this form' }))
+  }
+
+  it('shows no tooltip until the "?" tour button is clicked', async () => {
+    renderForm()
+
+    await screen.findByRole('heading', { name: 'New shop' })
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('walks through all five callouts in order, top to bottom: name/description, building/tower, fulfillment, shop photos, opening message', async () => {
+    const user = userEvent.setup()
+    renderForm()
+    await openTour(user)
+
+    expect(screen.getByText(/start with your shop's name and a short description/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Got it' }))
+
+    expect(screen.getByText(/public location shown to customers/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Got it' }))
+
+    expect(screen.getByText(/pickup or delivery changes how the order flows/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Got it' }))
+
+    expect(screen.getByText(/add a profile picture and cover photo/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Got it' }))
+
+    expect(screen.getByText(/this is how you get paid/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Got it' }))
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('the × on a callout closes the whole tour immediately, not just the current step', async () => {
+    const user = userEvent.setup()
+    renderForm()
+    await openTour(user)
+
+    await user.click(screen.getByRole('button', { name: 'Skip tour' }))
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('reopening the tour after closing it restarts at the first callout', async () => {
+    const user = userEvent.setup()
+    renderForm()
+    await openTour(user)
+
+    await user.click(screen.getByRole('button', { name: 'Skip tour' }))
+    await openTour(user)
+
+    expect(screen.getByText(/start with your shop's name and a short description/i)).toBeInTheDocument()
+  })
+})

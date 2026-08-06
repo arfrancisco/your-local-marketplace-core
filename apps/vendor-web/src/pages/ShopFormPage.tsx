@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { FulfillmentMethod, Shop } from '../api/types'
 import { TourCallout } from '../components/TourCallout'
+import { HelpTourButton } from '../components/HelpTourButton'
 import { ImageCropModal } from '../components/ImageCropModal'
 
 const METHODS: FulfillmentMethod[] = ['pickup', 'delivery']
@@ -27,26 +28,27 @@ const PHOTO_FIELDS: Record<PhotoField, { aspect: number; title: string; hint: st
   },
 }
 
-interface ShopFormPageProps {
-  /** Onboarding step 2 (OnboardingPage) renders this same component with
-   * onboardingMode on, which layers sequential callouts over the opening
-   * message/QR fields and the fulfillment checkboxes — the two things a
-   * brand-new vendor won't intuit on their own. The form itself is
-   * unchanged and fully usable with the tour skipped or absent. */
-  onboardingMode?: boolean
-  /** When set (onboarding), called instead of navigating to /shops on a
-   * successful save, so the caller can advance to the next onboarding step. */
-  onSaved?: () => void
-}
-
-export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPageProps = {}) {
+export function ShopFormPage() {
   const { id } = useParams()
   const editing = Boolean(id)
   const navigate = useNavigate()
-  // 0 = opening message/QR callout, 1 = fulfillment callout, 2 = tour done
-  // (finished or skipped) — either way callouts stop rendering.
+  // Numbered top-to-bottom, matching the form's own field order: 0 = name/
+  // description, 1 = building/tower, 2 = fulfillment, 3 = shop photos,
+  // 4 = opening message/QR — an optional, on-demand tour behind the "?"
+  // button (HelpTourButton), not shown automatically.
+  const [tourOpen, setTourOpen] = useState(false)
   const [tourStep, setTourStep] = useState(0)
-  const showTour = onboardingMode && tourStep < 2
+  const showTour = tourOpen && tourStep < 5
+
+  function openTour() {
+    setTourOpen(true)
+    setTourStep(0)
+  }
+
+  function closeTour() {
+    setTourOpen(false)
+    setTourStep(0)
+  }
 
   const [shop, setShop] = useState<Shop | null>(null)
   const [name, setName] = useState('')
@@ -69,16 +71,15 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    // One shop per vendor for now — direct navigation to /shops/new after
-    // already having one would otherwise hit a bare 422 from the API's
-    // uniqueness validation. Onboarding's own creation step never hits this,
-    // since it only renders once a vendor has zero shops.
-    if (!editing && !onboardingMode) {
+    // One shop per vendor — direct navigation to /shops/new after already
+    // having one would otherwise hit a bare 422 from the API's uniqueness
+    // validation.
+    if (!editing) {
       api.listShops().then((res) => {
         if (res.shops.length > 0) navigate('/shops', { replace: true })
       })
     }
-  }, [editing, onboardingMode, navigate])
+  }, [editing, navigate])
 
   useEffect(() => {
     if (!editing) return
@@ -144,8 +145,7 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
     try {
       if (editing) await api.updateShop(Number(id), fd)
       else await api.createShop(fd)
-      if (onSaved) onSaved()
-      else navigate('/shops')
+      navigate('/shops')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save shop')
     } finally {
@@ -164,29 +164,52 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
       )}
       <div className="row spread">
         <h1>{editing ? 'Edit shop' : 'New shop'}</h1>
-        {editing && <Link className="button" to={`/shops/${id}/preview`}>Preview shop</Link>}
-        {showTour && (
-          <button type="button" className="tour-skip" onClick={() => setTourStep(2)}>
-            Skip tour
-          </button>
+        {editing && (
+          <Link className="button" to={`/shops/${id}/preview`} state={{ from: 'edit' }}>
+            Preview shop
+          </Link>
         )}
       </div>
+      <HelpTourButton onClick={openTour} label="Tour this form" />
       <form onSubmit={onSubmit}>
-        <label>
-          Name
-          <input value={name} onChange={(e) => setName(e.target.value)} required />
-        </label>
+        <div className="tour-anchor">
+          <label>
+            Name
+            <input value={name} onChange={(e) => setName(e.target.value)} required />
+          </label>
+          {showTour && tourStep === 0 && (
+            <TourCallout
+              message="Start with your shop's name and a short description — this is the first thing customers see when they find you."
+              nextLabel="Got it"
+              placement="bottom"
+              onNext={() => setTourStep(1)}
+              onSkip={closeTour}
+            />
+          )}
+        </div>
         <label>
           Description
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
         </label>
-        <label>
-          Building / Tower
-          <input value={building} onChange={(e) => setBuilding(e.target.value)} required />
-          <p className="muted small">
-            Shown publicly on your shop page — customers see this, but never your exact unit.
-          </p>
-        </label>
+
+        <div className="tour-anchor">
+          <label>
+            Building / Tower
+            <input value={building} onChange={(e) => setBuilding(e.target.value)} required />
+            <p className="muted small">
+              Shown publicly on your shop page — customers see this, but never your exact unit.
+            </p>
+          </label>
+          {showTour && tourStep === 1 && (
+            <TourCallout
+              message="This is the public location shown to customers browsing the community — pick the tower/building they'll actually see."
+              nextLabel="Got it"
+              placement="bottom"
+              onNext={() => setTourStep(2)}
+              onSkip={closeTour}
+            />
+          )}
+        </div>
         <label>
           Unit number (private)
           <input
@@ -210,71 +233,82 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
               </label>
             ))}
           </fieldset>
-          {showTour && tourStep === 1 && (
+          {showTour && tourStep === 2 && (
             <TourCallout
               message="Pickup or delivery changes how the order flows after it's placed — pick what you actually offer."
               nextLabel="Got it"
-              onNext={() => setTourStep(2)}
-              onSkip={() => setTourStep(2)}
+              onNext={() => setTourStep(3)}
+              onSkip={closeTour}
             />
           )}
         </div>
 
-        <fieldset className="photo-field">
-          <legend>Shop photos</legend>
+        <div className="tour-anchor">
+          <fieldset className="photo-field">
+            <legend>Shop photos</legend>
 
-          <label>
-            Profile picture (square, JPEG/PNG/WebP)
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={(e) => pickPhoto('profile_photo', e)}
-            />
-          </label>
-          {profilePreview ? (
-            <div className="photo-preview-row">
-              <img className="photo-preview square" src={profilePreview} alt="Cropped profile picture preview" />
-              <p className="muted">Cropped. Save the shop to upload it.</p>
-            </div>
-          ) : (
-            shop?.profile_photo && (
+            <label>
+              Profile picture (square, JPEG/PNG/WebP)
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => pickPhoto('profile_photo', e)}
+              />
+            </label>
+            {profilePreview ? (
               <div className="photo-preview-row">
-                <img
-                  className="photo-preview square"
-                  src={`http://localhost:3000${shop.profile_photo.url}`}
-                  alt={shop.profile_photo.filename}
-                />
-                <p className="muted">Current profile picture.</p>
+                <img className="photo-preview square" src={profilePreview} alt="Cropped profile picture preview" />
+                <p className="muted">Cropped. Save the shop to upload it.</p>
               </div>
-            )
-          )}
+            ) : (
+              shop?.profile_photo && (
+                <div className="photo-preview-row">
+                  <img
+                    className="photo-preview square"
+                    src={`http://localhost:3000${shop.profile_photo.url}`}
+                    alt={shop.profile_photo.filename}
+                  />
+                  <p className="muted">Current profile picture.</p>
+                </div>
+              )
+            )}
 
-          <label>
-            Cover photo (wide banner, JPEG/PNG/WebP)
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={(e) => pickPhoto('cover_photo', e)}
-            />
-          </label>
-          {coverPreview ? (
-            <div className="photo-preview-row">
-              <img className="photo-preview wide" src={coverPreview} alt="Cropped cover photo preview" />
-              <p className="muted">Cropped. Save the shop to upload it.</p>
-            </div>
-          ) : (
-            shop?.cover_photo && (
+            <label>
+              Cover photo (wide banner, JPEG/PNG/WebP)
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => pickPhoto('cover_photo', e)}
+              />
+            </label>
+            {coverPreview ? (
               <div className="photo-preview-row">
-                <img
-                  className="photo-preview wide"
-                  src={`http://localhost:3000${shop.cover_photo.url}`}
-                  alt={shop.cover_photo.filename}
-                />
-                <p className="muted">Current cover photo.</p>
+                <img className="photo-preview wide" src={coverPreview} alt="Cropped cover photo preview" />
+                <p className="muted">Cropped. Save the shop to upload it.</p>
               </div>
-            )
+            ) : (
+              shop?.cover_photo && (
+                <div className="photo-preview-row">
+                  <img
+                    className="photo-preview wide"
+                    src={`http://localhost:3000${shop.cover_photo.url}`}
+                    alt={shop.cover_photo.filename}
+                  />
+                  <p className="muted">Current cover photo.</p>
+                </div>
+              )
+            )}
+          </fieldset>
+          {showTour && tourStep === 3 && (
+            <TourCallout
+              message="Add a profile picture and cover photo so your shop stands out. Skip it for now if you want — we'll show a placeholder tile until you do."
+              nextLabel="Got it"
+              placement="bottom"
+              onNext={() => setTourStep(4)}
+              onSkip={closeTour}
+            />
           )}
-        </fieldset>
+        </div>
 
         <div className="tour-anchor">
           <fieldset>
@@ -309,14 +343,14 @@ export function ShopFormPage({ onboardingMode = false, onSaved }: ShopFormPagePr
               </div>
             )}
           </fieldset>
-          {showTour && tourStep === 0 && (
+          {showTour && tourStep === 4 && (
             <TourCallout
               message="This is how you get paid. There's no payment processing in this app — write how customers should pay you (GCash number, bank details, etc.) and add a QR code if you have one. It's pinned above every order's chat."
               nextLabel="Got it"
               strong
               placement="top"
-              onNext={() => setTourStep(1)}
-              onSkip={() => setTourStep(2)}
+              onNext={closeTour}
+              onSkip={closeTour}
             />
           )}
         </div>

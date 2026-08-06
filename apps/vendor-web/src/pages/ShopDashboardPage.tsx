@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { Shop } from '../api/types'
 import { TourCallout } from '../components/TourCallout'
+import { HelpTourButton } from '../components/HelpTourButton'
 import { RatingSummary } from '../components/Ratings'
 import { DashboardActionsMenu } from '../components/DashboardActionsMenu'
 import { OrderList } from '../components/OrderList'
@@ -10,21 +11,10 @@ import { colorFor, emojiFor } from '../visuals'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
 
-interface ShopDashboardPageProps {
-  /** Onboarding step 3 (OnboardingPage) renders this same component with
-   * onboardingMode on, right after the vendor's first shop is created, and
-   * layers a short sequence of callouts pointing at the dashboard's
-   * controls. Outside onboarding this prop is absent and the page behaves
-   * exactly as before. */
-  onboardingMode?: boolean
-  /** Called once the dashboard tour finishes (last callout dismissed) or is
-   * skipped, so the caller can land the vendor on the real /shops route. */
-  onTourDone?: () => void
-}
-
-// Dashboard tour stops, in order: shop open/close control, the shop actions
-// menu (edit/inventory/reviews), the order list, then a closing "you're all
-// set" message.
+// Dashboard tour stops, in order: a centered "welcome to your dashboard"
+// message, the shop open/close control, the order list, then the shop
+// actions menu (edit/inventory/reviews) last. An optional, on-demand tour
+// behind the "?" button (HelpTourButton), not shown automatically.
 const TOUR_STOPS = 4
 
 // A vendor owns exactly one shop (enforced on the API by a uniqueness
@@ -34,12 +24,13 @@ const TOUR_STOPS = 4
 // dashboard's primary content; the less-frequent actions (edit shop
 // details, inventory, reviews) live behind the kebab menu instead of as
 // primary buttons.
-export function ShopDashboardPage({ onboardingMode = false, onTourDone }: ShopDashboardPageProps = {}) {
+export function ShopDashboardPage() {
   const [shop, setShop] = useState<Shop | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [pendingStatusChange, setPendingStatusChange] = useState<'open' | 'close' | null>(null)
   const [statusError, setStatusError] = useState<string | null>(null)
+  const [tourOpen, setTourOpen] = useState(false)
   const [tourStep, setTourStep] = useState(0)
   const navigate = useNavigate()
 
@@ -49,31 +40,34 @@ export function ShopDashboardPage({ onboardingMode = false, onTourDone }: ShopDa
       .then((res) => {
         setShop(res.shops[0] ?? null)
         // A vendor with no shop has nothing to see here — send them through
-        // onboarding instead of a bare empty dashboard. Derived from data (no
-        // shop), not a stored flag. Skip this when we're already the
-        // onboarding-mode render (step 3, right after the first shop was just
-        // created) to avoid any redirect loop.
-        if (!res.shops[0] && !onboardingMode) {
+        // onboarding instead of a bare empty dashboard. Derived from data
+        // (no shop), not a stored flag.
+        if (!res.shops[0]) {
           navigate('/onboarding', { replace: true })
         }
       })
       .finally(() => setLoading(false))
-  }, [onboardingMode, navigate])
+  }, [navigate])
+
+  function openTour() {
+    setTourOpen(true)
+    setTourStep(0)
+  }
 
   function advanceTour() {
     setTourStep((s) => {
       const next = s + 1
-      if (next >= TOUR_STOPS) onTourDone?.()
+      if (next >= TOUR_STOPS) setTourOpen(false)
       return next
     })
   }
 
   function skipTour() {
-    setTourStep(TOUR_STOPS)
-    onTourDone?.()
+    setTourOpen(false)
+    setTourStep(0)
   }
 
-  const showTour = onboardingMode && !!shop && tourStep < TOUR_STOPS
+  const showTour = tourOpen && !!shop && tourStep < TOUR_STOPS
 
   async function setOpen(target: Shop, open: boolean) {
     setBusy(true)
@@ -107,6 +101,15 @@ export function ShopDashboardPage({ onboardingMode = false, onTourDone }: ShopDa
 
   return (
     <div>
+      <HelpTourButton onClick={openTour} label="Tour your dashboard" />
+      {showTour && tourStep === 0 && (
+        <TourCallout
+          message="This is your dashboard from here on — come back anytime to manage your shop, items, and orders."
+          centered
+          onNext={advanceTour}
+          onSkip={skipTour}
+        />
+      )}
       <div className="tour-anchor">
         <button
           type="button"
@@ -127,7 +130,7 @@ export function ShopDashboardPage({ onboardingMode = false, onTourDone }: ShopDa
             ? 'Customers can find your shop and place orders right now.'
             : 'Customers cannot find your shop while it is closed.'}
         </p>
-        {showTour && tourStep === 0 && (
+        {showTour && tourStep === 1 && (
           <TourCallout
             message="Toggle your shop open or closed anytime — customers only see it in their shop list while it's open."
             onNext={advanceTour}
@@ -137,14 +140,6 @@ export function ShopDashboardPage({ onboardingMode = false, onTourDone }: ShopDa
       </div>
 
       <div className="tour-anchor">
-        {showTour && (
-          <div className="dashboard-topbar">
-            <button type="button" className="tour-skip" onClick={skipTour}>
-              Skip tour
-            </button>
-          </div>
-        )}
-
         <div className="shop-hero">
           {shop.cover_photo ? (
             <img className="shop-cover" src={`${API_ORIGIN}${shop.cover_photo.url}`} alt="" />
@@ -177,7 +172,7 @@ export function ShopDashboardPage({ onboardingMode = false, onTourDone }: ShopDa
             </div>
             <div className="shop-identity-actions tour-anchor">
               <DashboardActionsMenu shopId={shop.id} />
-              {showTour && tourStep === 1 && (
+              {showTour && tourStep === 3 && (
                 <TourCallout
                   message="Edit your shop details, manage inventory, and see reviews from this menu."
                   onNext={advanceTour}
@@ -187,14 +182,6 @@ export function ShopDashboardPage({ onboardingMode = false, onTourDone }: ShopDa
             </div>
           </div>
         </div>
-        {showTour && tourStep === 3 && (
-          <TourCallout
-            message="You're all set! This is your dashboard from here on — come back anytime to manage your shop, items, and orders."
-            nextLabel="Done"
-            onNext={advanceTour}
-            onSkip={skipTour}
-          />
-        )}
       </div>
 
       <div className="tour-anchor">
