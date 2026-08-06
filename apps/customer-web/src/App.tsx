@@ -133,8 +133,8 @@ function ActiveOrderButton() {
   return (
     <button className="bar-primary" onClick={onClick}>
       {activeOrders.length === 1
-        ? 'Track your order'
-        : `Track your orders (${activeOrders.length})`}
+        ? 'Track my order'
+        : `Track my orders (${activeOrders.length})`}
     </button>
   )
 }
