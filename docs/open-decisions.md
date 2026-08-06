@@ -13,18 +13,23 @@ make before going live to real neighbors.
 1. **Pilot location** — which specific cluster of buildings is the first pilot?
 2. **Fulfillment** — pickup only, vendor delivery only, or both, for the pilot?
    (The data model supports both; this is about what to enable.)
-3. **Cancellation abuse (resolved mechanism, open consequence question)** —
-   the cancellation mechanism itself is built and live: either a customer or
-   a vendor may cancel while an order is `placed` or `accepted` (not once
-   preparation has started), and must select a reason code (see
+3. **Cancellation abuse (resolved).** Both the cancellation mechanism and its
+   consequences are built and live. Either a customer or a vendor may cancel
+   while an order is `placed` or `accepted` (not once preparation has
+   started), and must select a reason code (see
    `Order::CUSTOMER_CANCELLATION_REASONS`/`VENDOR_CANCELLATION_REASONS` and
-   `Orders::TransitionStatus`). What's still undecided: there's no
-   consequence today for a user who cancels repeatedly — no rate limit, no
-   flagging, no visible pattern for an admin to catch a vendor who accepts
-   and then routinely bails, or a customer who orders and backs out. Decide
-   whether/how to address this (a cancellation-rate threshold, an admin
-   flag on the user/vendor, a cooldown, etc.) before real volume makes it a
-   real problem.
+   `Orders::TransitionStatus`). A two-tier abuse check
+   (`Orders::CancellationAbuseCheck`) runs on every cancellation: 3
+   cancellations by the same customer or vendor within a rolling 14-day
+   window trigger a temporary restriction (blocks the customer from
+   checkout, or closes the vendor's shop), admin-clearable via
+   `clear_cancellation_restriction` on `Api::V1::Admin::CustomerProfilesController`
+   /`VendorProfilesController`. A second offense after being cleared once
+   escalates to a full account suspension (`User#status = "suspended"`, the
+   same mechanism already enforced at login). This is documented in the
+   Terms and Conditions (Section 3, "Eligibility and accounts") and
+   surfaced to users as a small-print reminder in both apps'
+   `CancelOrderModal`.
 4. **Order edits** — when edits are eventually built, may a vendor edit an
    accepted order directly, or must every change be customer-approved?
    (Edits are out of scope for the current phase — see ADR 0005.)
@@ -59,19 +64,30 @@ make before going live to real neighbors.
     hosts image storage (see ADR 0006). Live in production at
     prisma.kapitmarket.ph.
 
-12. **Verification delivery (resolved, temporarily disabled for beta).** SMS
-    verification uses Semaphore; email verification uses Cloudflare Email
-    Service. Both are implemented and wired in (not stubbed/logged only).
-    Semaphore requires a custom Sender Name to be approved before production
-    SMS can go out under the app's own name; their stated turnaround is up to
-    5 business days with no official expedited option (checked directly with
-    their FAQ), and there's no confirmation yet that it has cleared.
-    Rather than block the beta on that, verification is currently switched
-    off end to end: `SKIP_VERIFICATION=true` (API, Railway env var, no
-    rebuild needed) removes the email-verified requirement to become a
-    vendor, and `VITE_SKIP_VERIFICATION=true` (customer-web, baked in at
-    build time via the Dockerfile) skips the mobile-verification screen
-    during registration. Both are meant to be temporary — flip them off (and
-    redeploy the frontend for the Vite one) once Semaphore's sender name is
-    confirmed approved and verification should be required again for real
-    users.
+12. **Verification delivery (email resolved; SMS still temporarily disabled
+    for beta).** SMS verification uses Semaphore; email verification uses
+    Cloudflare Email Service. Both are implemented and wired in (not
+    stubbed/logged only). Email verification is now fully resolved and
+    mandatory: registration step 2 (`VerifyEmailPage.tsx`) requires
+    confirming the emailed code before signup can finish — there's no
+    "skip for now" option. `VITE_SKIP_VERIFICATION` no longer does
+    anything; it was removed from customer-web's runtime code and only
+    survives as a harmless leftover in a type declaration
+    (`vite-env.d.ts`) and `.env.example`.
+
+    SMS is the part still disabled. Semaphore requires a custom Sender Name
+    to be approved before production SMS can go out under the app's own
+    name; their stated turnaround is up to 5 business days with no official
+    expedited option (checked directly with their FAQ), and there's no
+    confirmation yet that it has cleared. Until then, mobile verification
+    stays unused in place: `VerifyMobilePage.tsx` is still in the codebase,
+    swapped out of the registration flow in favor of the email step above.
+    Once Semaphore's sender name is confirmed approved, swap it back in as
+    the same kind of mandatory step email verification already is, not as a
+    skippable one (its old "Skip for now" link should not come back).
+
+    The backend `SKIP_VERIFICATION` env var (Railway, gates the
+    email-verified requirement in `Vendors::EligibilityCheck` for becoming
+    a vendor) still exists in code. It's now largely moot for new users
+    since registration verifies their email regardless, but flip it off if
+    it's still set in Railway.
