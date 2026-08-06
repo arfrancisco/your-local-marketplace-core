@@ -35,7 +35,7 @@ vi.mock('../api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/client')>()
   return {
     ...actual,
-    api: { ...actual.api, me: vi.fn(), sendFeedback: vi.fn().mockResolvedValue({ status: 'ok' }) },
+    api: { ...actual.api, me: vi.fn(), sendFeedback: vi.fn().mockResolvedValue({ status: 'ok' }), becomeVendor: vi.fn() },
   }
 })
 
@@ -124,16 +124,36 @@ describe('HamburgerMenu', () => {
     expect(screen.queryByRole('link', { name: /vendor dashboard/i })).not.toBeInTheDocument()
   })
 
-  it('shows a button-styled "Become a vendor" CTA for a customer with no vendor_profile', async () => {
+  it('shows a button-styled "Become a vendor" CTA that triggers the upgrade directly (not just a link to /account), and closes the drawer', async () => {
     setToken('tok123')
     vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
+    // Never resolves — the assertion only needs to observe the call, not
+    // the subsequent full-page navigation (window.location.href), which
+    // jsdom can't actually perform anyway.
+    vi.mocked(api.becomeVendor).mockImplementation(() => new Promise(() => {}))
 
     renderMenu()
     await openMenu()
 
-    const cta = await screen.findByRole('link', { name: /become a vendor/i })
-    expect(cta).toHaveAttribute('href', '/account')
+    const cta = await screen.findByRole('button', { name: /become a vendor/i })
     expect(cta).toHaveClass('link-button')
+    await userEvent.click(cta)
+
+    expect(api.becomeVendor).toHaveBeenCalled()
+    expect(screen.queryByRole('dialog', { name: /^menu$/i })).not.toBeInTheDocument()
+  })
+
+  it('hides the "Become a vendor" CTA for a customer who isn\'t actually eligible (e.g. not a resident)', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({
+      user: baseUser({ vendor_eligibility: { eligible: false, reasons: ['not_resident'] } }),
+    })
+
+    renderMenu()
+    await openMenu()
+
+    await screen.findByRole('link', { name: /my account/i })
+    expect(screen.queryByRole('button', { name: /become a vendor/i })).not.toBeInTheDocument()
   })
 
   it('hides the "Become a vendor" CTA once the customer already has a vendor_profile', async () => {

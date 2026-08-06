@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth'
+import { useBecomeVendor } from '../useBecomeVendor'
 import { vendorWebUrl } from '../vendorWeb'
 import { FeedbackModal } from './FeedbackModal'
 
@@ -13,6 +14,7 @@ export function HamburgerMenu() {
   const { user, logout } = useAuth()
   const [open, setOpen] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const { start: startBecomingVendor, starting: startingVendor } = useBecomeVendor()
 
   function close() {
     setOpen(false)
@@ -52,9 +54,23 @@ export function HamburgerMenu() {
                 <>
                   <li><Link to="/orders" onClick={close}>My orders</Link></li>
                   <li><Link to="/account" onClick={close}>My account</Link></li>
-                  {!user.vendor_profile && (
+                  {/* Gated on actual eligibility (not just "no vendor_profile
+                      yet") — offering this to someone who isn't eligible
+                      (e.g. not a resident) just bounces them to /account via
+                      useBecomeVendor's catch, which reads as a broken link. */}
+                  {!user.vendor_profile && user.vendor_eligibility.eligible && (
                     <li className="drawer-cta">
-                      <Link to="/account" onClick={close} className="link-button">Become a vendor</Link>
+                      <button
+                        type="button"
+                        className="link-button"
+                        disabled={startingVendor}
+                        onClick={() => {
+                          close()
+                          startBecomingVendor()
+                        }}
+                      >
+                        {startingVendor ? 'One moment…' : 'Become a vendor'}
+                      </button>
                     </li>
                   )}
                   {user.vendor_profile && (
