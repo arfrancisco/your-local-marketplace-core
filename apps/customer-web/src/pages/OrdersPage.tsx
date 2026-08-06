@@ -92,14 +92,14 @@ export function OrdersPage() {
                   <Link to={`/orders/${order.id}`} className="plain">
                     <div className="row spread">
                       <h2>
-                        {order.public_reference}
+                        {order.shop_name}
                         {order.has_unread_messages && <span className="unread-dot" aria-label="Unread update" />}
                       </h2>
                       <span className={`order-status-badge ${statusBadgeClass(groupKey)}`}>
                         {order.status.replace(/_/g, ' ')}
                       </span>
                     </div>
-                    <span className="shop-name">{order.shop_name}</span>
+                    <span className="muted order-reference">{order.public_reference}</span>
                     <p className="muted">
                       {order.items.length} item(s) · {formatPrice(order.total_cents, order.currency)}
                     </p>
