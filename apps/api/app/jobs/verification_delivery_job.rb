@@ -98,12 +98,24 @@ class VerificationDeliveryJob < ApplicationJob
     response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(request) }
     unless response.is_a?(Net::HTTPSuccess)
       Rails.logger.error("[VerificationDelivery] provider call failed: #{response.code} #{response.body}")
+      log, newly_created = ErrorLog.record!(
+        source: "backend",
+        exception: RuntimeError.new("VerificationDelivery provider call failed: #{response.code} #{response.body}")
+      )
+      ErrorAlertJob.perform_later(log.id) if newly_created
     end
     response
   rescue StandardError => e
     # A provider outage shouldn't raise into Sidekiq's retry storm for something
-    # as time-sensitive as an OTP — log it, the user can just tap "resend".
+    # as time-sensitive as an OTP — log it, the user can just tap "resend". But
+    # "don't raise" isn't "don't record" — this used to be genuinely invisible
+    # to the app's own error monitoring (built specifically to catch this
+    # class of failure), since raising is the only thing that reaches
+    # ApplicationJob's rescue_from. Recording it here directly closes that gap
+    # without changing the no-raise behavior.
     Rails.logger.error("[VerificationDelivery] provider call raised: #{e.class}: #{e.message}")
+    log, newly_created = ErrorLog.record!(source: "backend", exception: e)
+    ErrorAlertJob.perform_later(log.id) if newly_created
     nil
   end
 end
