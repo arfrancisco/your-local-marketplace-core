@@ -66,7 +66,7 @@ make before going live to real neighbors.
 
 12. **Verification delivery (email resolved; SMS still temporarily disabled
     for beta).** SMS verification uses Semaphore; email verification uses
-    Cloudflare Email Service. Both are implemented and wired in (not
+    Resend. Both are implemented and wired in (not
     stubbed/logged only). Email verification is now fully resolved and
     mandatory: registration step 2 (`VerifyEmailPage.tsx`) requires
     confirming the emailed code before signup can finish — there's no

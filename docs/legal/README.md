@@ -74,11 +74,13 @@ the drafts either leave them general or flag them inline:
   you likely want a vendor representation about local permits (barangay
   business permit, health clearance, etc.) beyond what's drafted. Flagged
   inline in the ToS, worth a lawyer's specific attention.
-- **Email/SMS delivery provider** — not chosen yet (`VerificationDeliveryJob`
-  just logs codes today, per its comment). The Privacy Policy names this as
-  "a provider we'll appoint" rather than a specific vendor; update once
-  Postmark/Twilio/whatever is picked, since that provider becomes a named
-  subprocessor.
+- **Email/SMS delivery providers** — chosen and live in production:
+  Resend (email) and Semaphore (SMS), both named as subprocessors in the
+  Privacy Policy. Neither is confirmed to run infrastructure inside the
+  Philippines (Railway/Cloudflare are global/US-oriented) — worth naming
+  explicitly to counsel as a cross-border-transfer detail, since the
+  Privacy Policy's existing "may be located outside the Philippines"
+  clause is generic rather than provider-specific.
 
 ## Marketing consent — why it's a separate checkbox, not bundled into ToS
 
