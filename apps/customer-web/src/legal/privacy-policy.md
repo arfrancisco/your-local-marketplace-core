@@ -145,9 +145,10 @@ for third-party advertising.
   - **Cloudflare R2** — stores uploaded images (shop photos, item photos,
     chat images, payment QR codes).
   - **Railway** — hosts our application servers.
-  - An **email/SMS delivery provider** we haven't selected yet, which
-    will send verification codes and (once built) marketing messages.
-    We'll update this policy to name it once chosen.
+  - **Resend** — sends verification emails and (once built) marketing
+    emails.
+  - **Semaphore** — sends verification SMS and (once built) marketing SMS,
+    to Philippine mobile numbers.
 - **Legal and safety** — if required by law, court order, or to protect
   the rights, property, or safety of our users or the public.
 - **Business transfers** — if we're ever involved in a merger,
