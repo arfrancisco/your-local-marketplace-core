@@ -10,6 +10,7 @@ module Api
     class ClientErrorsController < BaseController
       skip_before_action :authenticate!
       before_action :authenticate_optionally!
+      before_action :verify_known_origin
 
       # Only the three known clients may label themselves; anything else is
       # recorded under a generic tag rather than trusted, since this endpoint
@@ -65,6 +66,40 @@ module Api
 
       def client_error_params
         params.permit(:name, :message, :stack, :source, :url, :user_agent)
+      end
+
+      # Defense in depth, not the real access control (that's the rate limit
+      # in config/initializers/rack_attack.rb — this is a public endpoint by
+      # design, and Origin/Referer are just headers a non-browser caller can
+      # set to anything). This only rejects a request that *claims* an origin
+      # clearly outside our own frontends; a request with neither header is
+      # let through rather than blocked, since a same-origin production
+      # request (all three SPAs are served from the same origin as the API)
+      # isn't guaranteed to always send one, and blocking on absence would
+      # risk breaking real traffic for no real security gain — a caller
+      # willing to spoof this can just omit it too.
+      def verify_known_origin
+        header = request.headers["Origin"].presence || request.headers["Referer"].presence
+        return if header.blank?
+
+        origin = request_origin(header)
+        return if origin.nil? || allowed_origins.include?(origin)
+
+        raise ApiError::Forbidden, "Request origin not recognized"
+      end
+
+      def request_origin(header)
+        uri = URI(header)
+        return nil if uri.host.blank?
+
+        port = uri.port unless [80, 443].include?(uri.port)
+        "#{uri.scheme}://#{uri.host}#{":#{port}" if port}"
+      rescue URI::InvalidURIError
+        nil
+      end
+
+      def allowed_origins
+        ENV.fetch("CORS_ORIGINS", "http://localhost:5173,http://localhost:5174,http://localhost:5175").split(",")
       end
     end
   end

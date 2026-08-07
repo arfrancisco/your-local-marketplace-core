@@ -18,13 +18,23 @@ class ErrorLog < ApplicationRecord
   # A browser-reported error, shaped just enough to walk through `record!`
   # alongside real server-side exceptions. `name` is what distinguishes it from
   # a real Exception, whose class name is the thing worth recording.
+  #
+  # Unlike a real Exception (raised by our own code, so effectively bounded in
+  # size), every field here is attacker-controlled free text from a public,
+  # unauthenticated endpoint (Api::V1::ClientErrorsController) — truncate
+  # before it ever reaches `message`/`backtrace` columns, on top of (not
+  # instead of) the rate limit that caps how often it can happen at all.
   class ClientError
+    MAX_NAME_LENGTH = 255
+    MAX_MESSAGE_LENGTH = 2_000
+    MAX_BACKTRACE_LENGTH = 10_000
+
     attr_reader :name, :message, :backtrace
 
     def initialize(name:, message:, backtrace: nil)
-      @name = name.presence || "ClientError"
-      @message = message.to_s
-      @backtrace = backtrace.to_s.split("\n")
+      @name = name.presence&.slice(0, MAX_NAME_LENGTH) || "ClientError"
+      @message = message.to_s.slice(0, MAX_MESSAGE_LENGTH)
+      @backtrace = backtrace.to_s.slice(0, MAX_BACKTRACE_LENGTH).split("\n")
     end
   end
 

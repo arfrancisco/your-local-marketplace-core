@@ -67,5 +67,39 @@ RSpec.describe "Api::V1 ClientErrors", type: :request do
       expect(response).to have_http_status(:created)
       expect(ErrorLog.last.exception_class).to eq("ClientError")
     end
+
+    it "accepts a request whose Origin is one of our own frontends" do
+      post "/api/v1/client_errors", params: payload, headers: { "Origin" => "http://localhost:5173" }
+      expect(response).to have_http_status(:created)
+    end
+
+    it "rejects a request whose Origin clearly isn't one of our own frontends" do
+      post "/api/v1/client_errors", params: payload, headers: { "Origin" => "https://evil.example.com" }
+      expect(response).to have_http_status(:forbidden)
+    end
+
+    it "falls back to Referer when Origin is absent" do
+      post "/api/v1/client_errors", params: payload, headers: { "Referer" => "https://evil.example.com/whatever" }
+      expect(response).to have_http_status(:forbidden)
+    end
+
+    it "does not block a request with neither header (not every real caller sends one)" do
+      expect {
+        post "/api/v1/client_errors", params: payload
+      }.to change(ErrorLog, :count).by(1)
+    end
+
+    it "truncates an oversized payload instead of storing it unbounded" do
+      post "/api/v1/client_errors", params: payload.merge(
+        name: "X" * 1_000,
+        message: "M" * 5_000,
+        stack: "S" * 50_000
+      )
+
+      log = ErrorLog.last
+      expect(log.exception_class.length).to eq(ErrorLog::ClientError::MAX_NAME_LENGTH)
+      expect(log.message.length).to eq(ErrorLog::ClientError::MAX_MESSAGE_LENGTH)
+      expect(log.backtrace.length).to be <= ErrorLog::ClientError::MAX_BACKTRACE_LENGTH
+    end
   end
 end
