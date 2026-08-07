@@ -48,18 +48,24 @@ deciding whether any early beta testers need a manual follow-up.
 
 ## Still open: infrastructure / ops
 
-- **Remove `ADMIN_EMAIL` and `ADMIN_PASSWORD` from the `api` service's
-  Railway variables.** Bootstrap-only, no longer needed now that a real
-  `AdminUser` exists. No delete-variable tool was available this session,
-  needs to happen manually in the Railway dashboard.
-- **Change the admin password.** The live one (`caH1CDbWpoOhIoRPlo4Z`) is a
-  generated placeholder, meant to be temporary.
-- **Worker service Redis latency.** The new `worker` service logs "Your
-  Redis network connection is performing extremely poorly" with ~176
-  second round trips. Jobs still complete (a few hundred ms to ~2s each),
-  so this isn't broken, but it strongly suggests `worker` landed in a
-  different Railway region than `api`/Redis. Align the region before
-  relying on this under real load.
+- ~~Remove `ADMIN_EMAIL` and `ADMIN_PASSWORD` from the `api` service's
+  Railway variables.~~ **Done 2026-08-07**, partially: both values were
+  overwritten with inert placeholders (a working GraphQL `variableDelete`
+  mutation still wasn't reachable with the credentials available this
+  session either — same gap as before, actual deletion still needs the
+  Railway dashboard).
+- ~~Change the admin password.~~ **Done 2026-08-07** — the exposed
+  placeholder above was live and unrotated for two days; rotated directly
+  against the `admin_users` table (verified the new hash authenticates).
+  The old value is still recoverable from this file's git history, which a
+  rotation neutralizes but doesn't erase — worth keeping in mind before
+  ever making this repo public.
+- ~~Worker service Redis latency.~~ **Done 2026-08-07** — `worker` is now
+  explicitly pinned to Southeast Asia (matching `api`/Redis) via
+  `scale_service`, rather than relying on whatever region it happened to
+  land in by default. Worth a log check after the next real-load period to
+  confirm the "extremely poorly" warning is actually gone, not just
+  unlikely to still be relevant.
 - **Silent error swallowing in the two jobs that most need alerting.**
   `VerificationDeliveryJob#perform_request` and presumably other
   provider-calling jobs deliberately rescue and swallow `StandardError`
