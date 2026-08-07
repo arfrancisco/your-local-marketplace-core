@@ -101,5 +101,11 @@ RSpec.describe "Api::V1 ClientErrors", type: :request do
       expect(log.message.length).to eq(ErrorLog::ClientError::MAX_MESSAGE_LENGTH)
       expect(log.backtrace.length).to be <= ErrorLog::ClientError::MAX_BACKTRACE_LENGTH
     end
+
+    it "truncates an oversized url instead of storing it unbounded" do
+      post "/api/v1/client_errors", params: payload.merge(url: "https://kapitmarket.ph/#{'a' * 5_000}")
+
+      expect(ErrorLog.last.request_path.length).to eq(ErrorLog::MAX_REQUEST_PATH_LENGTH)
+    end
   end
 end

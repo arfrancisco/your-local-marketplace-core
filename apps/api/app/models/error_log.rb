@@ -15,6 +15,14 @@ class ErrorLog < ApplicationRecord
 
   scope :unresolved, -> { where(resolved_at: nil) }
 
+  # request_path is unbounded in the schema (a plain Rails string column),
+  # and — unlike a real ActionDispatch::Request#path — the "request" handed
+  # to `record!` for a client-reported error is a caller-controlled `url`
+  # value from a public endpoint (see ClientErrorsController::ClientRequest).
+  # Bounding it here, not per-caller, closes that off structurally for
+  # anything that calls `record!`, not just today's one caller.
+  MAX_REQUEST_PATH_LENGTH = 2_000
+
   # A browser-reported error, shaped just enough to walk through `record!`
   # alongside real server-side exceptions. `name` is what distinguishes it from
   # a real Exception, whose class name is the thing worth recording.
@@ -70,7 +78,7 @@ class ErrorLog < ApplicationRecord
       exception_class: exception_class.presence || "UnknownError",
       message: message.presence || "(no message)",
       backtrace: backtrace.join("\n").presence,
-      request_path: request&.path,
+      request_path: request&.path&.slice(0, MAX_REQUEST_PATH_LENGTH),
       request_method: request&.request_method,
       user_id: user&.id,
       occurrences_count: 1,
