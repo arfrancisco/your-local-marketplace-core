@@ -36,6 +36,10 @@ class Order < ApplicationRecord
 
   # Legal status transitions (ADR 0003). Enforced by Orders::TransitionStatus,
   # never inferred from anything else (e.g. chat content — see ADR 0009).
+  # This is the abstract state graph only — ready_for_pickup/out_for_delivery
+  # are both listed as reachable from "preparing" here, but which one is
+  # actually available on a *given* order additionally depends on its
+  # fulfillment_method (see FULFILLMENT_SPECIFIC_TRANSITIONS below).
   TRANSITIONS = {
     "placed" => %w[accepted rejected cancelled],
     "accepted" => %w[preparing cancelled],
@@ -45,6 +49,15 @@ class Order < ApplicationRecord
     "completed" => [],
     "rejected" => [],
     "cancelled" => []
+  }.freeze
+
+  # The two statuses in TRANSITIONS that only make sense for one
+  # fulfillment_method — without this, a pickup order could be pushed to
+  # "out_for_delivery" (and vice versa), which the state graph alone allows
+  # since it has no concept of fulfillment_method at all.
+  FULFILLMENT_SPECIFIC_TRANSITIONS = {
+    "ready_for_pickup" => "pickup",
+    "out_for_delivery" => "delivery"
   }.freeze
 
   # An order counts as demo if either party to it is a demo user — a
@@ -61,8 +74,19 @@ class Order < ApplicationRecord
   validates :payment_status, inclusion: { in: PAYMENT_STATUSES }
   validates :subtotal_cents, :total_cents, numericality: { greater_than_or_equal_to: 0 }
 
+  # Single source of truth for "what can this order actually move to right
+  # now" — used both to validate an attempted transition (below) and to tell
+  # the frontend which buttons to show (OrderSerializer), so the two can
+  # never drift apart the way TRANSITIONS-alone-vs-fulfillment_method did.
+  def available_transitions
+    TRANSITIONS.fetch(status, []).select do |to_status|
+      required_method = FULFILLMENT_SPECIFIC_TRANSITIONS[to_status]
+      required_method.nil? || fulfillment_method == required_method
+    end
+  end
+
   def can_transition_to?(to_status)
-    TRANSITIONS.fetch(status, []).include?(to_status)
+    available_transitions.include?(to_status)
   end
 
   def demo?

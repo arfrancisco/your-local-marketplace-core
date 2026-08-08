@@ -33,7 +33,7 @@ module OrderSerializer
       customer_building: order.customer_profile.default_address&.building,
       customer_unit: order.customer_profile.default_address&.unit,
       status: order.status,
-      can_transition_to: Order::TRANSITIONS.fetch(order.status, []),
+      can_transition_to: order.available_transitions,
       fulfillment_method: order.fulfillment_method,
       subtotal_cents: order.subtotal_cents,
       total_cents: order.total_cents,

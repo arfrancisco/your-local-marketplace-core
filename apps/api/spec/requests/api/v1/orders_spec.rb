@@ -84,6 +84,13 @@ RSpec.describe "Api::V1 Orders", type: :request do
       expect(json_order["customer_unit"]).to be_nil
     end
 
+    it "only offers the transition matching the order's own fulfillment_method, not both" do
+      preparing_pickup = create(:order, :with_conversation, shop: shop, status: "preparing", fulfillment_method: "pickup")
+      get "/api/v1/orders/#{preparing_pickup.id}", headers: auth_headers(vendor_user)
+
+      expect(json.dig("order", "can_transition_to")).to eq(["ready_for_pickup"])
+    end
+
     it "flags has_unread_messages true for the vendor when the customer posted a message they haven't read" do
       create(:message, conversation: order.conversation, sender_user: customer, body: "When will it be ready?")
       get "/api/v1/orders/#{order.id}", headers: auth_headers(vendor_user)
