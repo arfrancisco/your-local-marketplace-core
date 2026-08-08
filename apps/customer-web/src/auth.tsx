@@ -12,6 +12,10 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>
   register: (payload: RegisterPayload) => Promise<void>
   logout: () => void
+  // For callers that already have a fresh User from some other endpoint's
+  // response (e.g. a verification confirm) and just need the cached copy
+  // here to catch up, without a whole extra /me round-trip.
+  updateUser: (user: User) => void
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -50,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser: setUser }}>
       {children}
     </AuthContext.Provider>
   )

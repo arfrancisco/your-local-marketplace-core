@@ -121,7 +121,7 @@ describe('Header', () => {
   })
 })
 
-describe('EmailVerificationBanner', () => {
+describe('MobileVerificationBanner', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
@@ -132,24 +132,24 @@ describe('EmailVerificationBanner', () => {
   it('is absent when signed out', async () => {
     renderApp()
     await screen.findByRole('link', { name: /prisma kapitmarket/i })
-    expect(screen.queryByText(/verify your email/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/verify your mobile number/i)).not.toBeInTheDocument()
   })
 
-  it('is absent when signed in with a verified email', async () => {
+  it('is absent when signed in with a verified mobile number', async () => {
     setToken('tok123')
-    vi.mocked(api.me).mockResolvedValue({ user: baseUser({ email_verified: true }) })
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser({ mobile_verified: true }) })
     renderApp()
     await screen.findByRole('link', { name: /prisma kapitmarket/i })
-    expect(screen.queryByText(/verify your email/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/verify your mobile number/i)).not.toBeInTheDocument()
   })
 
-  it('shows and links to /account#email-verify when signed in with an unverified email', async () => {
+  it('shows and links to /account#mobile-verify when signed in with an unverified mobile number', async () => {
     setToken('tok123')
-    vi.mocked(api.me).mockResolvedValue({ user: baseUser({ email_verified: false }) })
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser({ mobile_verified: false }) })
     renderApp()
 
-    expect(await screen.findByText(/verify your email/i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /verify now/i })).toHaveAttribute('href', '/account#email-verify')
+    expect(await screen.findByText(/verify your mobile number/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /verify now/i })).toHaveAttribute('href', '/account#mobile-verify')
   })
 })
 
