@@ -140,6 +140,17 @@ RSpec.describe "Api::V1 Orders", type: :request do
       expect(response).to have_http_status(:forbidden)
     end
 
+    it "lets a vendor accept an order they placed on their own shop (customer and vendor are the same account)" do
+      dual_role_user = create(:user, :customer, :vendor)
+      own_shop = create(:shop, :open, vendor_profile: dual_role_user.vendor_profile)
+      own_order = create(:order, :with_item, :with_conversation,
+                          customer_profile: dual_role_user.customer_profile, shop: own_shop)
+
+      post "/api/v1/orders/#{own_order.id}/transitions", params: { to_status: "accepted" }, headers: auth_headers(dual_role_user)
+      expect(response).to have_http_status(:ok)
+      expect(json.dig("order", "status")).to eq("accepted")
+    end
+
     it "422s on an illegal transition" do
       post "/api/v1/orders/#{order.id}/transitions", params: { to_status: "completed" }, headers: auth_headers(vendor_user)
       expect(response).to have_http_status(:unprocessable_entity)
