@@ -19,10 +19,6 @@ COPY apps/customer-web/ ./
 # Same-origin once served by this same Rails app — a relative path, not a
 # cross-origin URL. Vite bakes this in at build time.
 ENV VITE_API_BASE_URL=/api/v1
-# Beta-launch toggle: skip mobile verification during registration while SMS
-# delivery is unreliable (Semaphore sender-name approval pending). Remove
-# this line (or set to false) to restore the full 3-screen flow.
-ENV VITE_SKIP_VERIFICATION=true
 RUN npm run build
 
 FROM node:20-slim AS vendor-web-build

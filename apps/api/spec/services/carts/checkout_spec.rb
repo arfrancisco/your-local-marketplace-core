@@ -78,6 +78,16 @@ RSpec.describe Carts::Checkout do
     expect(order).to be_persisted
   end
 
+  it "allows checkout for a customer verified by email only (pre-existing account, registered before mobile verification)" do
+    legacy_customer = create(:user, :customer, :email_verified)
+    legacy_cart = Carts::AddItem.new(
+      customer_profile: legacy_customer.customer_profile, shop: shop, item: item, quantity: 1
+    ).call
+
+    order = described_class.new(cart: legacy_cart, fulfillment_method: "pickup").call
+    expect(order).to be_persisted
+  end
+
   it "rejects checkout for a customer under a cancellation-abuse restriction" do
     customer.customer_profile.update!(cancellation_restricted_at: Time.current)
 

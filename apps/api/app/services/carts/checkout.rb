@@ -18,7 +18,7 @@ module Carts
     end
 
     def call
-      unless @cart.customer_profile.user.mobile_verified?
+      unless verified_customer?
         raise ApiError.new(
           "Please verify your mobile number before placing an order. Check your text messages for the code we sent when you registered, or verify from your Account page.",
           code: "mobile_not_verified", status: :forbidden
@@ -65,6 +65,14 @@ module Carts
     end
 
     private
+
+    # Either channel counts: pre-existing customers were auto-verified by
+    # email before mobile became the primary registration channel, and
+    # would otherwise be locked out of checkout with no action of their own.
+    def verified_customer?
+      user = @cart.customer_profile.user
+      user.mobile_verified? || user.email_verified?
+    end
 
     # Mirrors Orders::TransitionStatus#post_system_message so the chat reads
     # as a full log of the order from the moment it exists, not just from

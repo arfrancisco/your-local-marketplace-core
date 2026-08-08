@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth'
-import { useBecomeVendor } from '../useBecomeVendor'
+import { useBecomeVendor, EMAIL_NOT_VERIFIED_REASON } from '../useBecomeVendor'
 import { vendorWebUrl } from '../vendorWeb'
 import { FeedbackModal } from './FeedbackModal'
 import { BecomeVendorEmailModal } from './BecomeVendorEmailModal'
@@ -70,7 +70,7 @@ export function HamburgerMenu() {
                   {!user.vendor_profile && (
                     user.vendor_eligibility.eligible ||
                     (user.vendor_eligibility.reasons.length === 1 &&
-                      user.vendor_eligibility.reasons[0] === 'email_not_verified')
+                      user.vendor_eligibility.reasons[0] === EMAIL_NOT_VERIFIED_REASON)
                   ) && (
                     <li className="drawer-cta">
                       <button

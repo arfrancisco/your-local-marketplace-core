@@ -174,6 +174,21 @@ describe('HamburgerMenu', () => {
     expect(screen.queryByRole('button', { name: /become a vendor/i })).not.toBeInTheDocument()
   })
 
+  it('hides the "Become a vendor" CTA when email_not_verified is blocking alongside another reason (not a one-click fix)', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({
+      user: baseUser({
+        vendor_eligibility: { eligible: false, reasons: ['email_not_verified', 'not_resident'] },
+      }),
+    })
+
+    renderMenu()
+    await openMenu()
+
+    await screen.findByRole('link', { name: /my account/i })
+    expect(screen.queryByRole('button', { name: /become a vendor/i })).not.toBeInTheDocument()
+  })
+
   it('hides the "Become a vendor" CTA once the customer already has a vendor_profile', async () => {
     setToken('tok123')
     vi.mocked(api.me).mockResolvedValue({

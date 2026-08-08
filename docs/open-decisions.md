@@ -64,30 +64,35 @@ make before going live to real neighbors.
     hosts image storage (see ADR 0006). Live in production at
     prisma.kapitmarket.ph.
 
-12. **Verification delivery (email resolved; SMS still temporarily disabled
-    for beta).** SMS verification uses Semaphore; email verification uses
-    Resend. Both are implemented and wired in (not
-    stubbed/logged only). Email verification is now fully resolved and
-    mandatory: registration step 2 (`VerifyEmailPage.tsx`) requires
-    confirming the emailed code before signup can finish — there's no
-    "skip for now" option. `VITE_SKIP_VERIFICATION` no longer does
-    anything; it was removed from customer-web's runtime code and only
-    survives as a harmless leftover in a type declaration
-    (`vite-env.d.ts`) and `.env.example`.
+12. **Verification delivery (resolved — two-tier policy, both channels
+    live).** SMS verification uses Semaphore; email verification uses
+    Resend. Both are implemented, wired in, and live in production — no
+    channel is stubbed/logged only or disabled anymore. Semaphore's custom
+    Sender Name approval (the prior blocker) landed, so SMS is now
+    registration's mandatory step 2 (`VerifyMobilePage.tsx`) — no "skip for
+    now" option. `VerifyEmailPage.tsx` is still in the codebase, unused in
+    the registration flow (kept in case email ever needs to become primary
+    again, same pattern `VerifyMobilePage.tsx` had before this swap).
 
-    SMS is the part still disabled. Semaphore requires a custom Sender Name
-    to be approved before production SMS can go out under the app's own
-    name; their stated turnaround is up to 5 business days with no official
-    expedited option (checked directly with their FAQ), and there's no
-    confirmation yet that it has cleared. Until then, mobile verification
-    stays unused in place: `VerifyMobilePage.tsx` is still in the codebase,
-    swapped out of the registration flow in favor of the email step above.
-    Once Semaphore's sender name is confirmed approved, swap it back in as
-    the same kind of mandatory step email verification already is, not as a
-    skippable one (its old "Skip for now" link should not come back).
+    This is a deliberate two-tier trust bar, not a temporary state:
+    - **Customers** need only `mobile_verified?` to check out
+      (`Carts::Checkout`). The gate actually accepts *either*
+      `mobile_verified? || email_verified?`, specifically so pre-existing
+      accounts (registered back when email was the mandatory step, so they
+      have `email_verified_at` but no `mobile_verified_at`) aren't locked
+      out post-swap without a backfill.
+    - **Vendors** additionally require `email_verified?`
+      (`Vendors::EligibilityCheck`) — a real, enforced requirement on top
+      of the mobile verification every customer already completes at
+      registration, not a leftover from the old flow. New registrants
+      verify email separately from the Account page (or inline, via the
+      "become a vendor" flow's email-verify modal) the first time they try
+      to become a vendor.
 
-    The backend `SKIP_VERIFICATION` env var (Railway, gates the
-    email-verified requirement in `Vendors::EligibilityCheck` for becoming
-    a vendor) still exists in code. It's now largely moot for new users
-    since registration verifies their email regardless, but flip it off if
-    it's still set in Railway.
+    `VITE_SKIP_VERIFICATION` no longer does anything on the frontend; it
+    was removed from customer-web's runtime code and only survives as a
+    harmless leftover in a type declaration (`vite-env.d.ts`) and
+    `.env.example`. The backend `SKIP_VERIFICATION` env var (Railway,
+    gates the email-verified requirement in `Vendors::EligibilityCheck`
+    for becoming a vendor) still exists in code for local/e2e use — flip
+    it off if it's still set in Railway production.

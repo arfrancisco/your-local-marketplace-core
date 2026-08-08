@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from './api/client'
 import { vendorWebUrl } from './vendorWeb'
 
+// Matches Vendors::Upgrade's reason codes (apps/api/app/services/vendors/upgrade.rb).
+export const EMAIL_NOT_VERIFIED_REASON = 'email_not_verified'
+
 // Shared by the header banner and hamburger menu's "become a vendor" entry
 // points so a click from either does the actual upgrade immediately, rather
 // than just linking to /account and leaving a second, easy-to-miss click
@@ -35,7 +38,7 @@ export function useBecomeVendor() {
       // one-click fix, so those keep the old behavior: land on /account,
       // which already has the full explanation of what's unmet.
       const reasons = err instanceof ApiError ? (err.details?.reasons as string[] | undefined) : undefined
-      if (reasons?.length === 1 && reasons[0] === 'email_not_verified') {
+      if (reasons?.length === 1 && reasons[0] === EMAIL_NOT_VERIFIED_REASON) {
         setShowEmailVerifyModal(true)
         return
       }
