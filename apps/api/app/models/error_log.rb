@@ -15,16 +15,34 @@ class ErrorLog < ApplicationRecord
 
   scope :unresolved, -> { where(resolved_at: nil) }
 
+  # request_path is unbounded in the schema (a plain Rails string column),
+  # and — unlike a real ActionDispatch::Request#path — the "request" handed
+  # to `record!` for a client-reported error is a caller-controlled `url`
+  # value from a public endpoint (see ClientErrorsController::ClientRequest).
+  # Bounding it here, not per-caller, closes that off structurally for
+  # anything that calls `record!`, not just today's one caller.
+  MAX_REQUEST_PATH_LENGTH = 2_000
+
   # A browser-reported error, shaped just enough to walk through `record!`
   # alongside real server-side exceptions. `name` is what distinguishes it from
   # a real Exception, whose class name is the thing worth recording.
+  #
+  # Unlike a real Exception (raised by our own code, so effectively bounded in
+  # size), every field here is attacker-controlled free text from a public,
+  # unauthenticated endpoint (Api::V1::ClientErrorsController) — truncate
+  # before it ever reaches `message`/`backtrace` columns, on top of (not
+  # instead of) the rate limit that caps how often it can happen at all.
   class ClientError
+    MAX_NAME_LENGTH = 255
+    MAX_MESSAGE_LENGTH = 2_000
+    MAX_BACKTRACE_LENGTH = 10_000
+
     attr_reader :name, :message, :backtrace
 
     def initialize(name:, message:, backtrace: nil)
-      @name = name.presence || "ClientError"
-      @message = message.to_s
-      @backtrace = backtrace.to_s.split("\n")
+      @name = name.presence&.slice(0, MAX_NAME_LENGTH) || "ClientError"
+      @message = message.to_s.slice(0, MAX_MESSAGE_LENGTH)
+      @backtrace = backtrace.to_s.slice(0, MAX_BACKTRACE_LENGTH).split("\n")
     end
   end
 
@@ -60,7 +78,7 @@ class ErrorLog < ApplicationRecord
       exception_class: exception_class.presence || "UnknownError",
       message: message.presence || "(no message)",
       backtrace: backtrace.join("\n").presence,
-      request_path: request&.path,
+      request_path: request&.path&.slice(0, MAX_REQUEST_PATH_LENGTH),
       request_method: request&.request_method,
       user_id: user&.id,
       occurrences_count: 1,

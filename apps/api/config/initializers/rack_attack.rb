@@ -34,4 +34,14 @@ class Rack::Attack
   throttle("discovery/ip", limit: 120, period: 60) do |req|
     req.ip if req.get? && req.path.start_with?("/api/v1/shops")
   end
+
+  # Client crash reports (see Api::V1::ClientErrorsController): public and
+  # unauthenticated by design, since a browser can crash before the user
+  # signs in. Fingerprint dedup only collapses *identical* reports, so a
+  # caller who varies the payload per request can bypass it entirely — this
+  # throttle, not the dedup, is what actually caps DB growth and the
+  # per-new-fingerprint ErrorAlertJob email it triggers.
+  throttle("client_errors/ip", limit: 20, period: 60) do |req|
+    req.ip if req.path == "/api/v1/client_errors" && req.post?
+  end
 end
