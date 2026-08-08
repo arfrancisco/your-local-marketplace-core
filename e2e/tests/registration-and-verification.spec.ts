@@ -1,15 +1,14 @@
 import { test, expect, type Page } from '@playwright/test'
 
-// Full 3-screen registration flow (register -> verify email -> complete
+// Full 3-screen registration flow (register -> verify mobile -> complete
 // profile), driven against real, locally-running servers. Uses the
 // api/v1/test_helpers/verification_code endpoint to retrieve the real code
-// deterministically, without a real inbox — that endpoint only exists
+// deterministically, without a real text message — that endpoint only exists
 // in test/dev (with ENABLE_TEST_HELPERS=true), never production; see
 // config/initializers/test_helpers.rb.
 //
-// Screen 2 is temporarily email verification, not mobile (Semaphore SMS
-// approval still pending — see LoginPage.tsx's comment) and is no longer
-// skippable, unlike the mobile-verification screen it replaces.
+// Screen 2 is mobile verification via Semaphore, not skippable — see
+// LoginPage.tsx / VerifyMobilePage.tsx.
 
 const CUSTOMER_BASE = process.env.CUSTOMER_WEB_URL ?? 'http://localhost:5173'
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:3000'
@@ -25,8 +24,8 @@ function uniqueMobile() {
 }
 
 // The verification code isn't sent by an action this test itself waits on —
-// email verification is auto-requested by a useEffect the moment screen 2
-// mounts (VerifyEmailPage.tsx), so there's no UI signal to wait for before
+// mobile verification is auto-requested by a useEffect the moment screen 2
+// mounts (VerifyMobilePage.tsx), so there's no UI signal to wait for before
 // the challenge exists server-side. Poll briefly instead of fetching once,
 // rather than a blind sleep.
 async function fetchVerificationCode(page: Page, email: string, purpose: string): Promise<string> {
@@ -59,7 +58,7 @@ async function fillScreen1(page: Page, email: string, mobile: string, isResident
   await page.getByRole('button', { name: 'Create account' }).click()
 }
 
-test('full flow: register, verify email, complete profile as a resident', async ({ page }) => {
+test('full flow: register, verify mobile, complete profile as a resident', async ({ page }) => {
   const email = uniqueEmail('resident')
   const mobile = uniqueMobile()
 
@@ -68,8 +67,8 @@ test('full flow: register, verify email, complete profile as a resident', async 
     await expect(page.getByText(/step 2 of 3/i)).toBeVisible()
   })
 
-  await test.step('screen 2: verify email with the real code', async () => {
-    const code = await fetchVerificationCode(page, email, 'email_verification')
+  await test.step('screen 2: verify mobile number with the real code', async () => {
+    const code = await fetchVerificationCode(page, email, 'mobile_verification')
     await page.getByLabel('Verification code').fill(code)
     await page.getByRole('button', { name: 'Confirm' }).click()
     await expect(page.getByText(/step 3 of 3/i)).toBeVisible()
@@ -110,7 +109,7 @@ test('registration is still gated by the residency consent checkbox', async ({ p
   await expect(page.getByText(/step 2 of 3/i)).not.toBeVisible()
 })
 
-test('email verification cannot be skipped, same as profile completion', async ({ page }) => {
+test('mobile verification cannot be skipped, same as profile completion', async ({ page }) => {
   const email = uniqueEmail('nonresident')
   const mobile = uniqueMobile()
 
@@ -118,7 +117,7 @@ test('email verification cannot be skipped, same as profile completion', async (
   await expect(page.getByText(/step 2 of 3/i)).toBeVisible()
   await expect(page.getByRole('button', { name: 'Skip for now' })).not.toBeVisible()
 
-  const code = await fetchVerificationCode(page, email, 'email_verification')
+  const code = await fetchVerificationCode(page, email, 'mobile_verification')
   await page.getByLabel('Verification code').fill(code)
   await page.getByRole('button', { name: 'Confirm' }).click()
   await expect(page.getByText(/step 3 of 3/i)).toBeVisible()
