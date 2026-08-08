@@ -33,6 +33,22 @@ RSpec.describe Orders::TransitionStatus do
     expect(order.order_status_events).to be_empty
   end
 
+  it "rejects out_for_delivery on a pickup order, even though it's reachable from 'preparing' in the abstract state graph" do
+    pickup_order = create(:order, :with_conversation, shop: shop, status: "preparing", fulfillment_method: "pickup")
+
+    expect { described_class.new(order: pickup_order, to_status: "out_for_delivery", actor_user: vendor_user).call }
+      .to raise_error(ApiError::UnprocessableEntity, /preparing to out_for_delivery/)
+    expect(pickup_order.reload.status).to eq("preparing")
+  end
+
+  it "rejects ready_for_pickup on a delivery order" do
+    delivery_order = create(:order, :with_conversation, shop: shop, status: "preparing", fulfillment_method: "delivery")
+
+    expect { described_class.new(order: delivery_order, to_status: "ready_for_pickup", actor_user: vendor_user).call }
+      .to raise_error(ApiError::UnprocessableEntity, /preparing to ready_for_pickup/)
+    expect(delivery_order.reload.status).to eq("preparing")
+  end
+
   it "enqueues RatingReminderJob with a 24-hour delay when completing an order" do
     ready_order = create(:order, :with_conversation, shop: shop, status: "ready_for_pickup")
 
