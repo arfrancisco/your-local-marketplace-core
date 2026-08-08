@@ -233,12 +233,14 @@ export function AccountPage() {
           )}
         </div>
         {!profile.mobile_verified && profile.mobile_number && (
-          <VerificationAction
-            actionLabel="Verify your mobile number"
-            requestCode={api.requestMobileVerification}
-            confirmCode={api.confirmMobileVerification}
-            onVerified={setOverride}
-          />
+          <div id="mobile-verify">
+            <VerificationAction
+              actionLabel="Verify your mobile number"
+              requestCode={api.requestMobileVerification}
+              confirmCode={api.confirmMobileVerification}
+              onVerified={setOverride}
+            />
+          </div>
         )}
       </div>
 

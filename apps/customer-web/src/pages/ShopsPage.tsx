@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Shop } from '../api/types'
 import { colorFor, emojiFor } from '../visuals'
+import { useAuth } from '../auth'
+import { useBecomeVendor } from '../useBecomeVendor'
+import { BecomeVendorEmailModal } from '../components/BecomeVendorEmailModal'
 
 // Matches vendor-web's inventory icons in spirit: a plain stroked SVG, not
 // an icon-font/library, consistent with the rest of this app's zero-icon-
@@ -184,6 +187,42 @@ export function ShopSpotlightCarousel({ shops }: { shops: Shop[] }) {
   )
 }
 
+// A bigger, landing-page-specific invitation to sell — the app-wide
+// BecomeVendorBanner (App.tsx) is a persistent but thin reminder shown on
+// every page; this is a one-time, higher-visibility version specifically
+// for the shop list, the highest-traffic page in the app and the one place
+// a browsing visitor currently sees nothing about selling at all. Hidden
+// entirely for an existing vendor, same condition BecomeVendorBanner uses.
+function BecomeVendorCTA() {
+  const { user } = useAuth()
+  const { start, starting, showEmailVerifyModal, closeEmailVerifyModal } = useBecomeVendor()
+
+  if (user?.vendor_profile) return null
+
+  return (
+    <div className="become-vendor-cta">
+      <h2>Have something to sell?</h2>
+      <p className="muted">Open your own shop and reach the whole community.</p>
+      {user ? (
+        <button type="button" onClick={start} disabled={starting}>
+          {starting ? 'One moment…' : 'Become a vendor'}
+        </button>
+      ) : (
+        <Link to="/login?mode=register" className="link-button">Create an account</Link>
+      )}
+      {showEmailVerifyModal && (
+        <BecomeVendorEmailModal
+          onClose={closeEmailVerifyModal}
+          onVerified={() => {
+            closeEmailVerifyModal()
+            start()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
 export function ShopsPage() {
   const [shops, setShops] = useState<Shop[]>([])
   const [query, setQuery] = useState('')
@@ -230,6 +269,8 @@ export function ShopsPage() {
         <h1>What's cooking today</h1>
         <p className="muted">Fresh from the people next door.</p>
       </div>
+
+      <BecomeVendorCTA />
 
       <div className="search-bar">
         <SearchIcon />

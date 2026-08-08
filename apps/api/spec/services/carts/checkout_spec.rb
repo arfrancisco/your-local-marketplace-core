@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe Carts::Checkout do
-  let(:customer) { create(:user, :customer, :email_verified) }
+  let(:customer) { create(:user, :customer, :mobile_verified) }
   let(:shop) { create(:shop, :open, fulfillment_methods: %w[pickup delivery]) }
   let(:item) { create(:item, shop: shop, price_cents: 15_000) }
   let(:cart) do
@@ -63,17 +63,17 @@ RSpec.describe Carts::Checkout do
       .to raise_error(ApiError::UnprocessableEntity, /no longer available/i)
   end
 
-  it "rejects checkout for a customer whose email isn't verified" do
+  it "rejects checkout for a customer whose mobile number isn't verified" do
     unverified = create(:user, :customer)
     unverified_cart = Carts::AddItem.new(
       customer_profile: unverified.customer_profile, shop: shop, item: item, quantity: 1
     ).call
 
     expect { described_class.new(cart: unverified_cart, fulfillment_method: "pickup").call }
-      .to raise_error(ApiError) { |e| expect(e.code).to eq("email_not_verified"); expect(e.status).to eq(:forbidden) }
+      .to raise_error(ApiError) { |e| expect(e.code).to eq("mobile_not_verified"); expect(e.status).to eq(:forbidden) }
   end
 
-  it "allows checkout for a customer with a verified email" do
+  it "allows checkout for a customer with a verified mobile number" do
     order = described_class.new(cart: cart, fulfillment_method: "pickup").call
     expect(order).to be_persisted
   end

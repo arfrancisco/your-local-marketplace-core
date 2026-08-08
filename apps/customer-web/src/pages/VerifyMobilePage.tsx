@@ -2,14 +2,11 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { api, ApiError } from '../api/client'
 
 interface Props {
-  // Called whether the code was confirmed or the user chose to skip — the
-  // account page carries the persistent "verify your mobile" reminder from
-  // here on, so this screen doesn't need to remember which happened.
   onDone: () => void
 }
 
-// Screen 2 of registration. Skippable — unlike CompleteProfilePage, there is
-// always a way past this screen.
+// Screen 2 of registration. Not skippable — mobile verification unlocks
+// checkout, so there's no path past this screen without it.
 export function VerifyMobilePage({ onDone }: Props) {
   const [code, setCode] = useState('')
   const [confirming, setConfirming] = useState(false)
@@ -61,7 +58,7 @@ export function VerifyMobilePage({ onDone }: Props) {
   return (
     <div>
       <h1>Verify your mobile number</h1>
-      <p className="muted">We texted you a code. Enter it below, or skip for now and verify later.</p>
+      <p className="muted">We texted you a code. Enter it below to continue.</p>
       <form onSubmit={onConfirm}>
         <label>
           Verification code
@@ -82,7 +79,6 @@ export function VerifyMobilePage({ onDone }: Props) {
       <button className="plain-link" onClick={resend} disabled={sending}>
         {sending ? 'Sending…' : 'Resend code'}
       </button>
-      <button className="plain-link" onClick={onDone}>Skip for now</button>
     </div>
   )
 }

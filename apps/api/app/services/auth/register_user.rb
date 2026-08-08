@@ -51,7 +51,7 @@ module Auth
         user.create_vendor_profile!(display_name: display_name) if @roles.include?("vendor")
       end
 
-      Verifications::IssueChallenge.new(user: user, channel: "email").call
+      Verifications::IssueChallenge.new(user: user, channel: "mobile").call
       _record, raw = ApiToken.issue!(user)
       Result.new(user: user, token: raw)
     end

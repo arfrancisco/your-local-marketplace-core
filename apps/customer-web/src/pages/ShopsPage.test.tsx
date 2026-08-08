@@ -3,12 +3,41 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { ShopsPage, ShopSpotlightCarousel } from './ShopsPage'
-import { api } from '../api/client'
-import type { Shop } from '../api/types'
+import { api, setToken } from '../api/client'
+import { AuthProvider } from '../auth'
+import type { Shop, User } from '../api/types'
 
-vi.mock('../api/client', () => ({
-  api: { listShops: vi.fn() },
-}))
+function shopsPageUser(overrides: Partial<User> = {}): User {
+  return {
+    id: 1,
+    email: 'neighbor@example.com',
+    mobile_number: '09171234567',
+    first_name: 'Juan',
+    last_name: 'Dela Cruz',
+    status: 'active',
+    email_verified: true,
+    mobile_verified: true,
+    email_marketing_opt_in: false,
+    sms_marketing_opt_in: false,
+    last_signed_in_at: '2026-08-01T00:00:00Z',
+    created_at: '2026-01-01T00:00:00Z',
+    customer_profile: {
+      id: 1, display_name: 'Juan', default_address_id: 1,
+      is_resident: true, willing_to_verify_residency: true,
+    },
+    vendor_profile: null,
+    vendor_eligibility: { eligible: true, reasons: [] },
+    ...overrides,
+  }
+}
+
+vi.mock('../api/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../api/client')>()
+  return {
+    ...actual,
+    api: { ...actual.api, listShops: vi.fn(), me: vi.fn(), becomeVendor: vi.fn() },
+  }
+})
 
 const listShops = vi.mocked(api.listShops)
 
@@ -36,7 +65,9 @@ function shop(id: number, name: string, overrides: Partial<Shop> = {}): Shop {
 function renderPage() {
   render(
     <MemoryRouter>
-      <ShopsPage />
+      <AuthProvider>
+        <ShopsPage />
+      </AuthProvider>
     </MemoryRouter>,
   )
 }
@@ -185,4 +216,44 @@ describe('ShopsPage', () => {
     await screen.findByText(/no shops match "br"/i)
     expect(listShops).toHaveBeenCalledWith('br')
   }, 10000)
+
+  it('links a signed-out visitor to registration', async () => {
+    listShops.mockResolvedValue({ shops: [] })
+    renderPage()
+
+    expect(await screen.findByRole('link', { name: /create an account/i })).toHaveAttribute(
+      'href',
+      '/login?mode=register',
+    )
+  })
+
+  it('triggers the become-vendor flow for a signed-in non-vendor', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: shopsPageUser() })
+    listShops.mockResolvedValue({ shops: [] })
+    // Never resolves — the assertion only needs to observe the call, not the
+    // subsequent full-page navigation, which jsdom can't perform anyway.
+    vi.mocked(api.becomeVendor).mockImplementation(() => new Promise(() => {}))
+
+    renderPage()
+    const cta = await screen.findByRole('button', { name: /become a vendor/i })
+    await userEvent.click(cta)
+
+    expect(api.becomeVendor).toHaveBeenCalled()
+    setToken(null)
+  })
+
+  it('hides the CTA entirely for a customer who is already a vendor', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({
+      user: shopsPageUser({ vendor_profile: { id: 1, display_name: "Juan's Shop", verification_status: 'verified' } }),
+    })
+    listShops.mockResolvedValue({ shops: [] })
+
+    renderPage()
+    await screen.findByText(/no shops are open/i)
+
+    expect(screen.queryByText(/have something to sell/i)).not.toBeInTheDocument()
+    setToken(null)
+  })
 })

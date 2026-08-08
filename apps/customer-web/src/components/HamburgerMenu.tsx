@@ -4,6 +4,7 @@ import { useAuth } from '../auth'
 import { useBecomeVendor } from '../useBecomeVendor'
 import { vendorWebUrl } from '../vendorWeb'
 import { FeedbackModal } from './FeedbackModal'
+import { BecomeVendorEmailModal } from './BecomeVendorEmailModal'
 
 // Replaces the header's inline link row at *every* width, not just on mobile —
 // the top bar is now just the brand plus this button and the cart icon.
@@ -14,7 +15,12 @@ export function HamburgerMenu() {
   const { user, logout } = useAuth()
   const [open, setOpen] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
-  const { start: startBecomingVendor, starting: startingVendor } = useBecomeVendor()
+  const {
+    start: startBecomingVendor,
+    starting: startingVendor,
+    showEmailVerifyModal,
+    closeEmailVerifyModal,
+  } = useBecomeVendor()
 
   function close() {
     setOpen(false)
@@ -57,8 +63,15 @@ export function HamburgerMenu() {
                   {/* Gated on actual eligibility (not just "no vendor_profile
                       yet") — offering this to someone who isn't eligible
                       (e.g. not a resident) just bounces them to /account via
-                      useBecomeVendor's catch, which reads as a broken link. */}
-                  {!user.vendor_profile && user.vendor_eligibility.eligible && (
+                      useBecomeVendor's catch, which reads as a broken link.
+                      Email-not-verified is the one exception: that's now a
+                      one-click fix via the modal below, not a dead end, so
+                      the CTA stays visible for it specifically. */}
+                  {!user.vendor_profile && (
+                    user.vendor_eligibility.eligible ||
+                    (user.vendor_eligibility.reasons.length === 1 &&
+                      user.vendor_eligibility.reasons[0] === 'email_not_verified')
+                  ) && (
                     <li className="drawer-cta">
                       <button
                         type="button"
@@ -119,6 +132,15 @@ export function HamburgerMenu() {
       )}
 
       {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
+      {showEmailVerifyModal && (
+        <BecomeVendorEmailModal
+          onClose={closeEmailVerifyModal}
+          onVerified={() => {
+            closeEmailVerifyModal()
+            startBecomingVendor()
+          }}
+        />
+      )}
     </>
   )
 }

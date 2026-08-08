@@ -156,6 +156,20 @@ body { margin: 0; position: relative; }
 .hero h1 { margin: 0 0 0.3rem; }
 .hero p { margin: 0; }
 
+/* Same sage-green invitation palette as .become-vendor-banner, but a full
+   card — this is the landing page's own, more visible version of that
+   thinner app-wide banner, not a replacement for it. */
+.become-vendor-cta {
+  background: #eaf3ec;
+  border: 1px solid #c3ddc8;
+  border-radius: 14px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+.become-vendor-cta h2 { margin: 0 0 0.3rem; color: #2f5c3d; }
+.become-vendor-cta p { margin: 0 0 0.75rem; }
+
 .card {
   background: #fffdf9;
   border: 1px solid #ecdfcd;

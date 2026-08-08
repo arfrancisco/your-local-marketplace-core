@@ -38,8 +38,8 @@ vi.mock('../api/client', async (importOriginal) => {
       register: vi.fn().mockResolvedValue({ token: 'tok123', user }),
       login: vi.fn(),
       me: vi.fn().mockResolvedValue({ user }),
-      requestEmailVerification: vi.fn().mockResolvedValue({}),
-      confirmEmailVerification: vi.fn().mockResolvedValue({ user }),
+      requestMobileVerification: vi.fn().mockResolvedValue({}),
+      confirmMobileVerification: vi.fn().mockResolvedValue({ user }),
       completeProfile: vi.fn().mockResolvedValue({ user, address: {} }),
     },
   }
@@ -100,7 +100,7 @@ describe('LoginPage registration flow', () => {
     )
   })
 
-  it('progresses through all 3 screens, requiring email verification with no skip option', async () => {
+  it('progresses through all 3 screens, requiring mobile verification with no skip option', async () => {
     renderPage()
     await userEvent.click(screen.getByRole('button', { name: /don't have an account/i }))
 
@@ -110,12 +110,12 @@ describe('LoginPage registration flow', () => {
     await userEvent.click(screen.getByRole('button', { name: /create account/i }))
 
     expect(await screen.findByText('Step 2 of 3')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /verify your email/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /verify your mobile number/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /skip for now/i })).not.toBeInTheDocument()
 
     await userEvent.type(screen.getByLabelText(/verification code/i), '123456')
     await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }))
-    expect(api.confirmEmailVerification).toHaveBeenCalledWith('123456')
+    expect(api.confirmMobileVerification).toHaveBeenCalledWith('123456')
 
     expect(await screen.findByText('Step 3 of 3')).toBeInTheDocument()
     await userEvent.type(screen.getByLabelText(/first name/i), 'Juan')

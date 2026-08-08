@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { HamburgerMenu } from './HamburgerMenu'
 import { AuthProvider } from '../auth'
-import { api, setToken } from '../api/client'
+import { api, ApiError, setToken } from '../api/client'
 import type { User } from '../api/types'
 
 function baseUser(overrides: Partial<User> = {}): User {
@@ -141,6 +141,24 @@ describe('HamburgerMenu', () => {
 
     expect(api.becomeVendor).toHaveBeenCalled()
     expect(screen.queryByRole('dialog', { name: /^menu$/i })).not.toBeInTheDocument()
+  })
+
+  it('shows the "Become a vendor" CTA when email verification is the only thing blocking, and opens the verify-email modal on click instead of bouncing to /account', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({
+      user: baseUser({ vendor_eligibility: { eligible: false, reasons: ['email_not_verified'] } }),
+    })
+    vi.mocked(api.becomeVendor).mockRejectedValue(
+      new ApiError(403, 'forbidden', 'Not eligible', { reasons: ['email_not_verified'] }),
+    )
+
+    renderMenu()
+    await openMenu()
+
+    const cta = await screen.findByRole('button', { name: /become a vendor/i })
+    await userEvent.click(cta)
+
+    expect(await screen.findByRole('dialog', { name: /verify your email/i })).toBeInTheDocument()
   })
 
   it('hides the "Become a vendor" CTA for a customer who isn\'t actually eligible (e.g. not a resident)', async () => {

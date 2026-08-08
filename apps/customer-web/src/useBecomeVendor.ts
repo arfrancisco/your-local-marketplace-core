@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from './api/client'
+import { api, ApiError } from './api/client'
 import { vendorWebUrl } from './vendorWeb'
 
 // Shared by the header banner and hamburger menu's "become a vendor" entry
@@ -14,6 +14,7 @@ import { vendorWebUrl } from './vendorWeb'
 export function useBecomeVendor() {
   const navigate = useNavigate()
   const [starting, setStarting] = useState(false)
+  const [showEmailVerifyModal, setShowEmailVerifyModal] = useState(false)
 
   async function start() {
     setStarting(true)
@@ -22,16 +23,25 @@ export function useBecomeVendor() {
       // Full navigation, not React Router — crossing from customer-web into
       // vendor-web, a separate SPA sharing the same origin and auth token.
       window.location.href = vendorWebUrl('/onboarding')
-    } catch {
-      // Not actually eligible (e.g. not a resident) despite the banner/menu
-      // entry point showing — those don't pre-check full eligibility, only
-      // "no vendor_profile yet". /account already has the full explanation
-      // of which requirement is unmet, so land there instead of failing
-      // silently with nowhere to show an error.
+    } catch (err) {
       setStarting(false)
+      // Vendors::Upgrade returns the specific unmet reasons in details.reasons
+      // (see apps/api/app/services/vendors/upgrade.rb). When email
+      // verification is the *only* thing blocking — the realistic default
+      // state for every new registrant now that mobile is verified at
+      // registration instead — that's a single quick fix-in-place action, so
+      // surface it right here instead of bouncing to /account. Any other or
+      // multiple reasons (not a resident, already a vendor, etc.) aren't a
+      // one-click fix, so those keep the old behavior: land on /account,
+      // which already has the full explanation of what's unmet.
+      const reasons = err instanceof ApiError ? (err.details?.reasons as string[] | undefined) : undefined
+      if (reasons?.length === 1 && reasons[0] === 'email_not_verified') {
+        setShowEmailVerifyModal(true)
+        return
+      }
       navigate('/account')
     }
   }
 
-  return { start, starting }
+  return { start, starting, showEmailVerifyModal, closeEmailVerifyModal: () => setShowEmailVerifyModal(false) }
 }
