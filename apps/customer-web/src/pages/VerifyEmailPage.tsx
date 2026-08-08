@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api, ApiError } from '../api/client'
+import { useAuth } from '../auth'
 
 interface Props {
   onDone: () => void
@@ -10,6 +11,7 @@ interface Props {
 // requires email verification as a separate step from registration's own
 // mobile verification.
 export function VerifyEmailPage({ onDone }: Props) {
+  const { updateUser } = useAuth()
   const [code, setCode] = useState('')
   const [confirming, setConfirming] = useState(false)
   const [sending, setSending] = useState(false)
@@ -51,7 +53,8 @@ export function VerifyEmailPage({ onDone }: Props) {
     setError(null)
     setConfirming(true)
     try {
-      await api.confirmEmailVerification(code)
+      const res = await api.confirmEmailVerification(code)
+      updateUser(res.user)
       onDone()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Invalid or expired code')

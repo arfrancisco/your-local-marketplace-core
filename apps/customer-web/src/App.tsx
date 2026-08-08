@@ -47,11 +47,13 @@ function HeaderActions() {
 function Header() {
   return (
     <header className="topbar">
-      <div className="brand-block">
-        <Link to="/shops" className="brand">Prisma KapitMarket</Link>
-        <p className="brand-tagline">By the community, for the community</p>
+      <div className="topbar-inner">
+        <div className="brand-block">
+          <Link to="/shops" className="brand">Prisma KapitMarket</Link>
+          <p className="brand-tagline">By the community, for the community</p>
+        </div>
+        <HeaderActions />
       </div>
-      <HeaderActions />
     </header>
   )
 }
@@ -159,23 +161,6 @@ function MobileVerificationBanner() {
   )
 }
 
-// Invitation, not a nag — shown to every signed-in customer who isn't a
-// vendor yet, regardless of their own mobile-verified state (that's the
-// unrelated concern MobileVerificationBanner already covers above). Links
-// into the same "Become a vendor" eligibility flow AccountPage already has
-// (also reachable from HamburgerMenu's drawer) — this is just a more visible
-// entry point into it, not a new flow.
-function BecomeVendorBanner() {
-  const { user } = useAuth()
-  if (!user || user.vendor_profile) return null
-  return (
-    <div className="become-vendor-banner">
-      Got something to sell? Turn your kitchen into a shop —{' '}
-      <Link to="/account">become a vendor</Link>.
-    </div>
-  )
-}
-
 // The bar's flex-1 slot shows one thing at a time: the cart summary whenever
 // there's something in the cart (the task at hand), falling back to the
 // track-your-order reminder only once the cart is empty. Showing both
@@ -196,8 +181,10 @@ function BottomBarStatus() {
 function BottomBar() {
   return (
     <div className="bottom-bar">
-      <BottomBarStatus />
-      <CartButton />
+      <div className="bottom-bar-inner">
+        <BottomBarStatus />
+        <CartButton />
+      </div>
     </div>
   )
 }
@@ -207,7 +194,6 @@ export default function App() {
     <>
       <BetaBanner />
       <MobileVerificationBanner />
-      <BecomeVendorBanner />
       <RatingNudgeModal />
       <Header />
 

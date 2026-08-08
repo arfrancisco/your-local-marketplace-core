@@ -265,12 +265,12 @@ export function ShopsPage() {
 
   return (
     <div>
-      <div className="hero">
+      <BecomeVendorCTA />
+
+      <div className="page-heading">
         <h1>What's cooking today</h1>
         <p className="muted">Fresh from the people next door.</p>
       </div>
-
-      <BecomeVendorCTA />
 
       <div className="search-bar">
         <SearchIcon />

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api, ApiError } from '../api/client'
+import { useAuth } from '../auth'
 
 interface Props {
   onDone: () => void
@@ -8,6 +9,7 @@ interface Props {
 // Screen 2 of registration. Not skippable — mobile verification unlocks
 // checkout, so there's no path past this screen without it.
 export function VerifyMobilePage({ onDone }: Props) {
+  const { updateUser } = useAuth()
   const [code, setCode] = useState('')
   const [confirming, setConfirming] = useState(false)
   const [sending, setSending] = useState(false)
@@ -46,7 +48,8 @@ export function VerifyMobilePage({ onDone }: Props) {
     setError(null)
     setConfirming(true)
     try {
-      await api.confirmMobileVerification(code)
+      const res = await api.confirmMobileVerification(code)
+      updateUser(res.user)
       onDone()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Invalid or expired code')
