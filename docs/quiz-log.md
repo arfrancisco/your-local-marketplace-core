@@ -24,8 +24,8 @@ Nothing here needs hand-editing, but feel free.
 | # | Lesson | Taught | Quizzed | Score | Confidence |
 |---|---|---|---|---|---|
 | 1 | Product and its three refusals | 2026-08-06 | 2026-08-07 | 6/6 | solid |
-| 2 | Shape and shipping | 2026-08-07 | - | - | - |
-| 3 | Identity and authentication | - | - | - | - |
+| 2 | Shape and shipping | 2026-08-07 | 2026-08-10 | 4/6 | ok |
+| 3 | Identity and authentication | 2026-08-10 | - | - | - |
 | 4 | Authorization | - | - | - | - |
 | 5 | Data model and the snapshot rule | - | - | - | - |
 | 6 | Discovery | - | - | - | - |
@@ -38,6 +38,30 @@ Nothing here needs hand-editing, but feel free.
 ## Session log
 
 Newest first.
+
+### 2026-08-10 — Quiz: lesson 2 · Taught: lesson 3
+
+Score 4/6 on lesson 2. Confidence: ok.
+- Missed: the photo-404 triage scenario — picked "check R2 credentials"
+  instead of "check `RESERVED_PATH_PREFIXES` in `routes.rb`." Didn't connect
+  the "200 with wrong payload" signature to a routing cause rather than a
+  storage/credentials cause.
+- Missed: "merge to main deploys" scenario — picked "auto-deploys in a few
+  minutes" over "nothing deploys, `railway up` is the only path." Both
+  misses share a theme: assuming automation exists (auto-deploy, storage
+  validation catching routing bugs) where this repo deliberately has none.
+  Worth a re-read of the "Shipping: the part with no safety net" section
+  before beta launch, since a real deploy mistake here has real consequences.
+- Correctly answered: build-context/COPY-path failure, the two-mechanism
+  routing trap (ordering + late-appended engine routes), the VITE_* bake-in
+  question, and the live-code CI path-filter check (opened
+  `api-ci.yml` and got it right).
+- Delivered lesson 3 in full: capability-based identity (no role column,
+  shared localStorage token between customer-web/vendor-web), the
+  `ApiToken` SHA-256-not-BCrypt reasoning, the discovery-is-public /
+  stale-route-comment gotcha, the ActionCable query-param auth workaround,
+  and the two separate auth worlds (marketplace vs. admin) with instant
+  revocation and the 404-not-403 admin-namespace-gating point.
 
 <!-- Each session appends an entry in this shape:
 
@@ -73,5 +97,5 @@ the three misconceptions.
 
 ## Next up
 
-**Day 3 — quiz on lesson 2** (6 questions), then **lesson 3 — identity and
-authentication.**
+**Day 4 — quiz on lesson 3** (6 questions), then **lesson 4 —
+authorization.**
