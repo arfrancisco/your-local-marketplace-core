@@ -3,10 +3,12 @@ name: API CI
 on:
   push:
     branches: [main]
+  # Runs on every PR regardless of what changed, not just apps/api/** — this
+  # job's `test` check is required by main's branch protection, and a
+  # required check whose workflow never triggers leaves the PR stuck on
+  # "waiting for status" forever. A docs-only or frontend-only PR still
+  # needs this to run so it can actually merge.
   pull_request:
-    paths:
-      - "apps/api/**"
-      - ".github/workflows/api-ci.yml"
 
 jobs:
   test:
