@@ -41,6 +41,18 @@ RSpec.describe "Api::V1 Auth", type: :request do
       expect(ErrorLog.last.exception_class).to eq("Api::V1::RegistrationsController::HoneypotTriggered")
     end
 
+    it "rejects registration when the honeypot field is only whitespace, not just when it has real content" do
+      # A bot padding its autofill value with a single space would defeat a
+      # naive `.present?` check (ActiveSupport treats " " as blank) -- proves
+      # the actual check (!= "") catches this specific case, not just an
+      # obviously-non-empty value like the other honeypot test uses.
+      params[:user][:website] = " "
+
+      expect { post "/api/v1/auth/register", params: params }.not_to change(User, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
     it "does not re-alert on a second honeypot hit, only bumps occurrences_count" do
       params[:user][:website] = "http://spam-bot.example"
       post "/api/v1/auth/register", params: params # first occurrence -- alerts once

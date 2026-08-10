@@ -6,12 +6,17 @@ module Api
       # POST /api/v1/auth/register
       def create
         # Honeypot (see LoginPage.tsx): real users never see or fill this
-        # field. Read directly off params, not through registration_params'
+        # field, so a real submission is always the literal "" the input
+        # starts with -- ANY other content, including a bot padding its
+        # autofill value with a single space, is the signal. Deliberately
+        # not `.present?` -- that treats whitespace-only as blank too,
+        # which would let exactly that padding-with-a-space case through.
+        # Read directly off params, not through registration_params'
         # allowlist, so it can never accidentally reach Auth::RegisterUser
         # even if this check is ever removed. Bails out before any DB write
         # or Semaphore/Resend call -- the whole point is to not pay for or
         # otherwise process a bot's submission.
-        if params.dig(:user, :website).present?
+        if params.dig(:user, :website).to_s != ""
           alert_honeypot_triggered!
           raise ApiError::UnprocessableEntity, "Registration failed"
         end
@@ -51,11 +56,18 @@ module Api
       # beta is worth knowing about.
       class HoneypotTriggered < StandardError; end
 
+      # Rescued locally, not left to the global rescue_from StandardError --
+      # a DB hiccup while recording the alert must not itself downgrade the
+      # intended 422 (honeypot rejection) into a generic 500, which would
+      # both confuse the response and bury the actual honeypot signal under
+      # a secondary "internal_error" alert instead.
       def alert_honeypot_triggered!
         exception = HoneypotTriggered.new("Registration honeypot field was filled")
         exception.set_backtrace(caller)
         log, newly_created = ErrorLog.record!(source: "backend", exception: exception, request: request)
         ErrorAlertJob.perform_later(log.id) if newly_created
+      rescue StandardError => e
+        Rails.logger.error("[Registration] failed to record honeypot alert: #{e.class}: #{e.message}")
       end
     end
   end

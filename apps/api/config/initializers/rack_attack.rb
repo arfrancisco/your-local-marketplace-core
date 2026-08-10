@@ -21,10 +21,20 @@ class Rack::Attack
     retry_after = (request.env["rack.attack.match_data"] || {})[:period]
 
     if request.env["rack.attack.matched"] == "auth/register/ip"
-      exception = RegisterThrottleExceeded.new("Registration rate limit exceeded for an IP")
-      exception.set_backtrace(caller)
-      log, newly_created = ErrorLog.record!(source: "backend", exception: exception, request: request)
-      ErrorAlertJob.perform_later(log.id) if newly_created
+      # This runs as Rack middleware, not inside a Rails controller action --
+      # ApplicationController's rescue_from StandardError does not cover this
+      # lambda. Recording must never itself take down the 429 a throttled
+      # caller needs back (same reasoning as ErrorHandling#record_error_log,
+      # which this deliberately mirrors), and a DB/Redis hiccup here is most
+      # likely to happen precisely under the load of a real attack.
+      begin
+        exception = RegisterThrottleExceeded.new("Registration rate limit exceeded for an IP")
+        exception.set_backtrace(caller)
+        log, newly_created = ErrorLog.record!(source: "backend", exception: exception, request: request)
+        ErrorAlertJob.perform_later(log.id) if newly_created
+      rescue StandardError => e
+        Rails.logger.error("[RackAttack] failed to record register-throttle alert: #{e.class}: #{e.message}")
+      end
     end
 
     [

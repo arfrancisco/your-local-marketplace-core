@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_06_015614) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_10_100018) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -392,6 +392,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_015614) do
     t.string "sent_to", null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
+    t.index ["sent_to", "purpose", "created_at"], name: "idx_on_sent_to_purpose_created_at_bc573822e8"
     t.index ["user_id", "channel", "purpose", "consumed_at"], name: "idx_on_user_id_channel_purpose_consumed_at_3e53850e3b"
     t.index ["user_id"], name: "index_verification_challenges_on_user_id"
   end
