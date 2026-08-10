@@ -1,15 +1,17 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api, ApiError } from '../api/client'
+import { useAuth } from '../auth'
 
 interface Props {
   onDone: () => void
 }
 
-// Screen 2 of registration. Not skippable, unlike the mobile-verification
-// screen it temporarily replaces (see LoginPage's SKIP_MOBILE_VERIFICATION
-// comment) — email delivery is the channel that's actually reliable right
-// now, so this is the one verification step required to finish signing up.
+// No longer registration step 2 (that's mobile now, see LoginPage.tsx) —
+// reused as-is inside BecomeVendorEmailModal, since becoming a vendor
+// requires email verification as a separate step from registration's own
+// mobile verification.
 export function VerifyEmailPage({ onDone }: Props) {
+  const { updateUser } = useAuth()
   const [code, setCode] = useState('')
   const [confirming, setConfirming] = useState(false)
   const [sending, setSending] = useState(false)
@@ -51,7 +53,8 @@ export function VerifyEmailPage({ onDone }: Props) {
     setError(null)
     setConfirming(true)
     try {
-      await api.confirmEmailVerification(code)
+      const res = await api.confirmEmailVerification(code)
+      updateUser(res.user)
       onDone()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Invalid or expired code')

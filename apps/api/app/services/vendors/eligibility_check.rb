@@ -32,11 +32,13 @@ module Vendors
 
     private
 
-    # Beta-launch toggle: email/mobile verification delivery isn't reliable
-    # yet (Semaphore SMS sender-name approval pending, see
-    # docs/open-decisions.md), so this is temporarily off to let beta users
-    # sign up and become vendors with zero verification friction. Flip
-    # SKIP_VERIFICATION off (or unset it) to restore the requirement.
+    # Deliberately a real, enforced requirement, not a beta-launch stopgap:
+    # every customer already verifies mobile automatically at registration
+    # (see Auth::RegisterUser), so email verification here is a second,
+    # separate step specifically for becoming a vendor — a higher trust bar
+    # for someone about to run a shop than for someone who only ever places
+    # orders. SKIP_VERIFICATION remains available to turn this off (e.g. for
+    # a demo/seed environment); flip it off (or unset it) to restore it.
     def require_email_verification?
       ENV["SKIP_VERIFICATION"] != "true"
     end

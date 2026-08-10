@@ -35,20 +35,6 @@ body { margin: 0; position: relative; }
 }
 .verify-banner a { color: inherit; font-weight: 600; }
 
-/* Sage green, matching this app's existing accent color (.link-button,
-   button.link) — deliberately distinct from the amber beta-banner and blue
-   verify-banner above. This one is an invitation, not a status note or a
-   warning, so it gets the warmest of the three. */
-.become-vendor-banner {
-  background: #eaf3ec;
-  border-bottom: 1px solid #c3ddc8;
-  color: #2f5c3d;
-  text-align: center;
-  font-size: 0.85rem;
-  padding: 0.4rem 1rem;
-}
-.become-vendor-banner a { color: inherit; font-weight: 600; }
-
 /* Red/orange, deliberately distinct from the amber beta-banner and blue
    verify-banner above — this one is a warning, not just a status note.
    A demo shop looks identical to a real one, so this has to be unmissable
@@ -155,6 +141,20 @@ body { margin: 0; position: relative; }
 }
 .hero h1 { margin: 0 0 0.3rem; }
 .hero p { margin: 0; }
+
+/* Sage-green invitation palette, matching this app's existing accent color
+   (.link-button, button.link) — sits above the page heading, so extra
+   bottom margin keeps it from crowding the text right below it. */
+.become-vendor-cta {
+  background: #eaf3ec;
+  border: 1px solid #c3ddc8;
+  border-radius: 14px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+.become-vendor-cta h2 { margin: 0 0 0.3rem; color: #2f5c3d; }
+.become-vendor-cta p { margin: 0 0 0.75rem; }
 
 .card {
   background: #fffdf9;
