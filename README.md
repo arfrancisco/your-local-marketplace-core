@@ -24,14 +24,19 @@ If a future version needs to span a genuinely larger area, that is a real
 product change requiring a geo model — not a config tweak. See
 `docs/adr/0002-no-geo-discovery.md`.
 
+Live in production at **prisma.kapitmarket.ph**, hosted on Railway.
+
 ## Shape of the system
 
-One Ruby on Rails API backend serves two React web clients:
+One Ruby on Rails API backend serves three React web clients:
 
 ```
 apps/api/            Rails API — all business rules live here
 apps/customer-web/   React client for customers
 apps/vendor-web/     React client for vendors
+apps/admin-web/      React client for internal admin (accounts, moderation, audit log)
+admin-mcp/           MCP server exposing the admin API to Claude/agent tooling
+e2e/                 Playwright end-to-end tests, run against the full local stack
 ```
 
 An Android client is planned but lives in a **separate repo**, and its stack
@@ -40,30 +45,42 @@ serve it without changes.
 
 ## Current scope
 
-The build is phased. This repo currently targets:
+M0 through M4 (the original phased plan) are done, and the build has gone
+well beyond that original boundary:
 
-| Milestone | Scope |
-|---|---|
-| M0 | Foundation: Rails API, auth, authorization, storage, CI |
-| M1 | Vendor publishes a shop with items |
-| M2 | Customer discovers shops and browses items (no cart) |
-| M3 | Customer places a direct single-item order; vendor fulfills it |
-| M4 | Per-order chat with images, and ratings after completion |
+| Milestone | Scope | Status |
+|---|---|---|
+| M0 | Foundation: Rails API, auth, authorization, storage, CI | done |
+| M1 | Vendor publishes a shop with items | done |
+| M2 | Customer discovery (cart-free), daily-rotating shop list | done |
+| M3 | Cart, checkout, order lifecycle | done |
+| M4 | Per-order chat with images, and ratings after completion | done |
+| Beyond M4 | Registration/verification, vendor onboarding, admin panel, mobile/UX polish, social previews | done |
 
-**Deliberately not built yet**: shopping cart, order edits/change requests,
-online payments, courier dispatch, promotions or fees, multi-vendor
-checkout, inventory counts, admin interface, mobile clients.
+A shopping cart was originally deferred past M3 and later reintroduced (ADR
+0008) — checkout is now cart-based, not single-item. Order edits are still
+deferred (ADR 0005). There is no payment gateway: vendors arrange payment
+with customers directly over chat (ADR 0009) — a permanent design choice,
+not a phase limitation.
 
-Orders in this phase are placed directly against a single item rather than
-assembled in a cart. The cart is a later milestone; the order model is built
-to accept one without rework.
+What's left isn't more engineering so much as the product decisions in
+`docs/open-decisions.md` (pilot location, fulfillment mode, cancellation
+policy, etc.) that need an answer before this goes live to real neighbors
+beyond the current beta.
 
 ## Documentation
 
-- `docs/product-handover.md` — the original product spec this repo grew from
-- `docs/open-decisions.md` — product questions still unanswered
+- `CLAUDE.md` — orientation doc for working in this repo (architecture,
+  conventions, where things live); a good second stop after this README
+- `docs/architecture.md` — current system architecture
 - `docs/erd.md` — data model
-- `docs/adr/` — architecture decision records
+- `docs/adr/` — architecture decision records (authoritative wherever they
+  disagree with `docs/product-handover.md` or `docs/milestones.md`)
+- `docs/open-decisions.md` — product questions still unanswered
+- `docs/milestones.md` — the original M0–M4 plan, frozen historically
+- `docs/product-handover.md` — the original product spec this repo grew from
+- `docs/legal/` — Terms and Conditions, Privacy Policy (drafts — need lawyer
+  review before go-live)
 
 ## Local development
 
@@ -73,4 +90,9 @@ Prerequisites: Ruby, Node, Docker.
 docker compose up -d    # Postgres + Redis
 ```
 
-Per-app setup instructions live in each app's own README once scaffolded.
+Each app has its own README with setup/run instructions: `apps/api/`,
+`apps/customer-web/`, `apps/vendor-web/`, `e2e/`.
+
+## Contributing
+
+`main` is protected — changes land via pull request, not a direct push.
