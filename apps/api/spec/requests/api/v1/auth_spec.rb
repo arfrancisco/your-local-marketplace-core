@@ -28,12 +28,28 @@ RSpec.describe "Api::V1 Auth", type: :request do
       expect(user.sms_marketing_opt_in).to eq(false)
     end
 
-    it "rejects registration outright when the honeypot field is filled, without creating a user" do
+    it "rejects registration outright when the honeypot field is filled, alerts, and creates no user" do
       params[:user][:website] = "http://spam-bot.example"
+      user_count_before = User.count
 
-      expect { post "/api/v1/auth/register", params: params }.not_to change(User, :count)
+      expect { post "/api/v1/auth/register", params: params }
+        .to change(ErrorLog, :count).by(1)
+        .and have_enqueued_job(ErrorAlertJob)
 
       expect(response).to have_http_status(:unprocessable_entity)
+      expect(User.count).to eq(user_count_before)
+      expect(ErrorLog.last.exception_class).to eq("Api::V1::RegistrationsController::HoneypotTriggered")
+    end
+
+    it "does not re-alert on a second honeypot hit, only bumps occurrences_count" do
+      params[:user][:website] = "http://spam-bot.example"
+      post "/api/v1/auth/register", params: params # first occurrence -- alerts once
+
+      params[:user][:email] = "another-bot@example.com"
+      expect { post "/api/v1/auth/register", params: params }.to change(ErrorLog, :count).by(0)
+
+      expect(ErrorLog.last.occurrences_count).to eq(2)
+      expect(enqueued_jobs.count { |j| j["job_class"] == "ErrorAlertJob" }).to eq(1)
     end
 
     it "can register a vendor as well when roles ask for it" do

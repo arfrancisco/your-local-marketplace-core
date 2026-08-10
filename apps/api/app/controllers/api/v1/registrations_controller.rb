@@ -12,6 +12,7 @@ module Api
         # or Semaphore/Resend call -- the whole point is to not pay for or
         # otherwise process a bot's submission.
         if params.dig(:user, :website).present?
+          alert_honeypot_triggered!
           raise ApiError::UnprocessableEntity, "Registration failed"
         end
 
@@ -39,6 +40,22 @@ module Api
           :is_resident, :willing_to_verify_residency, :terms_accepted,
           :email_marketing_opt_in, :sms_marketing_opt_in, roles: []
         )
+      end
+
+      # Not a real raised exception -- constructed and handed to
+      # ErrorLog.record! purely to get the same fingerprint/dedup/first-
+      # occurrence-alert behavior real exceptions get. A stable message keeps
+      # every hit collapsing onto one fingerprint (occurrences_count climbs
+      # instead of a fresh alert per submission), and a real human should
+      # essentially never trigger this at all, so even one occurrence during
+      # beta is worth knowing about.
+      class HoneypotTriggered < StandardError; end
+
+      def alert_honeypot_triggered!
+        exception = HoneypotTriggered.new("Registration honeypot field was filled")
+        exception.set_backtrace(caller)
+        log, newly_created = ErrorLog.record!(source: "backend", exception: exception, request: request)
+        ErrorAlertJob.perform_later(log.id) if newly_created
       end
     end
   end

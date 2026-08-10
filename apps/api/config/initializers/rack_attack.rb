@@ -2,11 +2,31 @@
 # uploads). Uses the Rails cache store as its backend. Throttling is disabled in
 # the test environment so specs are deterministic; toggle with RACK_ATTACK_ENABLED.
 class Rack::Attack
+  # Not a real raised exception -- constructed and handed to ErrorLog.record!
+  # purely to get the same fingerprint/dedup/first-occurrence-alert behavior
+  # real exceptions get. A stable class + message keeps every hit (regardless
+  # of which IP triggered it) collapsing onto one fingerprint, so an attacker
+  # rotating IPs to dodge the throttle itself doesn't also multiply alert
+  # emails -- occurrences_count climbs instead, visible in the admin panel.
+  class RegisterThrottleExceeded < StandardError; end
+
   Rack::Attack.enabled = ENV.fetch("RACK_ATTACK_ENABLED", !Rails.env.test?.to_s) != "false"
 
-  # A blocked request gets a JSON 429, matching the API error envelope.
+  # A blocked request gets a JSON 429, matching the API error envelope. Only
+  # the registration throttle (not login/verifications/etc, which real users
+  # trip far more often via ordinary retries) is worth an operator alert --
+  # ErrorAlertJob only fires on this fingerprint's first-ever occurrence, so
+  # this does not turn into an email per throttled request.
   self.throttled_responder = lambda do |request|
     retry_after = (request.env["rack.attack.match_data"] || {})[:period]
+
+    if request.env["rack.attack.matched"] == "auth/register/ip"
+      exception = RegisterThrottleExceeded.new("Registration rate limit exceeded for an IP")
+      exception.set_backtrace(caller)
+      log, newly_created = ErrorLog.record!(source: "backend", exception: exception, request: request)
+      ErrorAlertJob.perform_later(log.id) if newly_created
+    end
+
     [
       429,
       { "Content-Type" => "application/json", "Retry-After" => retry_after.to_s },
