@@ -71,8 +71,18 @@ module Api
         authorize @order
       end
 
+      # False for a customer who is *also* the vendor of this order's shop
+      # (e.g. a vendor placing a test order on their own shop) — vendor-only
+      # transitions (accept/reject/etc.) should still be available to them,
+      # not blocked by the "customers may only cancel" rule above.
       def customer_actor?
-        current_user.customer_profile.present? && @order.customer_profile.user_id == current_user.id
+        current_user.customer_profile.present? &&
+          @order.customer_profile.user_id == current_user.id &&
+          !vendor_actor?
+      end
+
+      def vendor_actor?
+        current_user.vendor_profile.present? && @order.shop.vendor_profile.user_id == current_user.id
       end
     end
   end
