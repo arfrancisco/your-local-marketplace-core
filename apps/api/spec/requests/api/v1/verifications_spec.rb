@@ -70,4 +70,23 @@ RSpec.describe "Api::V1 Verifications", type: :request do
       expect(response).to have_http_status(:too_many_requests)
     end
   end
+
+  describe "per-destination rate limiting" do
+    it "caps sends to the same email address even across different accounts" do
+      other_user = create(:user, email: "previously-held-this-address@example.com")
+      # Simulate MAX_PER_HOUR prior sends to user's exact email address, but
+      # attached to a *different* account -- e.g. the address was freed and
+      # later claimed by `user`. The per-user cap alone can't see this, since
+      # it's scoped to the requesting user, not the destination.
+      Verifications::IssueChallenge::MAX_PER_HOUR.times do
+        VerificationChallenge.issue!(
+          user: other_user, channel: "email", purpose: "email_verification", sent_to: user.email
+        )
+      end
+
+      post "/api/v1/verifications/email", headers: auth_headers(user)
+      expect(response).to have_http_status(:too_many_requests)
+      expect(json.dig("error", "code")).to eq("rate_limited")
+    end
+  end
 end

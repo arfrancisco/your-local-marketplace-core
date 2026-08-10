@@ -11,6 +11,11 @@ h1, h2, h3, .brand {
 
 * { box-sizing: border-box; }
 body { margin: 0; position: relative; }
+/* Registration honeypot (LoginPage.tsx) — off-screen rather than
+   display:none/visibility:hidden, since some scripted bots specifically
+   skip fields hidden that way but still auto-fill ones that are merely
+   positioned outside the viewport. */
+.honeypot-field { position: absolute; left: -9999px; top: -9999px; }
 /* The broad `input { display: block }` rule below would otherwise win over
    the browser's default [hidden] styling — without this, a `hidden` file
    input (e.g. the chat composer's click-to-browse fallback) stays visible. */

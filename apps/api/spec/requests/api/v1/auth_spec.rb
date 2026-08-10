@@ -28,6 +28,14 @@ RSpec.describe "Api::V1 Auth", type: :request do
       expect(user.sms_marketing_opt_in).to eq(false)
     end
 
+    it "rejects registration outright when the honeypot field is filled, without creating a user" do
+      params[:user][:website] = "http://spam-bot.example"
+
+      expect { post "/api/v1/auth/register", params: params }.not_to change(User, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
     it "can register a vendor as well when roles ask for it" do
       params[:user][:roles] = %w[customer vendor]
       post "/api/v1/auth/register", params: params

@@ -5,6 +5,16 @@ module Api
 
       # POST /api/v1/auth/register
       def create
+        # Honeypot (see LoginPage.tsx): real users never see or fill this
+        # field. Read directly off params, not through registration_params'
+        # allowlist, so it can never accidentally reach Auth::RegisterUser
+        # even if this check is ever removed. Bails out before any DB write
+        # or Semaphore/Resend call -- the whole point is to not pay for or
+        # otherwise process a bot's submission.
+        if params.dig(:user, :website).present?
+          raise ApiError::UnprocessableEntity, "Registration failed"
+        end
+
         result = Auth::RegisterUser.new(
           email: registration_params[:email],
           password: registration_params[:password],

@@ -14,9 +14,22 @@ class Rack::Attack
     ]
   end
 
-  # Login/register: 10 attempts per minute per IP.
-  throttle("auth/ip", limit: 10, period: 60) do |req|
-    req.ip if req.path.start_with?("/api/v1/auth") && req.post?
+  # Login/logout: 10 attempts per minute per IP -- cheap to attempt (just a
+  # DB lookup + bcrypt check), so this is sized for brute-force protection.
+  throttle("auth/login/ip", limit: 10, period: 60) do |req|
+    req.ip if req.post? && (req.path == "/api/v1/auth/login" || req.path == "/api/v1/auth/logout")
+  end
+
+  # Registration: 5 per minute per IP, tighter than login and in its own
+  # bucket -- unlike login, a successful call here triggers a real Semaphore
+  # SMS send (2 credits/OTP), so the limit is sized for cost exposure, not
+  # brute-force. This alone doesn't stop an attacker minting many distinct
+  # accounts with real-format-but-fake numbers (User#mobile_number is unique,
+  # so Verifications::IssueChallenge's own per-destination cap never sees
+  # more than one hit per number in that pattern) -- this throttle is what
+  # actually caps that, by capping the source instead of the destination.
+  throttle("auth/register/ip", limit: 5, period: 60) do |req|
+    req.ip if req.post? && req.path == "/api/v1/auth/register"
   end
 
   # Verification send/confirm: 5 per minute per IP (codes cost money to send).
