@@ -47,11 +47,13 @@ function HeaderActions() {
 function Header() {
   return (
     <header className="topbar">
-      <div className="brand-block">
-        <Link to="/shops" className="brand">Prisma KapitMarket</Link>
-        <p className="brand-tagline">By the community, for the community</p>
+      <div className="topbar-inner">
+        <div className="brand-block">
+          <Link to="/shops" className="brand">Prisma KapitMarket</Link>
+          <p className="brand-tagline">By the community, for the community</p>
+        </div>
+        <HeaderActions />
       </div>
-      <HeaderActions />
     </header>
   )
 }
@@ -179,8 +181,10 @@ function BottomBarStatus() {
 function BottomBar() {
   return (
     <div className="bottom-bar">
-      <BottomBarStatus />
-      <CartButton />
+      <div className="bottom-bar-inner">
+        <BottomBarStatus />
+        <CartButton />
+      </div>
     </div>
   )
 }
