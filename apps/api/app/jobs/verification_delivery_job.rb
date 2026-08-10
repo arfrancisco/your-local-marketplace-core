@@ -94,8 +94,16 @@ class VerificationDeliveryJob < ApplicationJob
     perform_request(uri, request)
   end
 
+  # Without explicit timeouts Net::HTTP defaults to 60s open + 60s read —
+  # long enough for a stalled provider to tie up a Sidekiq worker well past
+  # the point a user has given up waiting for their OTP.
+  REQUEST_TIMEOUT_SECONDS = 5
+
   def perform_request(uri, request)
-    response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(request) }
+    response = Net::HTTP.start(
+      uri.hostname, uri.port,
+      use_ssl: true, open_timeout: REQUEST_TIMEOUT_SECONDS, read_timeout: REQUEST_TIMEOUT_SECONDS
+    ) { |http| http.request(request) }
     unless response.is_a?(Net::HTTPSuccess)
       Rails.logger.error("[VerificationDelivery] provider call failed: #{response.code} #{response.body}")
       log, newly_created = ErrorLog.record!(
