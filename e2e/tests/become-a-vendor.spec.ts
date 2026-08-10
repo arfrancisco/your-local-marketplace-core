@@ -1,12 +1,17 @@
 import { test, expect, type Page } from '@playwright/test'
 
 // Full "become a vendor" upgrade flow, driven against real, locally-running
-// servers: register a customer -> verify email (eligibility requirement,
-// unlike mobile which stays optional) -> account page shows eligibility ->
-// upgrade -> full-navigation redirect into vendor-web's onboarding tour ->
-// create a real first shop -> land on a fully-usable vendor dashboard.
-// Uses the same test_helpers/verification_code endpoint as the registration
-// spec to retrieve real codes deterministically.
+// servers: register a customer (mobile verified as part of registration,
+// see registration-and-verification.spec.ts) -> attempt the upgrade and see
+// it rejected because email still isn't verified -> verify email from the
+// account page -> upgrade succeeds -> full-navigation redirect into
+// vendor-web's onboarding tour -> create a real first shop -> land on a
+// fully-usable vendor dashboard. Becoming a vendor deliberately requires
+// both channels verified — mobile automatically via registration, email as
+// a separate step here — a higher trust bar than the mobile-only
+// requirement to place an order. Uses the same test_helpers/
+// verification_code endpoint as the registration spec to retrieve real
+// codes deterministically.
 
 const CUSTOMER_BASE = process.env.CUSTOMER_WEB_URL ?? 'http://localhost:5173'
 const VENDOR_BASE = process.env.VENDOR_WEB_URL ?? 'http://localhost:5174'
@@ -52,10 +57,13 @@ async function crossIntoVendorWeb(page: Page) {
   await page.goto(`${VENDOR_BASE}/onboarding`)
 }
 
-// Registers a resident customer (eligible on that front), verifies email
-// (screen 2 is mandatory now — see registration-and-verification.spec.ts's
-// header comment), and completes the required profile screen — leaves the
-// browser signed in on /shops with a verified email.
+// Registers a resident customer (eligible on the residency front) and
+// verifies mobile (screen 2 is mandatory now — see
+// registration-and-verification.spec.ts's header comment), completing the
+// required profile screen — leaves the browser signed in on /shops. Email
+// is deliberately left unverified here: that's the realistic state for
+// every fresh registrant now, and becoming a vendor is a separate step
+// (see verifyEmailFromAccountPage below).
 async function registerEligibleResident(page: Page, email: string) {
   await page.goto(`${CUSTOMER_BASE}/login`)
   await page.getByRole('button', { name: /don.t have an account/i }).click()
@@ -69,7 +77,7 @@ async function registerEligibleResident(page: Page, email: string) {
   await page.getByRole('button', { name: 'Create account' }).click()
 
   await expect(page.getByText(/step 2 of 3/i)).toBeVisible()
-  const code = await fetchVerificationCode(page, email, 'email_verification')
+  const code = await fetchVerificationCode(page, email, 'mobile_verification')
   await page.getByLabel('Verification code').fill(code)
   await page.getByRole('button', { name: 'Confirm' }).click()
 
@@ -82,24 +90,31 @@ async function registerEligibleResident(page: Page, email: string) {
   await page.waitForURL('**/shops')
 }
 
-// There used to be a test here for "customer without a verified email is
-// not yet eligible" (email verification was reachable-but-skippable during
-// registration). Now that screen 2 of registration requires email
-// verification to proceed at all (see registration-and-verification.spec.ts's
-// header comment), there is no way to reach the account page via the UI
-// with an unverified email anymore — that state is real for old accounts
-// that registered before this change, but it isn't reachable through any
-// current user-facing flow, so there's nothing left for an e2e test to
-// drive here. The underlying `Vendors::EligibilityCheck` reason
-// (`email_not_verified`) still exists and is still unit-tested at the
-// service level.
+// Drives the Account page's inline email-verification widget (under
+// #email-verify) — the second, separate verification vendor eligibility
+// requires on top of registration's own mobile verification. Assumes the
+// caller is already on /account.
+async function verifyEmailFromAccountPage(page: Page, email: string) {
+  const code = await fetchVerificationCode(page, email, 'email_verification')
+  await page.getByRole('button', { name: 'Verify your email' }).click()
+  await page.getByPlaceholder('Code').fill(code)
+  await page.getByRole('button', { name: 'Confirm' }).click()
+}
 
-test('full upgrade flow: register with verified email, become a vendor, no forced tour stops along the way', async ({ page }) => {
+test('full upgrade flow: register, blocked on email verification, verify it, become a vendor, no forced tour stops along the way', async ({ page }) => {
   const email = uniqueEmail('vendorupgrade')
 
-  await test.step('register as an eligible resident, email verified as part of registration', async () => {
+  await test.step('register as a resident — mobile verified, email not yet', async () => {
     await registerEligibleResident(page, email)
     await page.goto(`${CUSTOMER_BASE}/account`)
+    // Not eligible yet: residency is satisfied, but email isn't verified —
+    // no "Start selling" button, just the reason and an inline fix for it.
+    await expect(page.getByRole('button', { name: 'Start selling' })).not.toBeVisible()
+    await expect(page.getByText(/verify your email to become eligible/i)).toBeVisible()
+  })
+
+  await test.step('verifying email from the account page unlocks eligibility', async () => {
+    await verifyEmailFromAccountPage(page, email)
     await expect(page.getByRole('button', { name: 'Start selling' })).toBeVisible()
   })
 
@@ -156,6 +171,7 @@ test('/onboarding is a static splash, independent of whether the vendor already 
   await registerEligibleResident(page, email)
 
   await page.goto(`${CUSTOMER_BASE}/account`)
+  await verifyEmailFromAccountPage(page, email)
   await crossIntoVendorWeb(page)
 
   // Before creating any shop, /onboarding is just the static splash.

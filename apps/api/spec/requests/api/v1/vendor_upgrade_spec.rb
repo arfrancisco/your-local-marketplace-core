@@ -50,6 +50,15 @@ RSpec.describe "Api::V1 Vendor upgrade", type: :request do
       expect(json.dig("error", "details", "reasons")).to include("email_not_verified")
     end
 
+    it "blocks a mobile-verified-but-not-email-verified user with the correct reason (the realistic default state for every new registrant, now that mobile is verified at registration instead of email)" do
+      new_registrant = create(:user, :customer, :mobile_verified)
+      make_eligible!(new_registrant)
+
+      post "/api/v1/me/vendor_profile", headers: auth_headers(new_registrant)
+      expect(response).to have_http_status(:forbidden)
+      expect(json.dig("error", "details", "reasons")).to eq(["email_not_verified"])
+    end
+
     it "blocks an already-vendor account" do
       make_eligible!(user)
       user.create_vendor_profile!(display_name: "Existing Vendor")
