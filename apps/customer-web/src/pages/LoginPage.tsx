@@ -4,17 +4,8 @@ import { useAuth } from '../auth'
 import { ApiError } from '../api/client'
 import { SignupProgress } from '../components/SignupProgress'
 import { LegalModal } from '../components/LegalModal'
-import { VerifyEmailPage } from './VerifyEmailPage'
+import { VerifyMobilePage } from './VerifyMobilePage'
 import { CompleteProfilePage } from './CompleteProfilePage'
-
-// Screen 2 is temporarily email verification, not mobile — Resend (email)
-// is confirmed working end to end, but Semaphore (SMS) sender-name approval
-// is still pending, so a mobile-verification step would just be a dead end
-// for every beta signup. VerifyMobilePage.tsx is left in place, unused, for
-// exactly this swap-back: once Semaphore is approved, change the import
-// above back to VerifyMobilePage and the render below back to
-// <VerifyMobilePage .../> — same non-skippable requirement should carry
-// over, don't reintroduce VerifyMobilePage's old "Skip for now" link.
 
 // Browsing stays fully public — this page only exists for the moment
 // someone wants a real cart, which needs a real account (see auth.tsx).
@@ -112,7 +103,7 @@ export function LoginPage() {
     return (
       <div className="card narrow">
         <SignupProgress step={2} />
-        <VerifyEmailPage onDone={() => setRegisterStep(3)} />
+        <VerifyMobilePage onDone={() => setRegisterStep(3)} />
       </div>
     )
   }

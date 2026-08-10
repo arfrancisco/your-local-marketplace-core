@@ -18,10 +18,10 @@ module Carts
     end
 
     def call
-      unless @cart.customer_profile.user.email_verified?
+      unless verified_customer?
         raise ApiError.new(
-          "Please verify your email before placing an order. Check your inbox for the code we sent when you registered, or verify from your Account page.",
-          code: "email_not_verified", status: :forbidden
+          "Please verify your mobile number before placing an order. Check your text messages for the code we sent when you registered, or verify from your Account page.",
+          code: "mobile_not_verified", status: :forbidden
         )
       end
 
@@ -65,6 +65,25 @@ module Carts
     end
 
     private
+
+    # Registration now requires a non-skippable mobile OTP step (see
+    # VerifyMobilePage), so mobile is the only channel that should satisfy
+    # checkout for anyone who registered after that requirement went live.
+    # The email fallback exists only for accounts that predate it — they were
+    # auto-issued an email challenge instead and would otherwise be locked
+    # out of checkout with no action of their own. Without this cutover, a
+    # brand-new registrant could dodge the "mandatory" mobile step entirely
+    # by verifying email from the Account page instead (a real, working flow
+    # kept for the become-a-vendor path) — accepting that here defeats the
+    # whole reason mobile became mandatory in the first place.
+    MOBILE_VERIFICATION_MANDATORY_SINCE = Time.zone.parse("2026-08-08 00:00:00 +0800").freeze
+
+    def verified_customer?
+      user = @cart.customer_profile.user
+      return true if user.mobile_verified?
+
+      user.email_verified? && user.created_at < MOBILE_VERIFICATION_MANDATORY_SINCE
+    end
 
     # Mirrors Orders::TransitionStatus#post_system_message so the chat reads
     # as a full log of the order from the moment it exists, not just from

@@ -148,20 +148,20 @@ function BetaBanner() {
   )
 }
 
-function EmailVerificationBanner() {
+function MobileVerificationBanner() {
   const { user } = useAuth()
-  if (!user || user.email_verified) return null
+  if (!user || user.mobile_verified) return null
   return (
     <div className="verify-banner">
-      Verify your email to place an order — check your inbox, or{' '}
-      <a href="/account#email-verify">verify now</a>.
+      Verify your mobile number to place an order — check your text messages, or{' '}
+      <a href="/account#mobile-verify">verify now</a>.
     </div>
   )
 }
 
 // Invitation, not a nag — shown to every signed-in customer who isn't a
-// vendor yet, regardless of their own email-verified state (that's the
-// unrelated concern EmailVerificationBanner already covers above). Links
+// vendor yet, regardless of their own mobile-verified state (that's the
+// unrelated concern MobileVerificationBanner already covers above). Links
 // into the same "Become a vendor" eligibility flow AccountPage already has
 // (also reachable from HamburgerMenu's drawer) — this is just a more visible
 // entry point into it, not a new flow.
@@ -206,7 +206,7 @@ export default function App() {
   return (
     <>
       <BetaBanner />
-      <EmailVerificationBanner />
+      <MobileVerificationBanner />
       <BecomeVendorBanner />
       <RatingNudgeModal />
       <Header />
