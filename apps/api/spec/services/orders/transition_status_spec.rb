@@ -144,6 +144,100 @@ RSpec.describe Orders::TransitionStatus do
     end
   end
 
+  describe "order-lifecycle SMS notification (OrderNotificationJob)" do
+    it "enqueues OrderNotificationJob with the created event row's id when accepting" do
+      expect {
+        described_class.new(order: order, to_status: "accepted", actor_user: vendor_user).call
+      }.to have_enqueued_job(OrderNotificationJob)
+
+      event = order.order_status_events.sole
+      expect(OrderNotificationJob).to have_been_enqueued.with(event.id)
+    end
+
+    it "enqueues OrderNotificationJob when moving to ready_for_pickup" do
+      preparing_order = create(:order, :with_conversation, shop: shop, status: "preparing", fulfillment_method: "pickup")
+
+      expect {
+        described_class.new(order: preparing_order, to_status: "ready_for_pickup", actor_user: vendor_user).call
+      }.to have_enqueued_job(OrderNotificationJob)
+
+      event = preparing_order.order_status_events.sole
+      expect(OrderNotificationJob).to have_been_enqueued.with(event.id)
+    end
+
+    it "enqueues OrderNotificationJob when moving to out_for_delivery" do
+      preparing_order = create(:order, :with_conversation, shop: shop, status: "preparing", fulfillment_method: "delivery")
+
+      expect {
+        described_class.new(order: preparing_order, to_status: "out_for_delivery", actor_user: vendor_user).call
+      }.to have_enqueued_job(OrderNotificationJob)
+
+      event = preparing_order.order_status_events.sole
+      expect(OrderNotificationJob).to have_been_enqueued.with(event.id)
+    end
+
+    it "enqueues OrderNotificationJob when completing an order" do
+      ready_order = create(:order, :with_conversation, shop: shop, status: "ready_for_pickup")
+
+      expect {
+        described_class.new(order: ready_order, to_status: "completed", actor_user: vendor_user).call
+      }.to have_enqueued_job(OrderNotificationJob)
+
+      event = ready_order.order_status_events.sole
+      expect(OrderNotificationJob).to have_been_enqueued.with(event.id)
+    end
+
+    it "does not enqueue OrderNotificationJob when rejecting" do
+      expect {
+        described_class.new(order: order, to_status: "rejected", actor_user: vendor_user).call
+      }.not_to have_enqueued_job(OrderNotificationJob)
+    end
+
+    it "does not enqueue OrderNotificationJob when cancelling" do
+      expect {
+        described_class.new(order: order, to_status: "cancelled", actor_user: vendor_user, reason_code: "item_unavailable").call
+      }.not_to have_enqueued_job(OrderNotificationJob)
+    end
+
+    it "does not enqueue OrderNotificationJob when moving to preparing" do
+      accepted_order = create(:order, :with_conversation, shop: shop, status: "accepted")
+
+      expect {
+        described_class.new(order: accepted_order, to_status: "preparing", actor_user: vendor_user).call
+      }.not_to have_enqueued_job(OrderNotificationJob)
+    end
+  end
+
+  describe "row locking prevents a duplicate transition/notification under concurrent requests" do
+    it "calls @order.lock! as part of the transition" do
+      expect(order).to receive(:lock!).and_call_original
+
+      described_class.new(order: order, to_status: "accepted", actor_user: vendor_user).call
+    end
+
+    it "rejects a second concurrent transition once the first has already committed, instead of double-processing it" do
+      # Simulates two web requests each having loaded their own, now-stale,
+      # in-memory copy of the order — the real shape of the race this fixes
+      # (double-tap "Accept" from two tabs). request_a's call runs to
+      # completion (and commits) before request_b's call begins, but
+      # request_b's in-memory order object was loaded before that commit and
+      # is never reloaded until #call's internal @order.lock!.
+      order_seen_by_request_a = Order.find(order.id)
+      order_seen_by_request_b = Order.find(order.id)
+
+      described_class.new(order: order_seen_by_request_a, to_status: "accepted", actor_user: vendor_user).call
+
+      expect {
+        expect {
+          described_class.new(order: order_seen_by_request_b, to_status: "accepted", actor_user: vendor_user).call
+        }.to raise_error(ApiError::UnprocessableEntity, /accepted to accepted/)
+      }.not_to have_enqueued_job(OrderNotificationJob)
+
+      expect(order.reload.status).to eq("accepted")
+      expect(order.order_status_events.count).to eq(1)
+    end
+  end
+
   describe "cancellation-abuse detection" do
     it "runs Orders::CancellationAbuseCheck when the transition is a cancellation" do
       expect(Orders::CancellationAbuseCheck).to receive(:new)

@@ -35,5 +35,34 @@ RSpec.describe "Api::V1::Admin::Orders", type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
       expect(order.reload.status).to eq("placed")
     end
+
+    # Documented as intended in the order-lifecycle-SMS plan, not
+    # untested-by-accident: an admin "unsticking" a stuck order still calls
+    # Orders::TransitionStatus, which fires the same customer/vendor SMS a
+    # normal transition would, since the recipient's order state genuinely
+    # changed.
+    it "enqueues OrderNotificationJob, same as a normal transition" do
+      expect {
+        post "/api/v1/admin/orders/#{order.id}/transitions",
+             params: { to_status: "accepted" },
+             headers: admin_auth_headers
+      }.to have_enqueued_job(OrderNotificationJob)
+
+      expect(response).to have_http_status(:ok)
+      expect(order.reload.status).to eq("accepted")
+
+      event = order.order_status_events.sole
+      expect(OrderNotificationJob).to have_been_enqueued.with(event.id)
+    end
+
+    it "does not enqueue OrderNotificationJob for a non-notifiable transition (rejected)" do
+      expect {
+        post "/api/v1/admin/orders/#{order.id}/transitions",
+             params: { to_status: "rejected" },
+             headers: admin_auth_headers
+      }.not_to have_enqueued_job(OrderNotificationJob)
+
+      expect(order.reload.status).to eq("rejected")
+    end
   end
 end

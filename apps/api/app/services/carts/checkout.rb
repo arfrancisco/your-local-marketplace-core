@@ -11,6 +11,11 @@ module Carts
   # pinned panel that always reflects current vendor settings, not a chat
   # message (ADR 0009, revised).
   class Checkout
+    # Hard cap on how many non-terminal orders one customer can have open at
+    # once (see Order.in_flight). A structural fix, not a resettable time
+    # window — see the in-flight check in #call.
+    MAX_IN_FLIGHT_ORDERS = 3
+
     def initialize(cart:, fulfillment_method:, customer_note: nil)
       @cart = cart
       @fulfillment_method = fulfillment_method
@@ -30,6 +35,19 @@ module Carts
           "Your account is temporarily restricted from placing orders due to repeated cancellations. " \
           "Contact team.kapitmarket@gmail.com to request a review.",
           code: "cancellation_restricted", status: :forbidden
+        )
+      end
+
+      # Structural abuse/cost control: nothing else bounds how many orders
+      # (and therefore how many order-lifecycle SMS) a single account can
+      # generate — Item#sold_out? returns false whenever stock_count is nil,
+      # and checkout itself has no throttle. This stops the abuse at its
+      # source rather than just slowing it down with a resettable time
+      # window; also reasonable product hygiene independent of SMS.
+      if @cart.customer_profile.orders.in_flight.count >= MAX_IN_FLIGHT_ORDERS
+        raise ApiError.new(
+          "You have 3 orders in progress — let one finish or cancel it before placing another.",
+          code: "too_many_in_flight_orders", status: :forbidden
         )
       end
 
@@ -61,6 +79,7 @@ module Carts
         conversation = Conversation.create!(order: order)
       end
       post_placed_message(conversation)
+      OrderNotificationJob.perform_later(order.order_status_events.find_by(to_status: "placed").id)
       order
     end
 
