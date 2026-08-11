@@ -67,6 +67,11 @@ class Order < ApplicationRecord
   scope :demo, -> { where(customer_profile: CustomerProfile.demo).or(where(shop: Shop.demo)) }
   scope :real, -> { where(customer_profile: CustomerProfile.real).where(shop: Shop.real) }
 
+  # Not yet in a terminal state — used by Carts::Checkout's in-flight order
+  # cap (abuse/cost control for order-lifecycle SMS: nothing else bounds how
+  # many orders, and therefore how many SMS, a single account can generate).
+  scope :in_flight, -> { where.not(status: %w[completed rejected cancelled]) }
+
   before_validation :generate_public_reference, on: :create
 
   validates :public_reference, presence: true, uniqueness: true
