@@ -56,7 +56,11 @@ module Api
       end
 
       def user_params
-        params.require(:user).permit(:email, :mobile_number)
+        params.require(:user).permit(
+          :email, :mobile_number,
+          :sms_notify_order_placed, :sms_notify_order_accepted,
+          :sms_notify_order_ready, :sms_notify_order_completed
+        )
       end
 
       def reset_verification_stamps(user)
