@@ -5,6 +5,7 @@ import { FeedbackModal } from './components/FeedbackModal'
 import { Footer } from './components/Footer'
 import { HamburgerMenu } from './components/HamburgerMenu'
 import { LoginPage } from './pages/LoginPage'
+import { AccountPage } from './pages/AccountPage'
 import { ShopDashboardPage } from './pages/ShopDashboardPage'
 import { ShopFormPage } from './pages/ShopFormPage'
 import { ShopPreviewPage } from './pages/ShopPreviewPage'
@@ -86,6 +87,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/onboarding" element={<RequireAuth><OnboardingPage /></RequireAuth>} />
+          <Route path="/account" element={<RequireAuth><AccountPage /></RequireAuth>} />
           <Route path="/shops" element={<RequireAuth><ShopDashboardPage /></RequireAuth>} />
           <Route path="/shops/new" element={<RequireAuth><ShopFormPage /></RequireAuth>} />
           <Route path="/shops/:id/edit" element={<RequireAuth><ShopFormPage /></RequireAuth>} />
