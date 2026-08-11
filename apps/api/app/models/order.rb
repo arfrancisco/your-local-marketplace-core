@@ -5,6 +5,7 @@ class Order < ApplicationRecord
   has_many :order_items, dependent: :destroy
   has_many :order_status_events, dependent: :destroy
   has_many :ratings, dependent: :destroy
+  has_many :short_links, dependent: :destroy
   has_one :conversation, dependent: :destroy
 
   FULFILLMENT_METHODS = %w[pickup delivery].freeze

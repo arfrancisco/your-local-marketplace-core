@@ -36,6 +36,22 @@ class User < ApplicationRecord
   validates :mobile_number, format: { with: MOBILE_NUMBER_FORMAT }, uniqueness: true, allow_nil: true
   validates :status, inclusion: { in: STATUSES }
 
+  # Which order-lifecycle SMS a user has opted into — one column per type
+  # (see the migration), ready_for_pickup/out_for_delivery deliberately
+  # share one column (same "your order is moving" moment). Used by
+  # OrderNotificationJob so it never has to reach into raw column names.
+  NOTIFICATION_PREFERENCE_COLUMNS = {
+    "placed" => :sms_notify_order_placed,
+    "accepted" => :sms_notify_order_accepted,
+    "ready_for_pickup" => :sms_notify_order_ready,
+    "out_for_delivery" => :sms_notify_order_ready,
+    "completed" => :sms_notify_order_completed
+  }.freeze
+
+  def notifies_for?(event)
+    public_send(NOTIFICATION_PREFERENCE_COLUMNS.fetch(event))
+  end
+
   def email_verified?
     email_verified_at.present?
   end
