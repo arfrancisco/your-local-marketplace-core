@@ -165,6 +165,76 @@ function DefaultDeliveryNote({ defaultAddressId }: { defaultAddressId: number | 
   )
 }
 
+// SMS toggles for order-lifecycle updates — one per event a customer's order
+// can reach. All default true server-side; this only lets someone turn
+// individual ones off. Mirrors DefaultDeliveryNote's shape: local pending
+// state plus an explicit Save (no save-on-toggle).
+function NotificationPreferences({ user, onSaved }: { user: User; onSaved: (user: User) => void }) {
+  const [accepted, setAccepted] = useState(user.sms_notify_order_accepted)
+  const [ready, setReady] = useState(user.sms_notify_order_ready)
+  const [completed, setCompleted] = useState(user.sms_notify_order_completed)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function save() {
+    setError(null)
+    setSaved(false)
+    setSaving(true)
+    try {
+      const res = await api.updateMe({
+        sms_notify_order_accepted: accepted,
+        sms_notify_order_ready: ready,
+        sms_notify_order_completed: completed,
+      })
+      onSaved(res.user)
+      setSaved(true)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not save your notification preferences')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="card">
+      <h2>Notification preferences</h2>
+      <p className="muted small">Choose which order updates you get by SMS.</p>
+
+      <label className="checkbox-field">
+        <input
+          type="checkbox"
+          checked={accepted}
+          onChange={(e) => { setAccepted(e.target.checked); setSaved(false) }}
+        />
+        <span>Order accepted</span>
+      </label>
+      <label className="checkbox-field">
+        <input
+          type="checkbox"
+          checked={ready}
+          onChange={(e) => { setReady(e.target.checked); setSaved(false) }}
+        />
+        <span>Order ready / out for delivery</span>
+      </label>
+      <label className="checkbox-field">
+        <input
+          type="checkbox"
+          checked={completed}
+          onChange={(e) => { setCompleted(e.target.checked); setSaved(false) }}
+        />
+        <span>Order completed</span>
+      </label>
+
+      <button onClick={save} disabled={saving}>
+        {saving ? 'Saving…' : 'Save'}
+      </button>
+      {saved && !error && <span className="muted small" style={{ marginLeft: '0.5rem' }}>Saved.</span>}
+      {error && <p role="alert" className="error">{error}</p>}
+    </div>
+  )
+}
+
 export function AccountPage() {
   const { user, loading } = useAuth()
   // Local overrides applied after verification/vendor actions return a fresh
@@ -255,6 +325,8 @@ export function AccountPage() {
       </div>
 
       <DefaultDeliveryNote defaultAddressId={profile.customer_profile?.default_address_id ?? null} />
+
+      <NotificationPreferences user={profile} onSaved={setOverride} />
 
       <div className="card">
         <h2>Become a vendor</h2>
