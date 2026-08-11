@@ -25,6 +25,47 @@ RSpec.describe "Api::V1 Me", type: :request do
       expect(user.reload.email).to eq("changed@example.com")
       expect(user).not_to be_email_verified
     end
+
+    it "turns off all four notification preferences" do
+      patch "/api/v1/me", params: {
+        user: {
+          sms_notify_order_placed: false, sms_notify_order_accepted: false,
+          sms_notify_order_ready: false, sms_notify_order_completed: false
+        }
+      }, headers: auth_headers(user)
+
+      expect(response).to have_http_status(:ok)
+      user.reload
+      expect(user.sms_notify_order_placed).to eq(false)
+      expect(user.sms_notify_order_accepted).to eq(false)
+      expect(user.sms_notify_order_ready).to eq(false)
+      expect(user.sms_notify_order_completed).to eq(false)
+      expect(json.dig("user", "sms_notify_order_placed")).to eq(false)
+      expect(json.dig("user", "sms_notify_order_accepted")).to eq(false)
+      expect(json.dig("user", "sms_notify_order_ready")).to eq(false)
+      expect(json.dig("user", "sms_notify_order_completed")).to eq(false)
+    end
+
+    it "turns notification preferences back on" do
+      user.update!(
+        sms_notify_order_placed: false, sms_notify_order_accepted: false,
+        sms_notify_order_ready: false, sms_notify_order_completed: false
+      )
+
+      patch "/api/v1/me", params: {
+        user: {
+          sms_notify_order_placed: true, sms_notify_order_accepted: true,
+          sms_notify_order_ready: true, sms_notify_order_completed: true
+        }
+      }, headers: auth_headers(user)
+
+      expect(response).to have_http_status(:ok)
+      user.reload
+      expect(user.sms_notify_order_placed).to eq(true)
+      expect(user.sms_notify_order_accepted).to eq(true)
+      expect(user.sms_notify_order_ready).to eq(true)
+      expect(user.sms_notify_order_completed).to eq(true)
+    end
   end
 
   describe "POST /api/v1/me/complete_profile" do
