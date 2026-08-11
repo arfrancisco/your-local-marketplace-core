@@ -20,6 +20,9 @@ function baseUser(overrides: Partial<User> = {}): User {
     mobile_verified: true,
     email_marketing_opt_in: false,
     sms_marketing_opt_in: false,
+    sms_notify_order_accepted: true,
+    sms_notify_order_ready: true,
+    sms_notify_order_completed: true,
     last_signed_in_at: null,
     created_at: '2026-01-01T00:00:00Z',
     customer_profile: {
