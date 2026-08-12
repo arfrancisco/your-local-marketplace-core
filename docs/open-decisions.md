@@ -56,21 +56,28 @@ make before going live to real neighbors.
    (Current default: one shop per vendor, enforced by a uniqueness
    validation on `vendor_profile_id`, not a DB constraint. Documented in
    `shop.rb` as easy to lift if this changes.)
+10. **Opt-in mobile number visibility on the order page** — right now
+    neither party sees the other's raw mobile number anywhere in the app
+    (chat is the only channel). Idea floated: let either side opt in to
+    showing their number directly on the order page, for customers/vendors
+    who'd rather just call/text outside the app. Not scoped or designed
+    yet — separate from order-lifecycle SMS notifications (which use the
+    numbers internally but never display them to the other party).
 
 ## Technical / platform
 
-10. **Android client stack** — **undecided.** Will live in a separate repo.
+11. **Android client stack** — **undecided.** Will live in a separate repo.
     Leaning toward native Kotlin + Jetpack Compose over React Native for
     Android-specific compatibility (background tasks, notifications, camera,
     OEM quirks), but not committed. iOS is not currently planned. The API in
     this repo is being built to serve whatever client stack wins, so this
     decision does not block backend work.
 
-11. **Hosting (resolved).** Railway hosts the API (compute) and Cloudflare R2
+12. **Hosting (resolved).** Railway hosts the API (compute) and Cloudflare R2
     hosts image storage (see ADR 0006). Live in production at
     prisma.kapitmarket.ph.
 
-12. **Verification delivery (resolved — mobile is now the mandatory
+13. **Verification delivery (resolved — mobile is now the mandatory
     registration step).** SMS verification uses Semaphore; email
     verification uses Resend. Both are implemented and wired in — no
     channel is stubbed/logged only. Semaphore's custom Sender Name
