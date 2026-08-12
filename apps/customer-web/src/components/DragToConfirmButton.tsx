@@ -10,6 +10,38 @@ interface DragToConfirmButtonProps {
 
 const COMPLETE_THRESHOLD = 0.85
 
+// Bold SVG instead of a "→" text glyph — text arrows stay thin regardless of
+// font-weight in most fonts, an SVG stroke gives real control over
+// thickness.
+function ArrowIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M5 12h13M13 6l6 6-6 6"
+        stroke="currentColor"
+        strokeWidth="3.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+// The repeating chevrons that hint "drag this way" before any interaction —
+// a standard affordance for slide-to-confirm controls. Three, fading in and
+// sweeping left to right on a loop.
+function DragHint() {
+  return (
+    <div className="drag-confirm-hint" aria-hidden="true">
+      {[0, 1, 2].map((i) => (
+        <svg key={i} width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ animationDelay: `${i * 0.15}s` }}>
+          <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ))}
+    </div>
+  )
+}
+
 // A drag gesture, not a tap, is required to fire onConfirm — chosen
 // specifically over a confirmation dialog, which reflexive tapping can blow
 // straight through. Keyboard users aren't excluded: a native <button> still
@@ -79,10 +111,16 @@ export function DragToConfirmButton({ label, pendingLabel, onConfirm, disabled, 
 
   const percent = maxDragRef.current > 0 ? (dragX / maxDragRef.current) * 100 : 0
 
+  // Only hint while nothing's happening yet — once the customer has started
+  // dragging (or the control is locked/pending) the hint would just clutter
+  // the real feedback (the fill bar, the handle's own position).
+  const showHint = !dragging && dragX === 0 && !locked
+
   return (
     <div ref={trackRef} className={`drag-confirm-track${locked ? ' locked' : ''}`}>
       <div className="drag-confirm-fill" style={{ width: `${percent}%` }} />
       <span className="drag-confirm-label">{pending ? pendingLabel : label}</span>
+      {showHint && <DragHint />}
       <button
         type="button"
         className="drag-confirm-handle"
@@ -98,7 +136,7 @@ export function DragToConfirmButton({ label, pendingLabel, onConfirm, disabled, 
         onPointerCancel={handlePointerUp}
         onClick={handleClick}
       >
-        →
+        <ArrowIcon />
       </button>
     </div>
   )

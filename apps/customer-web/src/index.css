@@ -1255,6 +1255,31 @@ button.link {
 .drag-confirm-handle:active { cursor: grabbing; }
 .drag-confirm-handle:disabled { cursor: default; }
 
+/* Repeating chevron hint, shown only before any interaction starts — see
+   DragToConfirmButton.tsx's showHint logic. */
+@keyframes drag-chevron-pulse {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+.drag-confirm-hint {
+  position: absolute;
+  right: 1rem;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.05rem;
+  color: #c9b896;
+  pointer-events: none;
+}
+.drag-confirm-hint svg {
+  stroke: currentColor;
+  animation: drag-chevron-pulse 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .drag-confirm-hint svg { animation: none; opacity: 0.6; }
+}
+
 /* ------------------------------------------------------------------------ */
 /* Shop detail hero (cover photo + overlaid back button + identity card)     */
 /* ------------------------------------------------------------------------ */
