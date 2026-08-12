@@ -189,3 +189,44 @@ describe('OrderPage cancellation', () => {
     expect(screen.queryByLabelText('Reason')).not.toBeInTheDocument()
   })
 })
+
+describe('OrderPage report an issue', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    setToken('test-token')
+    vi.mocked(api.me).mockResolvedValue({ user } as never)
+  })
+
+  it('is available even when the order can no longer be cancelled', async () => {
+    vi.mocked(api.getOrder).mockResolvedValue({ order: baseOrder } as never) // can_transition_to: []
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Order actions menu' }))
+    expect(screen.getByRole('menuitem', { name: 'Report an issue' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Cancel order' })).not.toBeInTheDocument()
+  })
+
+  it('opens the feedback form pre-filled with the order reference and shop name', async () => {
+    vi.mocked(api.getOrder).mockResolvedValue({ order: baseOrder } as never)
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Order actions menu' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Report an issue' }))
+
+    expect(screen.getByRole('heading', { name: 'Send feedback' })).toBeInTheDocument()
+    const textarea = screen.getByLabelText("What's going on?") as HTMLTextAreaElement
+    expect(textarea.value).toContain('ORD-ABC12345')
+    expect(textarea.value).toContain('Adobo Republic')
+  })
+
+  it('offers both actions when the order is still cancellable', async () => {
+    vi.mocked(api.getOrder).mockResolvedValue({
+      order: { ...baseOrder, status: 'placed', can_transition_to: ['cancelled'] },
+    } as never)
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Order actions menu' }))
+    expect(screen.getByRole('menuitem', { name: 'Report an issue' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Cancel order' })).toBeInTheDocument()
+  })
+})
