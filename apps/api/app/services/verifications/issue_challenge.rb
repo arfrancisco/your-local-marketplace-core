@@ -8,9 +8,10 @@ module Verifications
       "mobile" => { purpose: "mobile_verification", recipient: :mobile_number, model_channel: "sms" }
     }.freeze
 
-    # Per-user-per-channel limits, on top of Rack::Attack's IP-level throttle
-    # (config/initializers/rack_attack.rb) — this layer catches one account
-    # being spammed regardless of which IP the requests come from.
+    # Per-user and per-destination limits, on top of Rack::Attack's IP-level
+    # throttle (config/initializers/rack_attack.rb) — this layer catches one
+    # account (or one real phone number/email) being spammed regardless of
+    # which IP the requests come from.
     COOLDOWN = 30.seconds
     MAX_PER_HOUR = 5
 
@@ -23,8 +24,8 @@ module Verifications
     end
 
     def call
-      sent_to = @user.public_send(@config[:recipient])
-      if sent_to.blank?
+      @sent_to = @user.public_send(@config[:recipient])
+      if @sent_to.blank?
         raise ApiError::UnprocessableEntity, "No #{@channel} on file to send a code to"
       end
 
@@ -34,7 +35,7 @@ module Verifications
         user: @user,
         channel: @config[:model_channel] || @channel,
         purpose: @config[:purpose],
-        sent_to: sent_to
+        sent_to: @sent_to
       )
       cache_code_for_e2e(@config[:purpose], code)
       VerificationDeliveryJob.perform_later(challenge.id, code)
@@ -61,6 +62,20 @@ module Verifications
       @user.verification_challenges.where(purpose: @config[:purpose])
     end
 
+    # Scoped to the raw destination (sent_to), not @user — catches a specific
+    # real phone number or email being harassed with repeat codes across
+    # multiple accounts that have held it over time (e.g. a number freed up
+    # by MeController#update and later claimed by someone else), which the
+    # per-user check above can't see since each account's own count resets.
+    # Does NOT catch a scripted attacker minting many distinct fake accounts
+    # each with their own real-format number — User#mobile_number/#email are
+    # both unique, so that pattern never touches the same destination twice
+    # regardless of scoping. That's a source (IP)-side problem, handled
+    # separately by Rack::Attack's register-specific throttle.
+    def recent_challenges_to_destination
+      VerificationChallenge.where(sent_to: @sent_to, purpose: @config[:purpose])
+    end
+
     def enforce_rate_limit!
       last = recent_challenges.order(created_at: :desc).first
       if last && last.created_at > COOLDOWN.ago
@@ -75,6 +90,14 @@ module Verifications
       if count_last_hour >= MAX_PER_HOUR
         raise ApiError.new(
           "Too many code requests. Try again later.",
+          code: "rate_limited", status: :too_many_requests
+        )
+      end
+
+      destination_count_last_hour = recent_challenges_to_destination.where(created_at: 1.hour.ago..).count
+      if destination_count_last_hour >= MAX_PER_HOUR
+        raise ApiError.new(
+          "Too many code requests to this number. Try again later.",
           code: "rate_limited", status: :too_many_requests
         )
       end

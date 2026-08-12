@@ -102,6 +102,10 @@ export interface RegisterPayload {
   terms_accepted: boolean
   email_marketing_opt_in?: boolean
   sms_marketing_opt_in?: boolean
+  // Honeypot -- always empty from the real form (see LoginPage.tsx). The
+  // backend reads this outside the strong-params allowlist and rejects the
+  // request outright if it's non-empty, so it never reaches Auth::RegisterUser.
+  website?: string
 }
 
 export interface CompleteProfilePayload {

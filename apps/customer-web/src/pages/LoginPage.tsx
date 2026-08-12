@@ -36,6 +36,13 @@ export function LoginPage() {
   const [registerError, setRegisterError] = useState<string | null>(null)
   const [emailTaken, setEmailTaken] = useState(false)
   const [registerSubmitting, setRegisterSubmitting] = useState(false)
+  // Honeypot: real users never see or fill this (CSS-hidden, out of tab
+  // order), but naive scripted bots that auto-fill every input on the page
+  // reliably do. Sent alongside the real payload, not merged into it -- the
+  // backend rejects the whole request without ever touching Auth::RegisterUser
+  // (no SMS gets sent) if this is non-empty. See config/initializers/
+  // rack_attack.rb and Verifications::IssueChallenge for the other two layers.
+  const [website, setWebsite] = useState('')
   const [legalModalOpen, setLegalModalOpen] = useState<'terms' | 'privacy' | null>(null)
 
   async function onLoginSubmit(e: FormEvent) {
@@ -79,6 +86,7 @@ export function LoginPage() {
         is_resident: isResident,
         ...(isResident ? { willing_to_verify_residency: willingToVerify } : {}),
         terms_accepted: termsAccepted,
+        website,
       })
       setRegisterStep(2)
     } catch (err) {
@@ -140,6 +148,21 @@ export function LoginPage() {
         </form>
       ) : (
         <form onSubmit={onRegisterSubmit}>
+          {/* Honeypot: real users never see or reach this (CSS-hidden,
+              tabindex -1, out of the visual layout entirely) -- scripted
+              bots that auto-fill every input on the page reliably do. */}
+          <div className="honeypot-field" aria-hidden="true">
+            <label htmlFor="website">Leave this field blank</label>
+            <input
+              type="text"
+              id="website"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+            />
+          </div>
           <label>
             Email
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
