@@ -77,10 +77,35 @@ test('vendor opening message, checkout, real-time chat, and status transition', 
     await expect(customer.getByText('Your cart')).toBeVisible()
 
     // "Pizza My Heart" (db/seeds.rb) is a seeded demo shop, so the checkout
-    // button reads "Place demo order (...)" here, not "Place order (...)" —
-    // match both, since this same button serves both a real shop's checkout
-    // and a demo one's (see CartModal.tsx).
-    await customer.getByRole('button', { name: /^place( demo)? order/i }).click()
+    // handle reads "Drag to place demo order" here, not "Drag to place
+    // order" — match both, since this same control serves both a real
+    // shop's checkout and a demo one's (see CartModal.tsx).
+    //
+    // Checkout requires an actual drag gesture, not a tap (DragToConfirmButton)
+    // — a plain .click() lands with event.detail === 1, which satisfies
+    // neither confirm path (the drag-distance check needs real pointer
+    // movement; the detail === 0 shortcut is keyboard-only). Simulate a real
+    // drag via Playwright's mouse API instead.
+    // The end X has to be derived from the track's actual width, not a
+    // fixed pixel offset — the cart sheet is up to 860px wide, so a small
+    // hardcoded drag distance lands well short of the 85% completion
+    // threshold and silently does nothing (this was tried and confirmed to
+    // fail locally). Overshooting past the track's right edge is safe: the
+    // component clamps dragX to the track's actual max drag distance.
+    const dragHandle = customer.getByRole('button', { name: /drag to place( demo)? order/i })
+    const track = customer.locator('.drag-confirm-track')
+    // The cart is a bottom sheet and the handle can sit below the default
+    // viewport height — boundingBox() coordinates outside the visible
+    // viewport don't correspond to anything a real pointer can hit, so the
+    // mouse events silently land nowhere. Scroll it into view first.
+    await dragHandle.scrollIntoViewIfNeeded()
+    const handleBox = await dragHandle.boundingBox()
+    const trackBox = await track.boundingBox()
+    if (!handleBox || !trackBox) throw new Error('drag-to-confirm handle/track has no bounding box')
+    await customer.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2)
+    await customer.mouse.down()
+    await customer.mouse.move(trackBox.x + trackBox.width, handleBox.y + handleBox.height / 2, { steps: 10 })
+    await customer.mouse.up()
     // Checkout lands on a dedicated "order placed" confirmation screen first
     // now, not the order page directly (see OrderPlacedPage.tsx) — follow
     // its "View order" link to reach the real order page the rest of this
@@ -118,12 +143,13 @@ test('vendor opening message, checkout, real-time chat, and status transition', 
 
   await test.step('vendor accepts the order via an explicit status button, customer sees it', async () => {
     await vendor.click('button:has-text("Accept")')
-    // Order status is shown via .order-status-badge on both sides, not
-    // .tagline (that class belongs to vendor-web's unrelated
-    // ShopPreviewPage.tsx) — see orderStatus.ts's statusBadgeClass.
-    await expect(vendor.locator('.order-status-badge').first()).toHaveText('accepted')
+    // Order detail pages (both apps) show status via OrderStatusStepper, not
+    // a .order-status-badge — that class only exists on the list views
+    // (OrdersPage/OrderList). The step matching the order's live status is
+    // the one with .step-current (see buildSteps in OrderStatusStepper.tsx).
+    await expect(vendor.locator('.order-status-stepper .step-current .stepper-label')).toHaveText('Accepted')
 
     await customer.reload() // order status itself isn't pushed live, only chat is (see plan notes)
-    await expect(customer.locator('.order-status-badge').first()).toHaveText(/accepted/i)
+    await expect(customer.locator('.order-status-stepper .step-current .stepper-label')).toHaveText('Accepted')
   })
 })

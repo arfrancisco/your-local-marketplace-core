@@ -103,15 +103,30 @@ describe('DragToConfirmButton', () => {
     expect(onConfirm).not.toHaveBeenCalled()
   })
 
-  it('resets the handle if pending ends without unmounting (checkout failed)', () => {
+  it('resets the handle position if pending ends without unmounting (checkout failed)', () => {
     const onConfirm = vi.fn()
     const { rerender } = render(
-      <DragToConfirmButton label="Drag to place order" pendingLabel="Placing…" onConfirm={onConfirm} pending />,
+      <DragToConfirmButton label="Drag to place order" pendingLabel="Placing…" onConfirm={onConfirm} pending={false} />,
     )
     stubLayout(300, 50)
+    const handle = screen.getByRole('button')
+
+    // Drag to completion first, exactly what happens right before a real
+    // checkout call fires — the handle parks at the end of the track and
+    // stays there while the parent's pending state is true. Asserting only
+    // label/disabled (as the old version of this test did) can't tell "the
+    // reset ran" apart from "the reset code doesn't exist at all", since
+    // both are pure functions of the `pending` prop alone.
+    firePointerDrag(0, 240)
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+    expect(handle.style.transform).toBe('translateX(250px)')
+
+    rerender(<DragToConfirmButton label="Drag to place order" pendingLabel="Placing…" onConfirm={onConfirm} pending />)
+    expect(handle.style.transform).toBe('translateX(250px)')
 
     rerender(<DragToConfirmButton label="Drag to place order" pendingLabel="Placing…" onConfirm={onConfirm} pending={false} />)
 
+    expect(handle.style.transform).toBe('translateX(0px)')
     expect(screen.getByText('Drag to place order')).toBeInTheDocument()
     expect(screen.getByRole('button')).not.toBeDisabled()
   })

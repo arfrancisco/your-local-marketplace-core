@@ -122,8 +122,14 @@ export function OrderPage() {
       <div className="card order-detail-section">
         <OrderDetailActionsMenu
           canCancel={canCancel}
-          onCancelOrder={() => setShowCancelModal(true)}
-          onReportIssue={() => setShowReportModal(true)}
+          onCancelOrder={() => {
+            setShowReportModal(false)
+            setShowCancelModal(true)
+          }}
+          onReportIssue={() => {
+            setShowCancelModal(false)
+            setShowReportModal(true)
+          }}
         />
         <ul className="list">
           {order.items.map((line) => (
