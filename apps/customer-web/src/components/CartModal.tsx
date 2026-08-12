@@ -1,4 +1,5 @@
 import { useCart } from '../CartContext'
+import { DragToConfirmButton } from './DragToConfirmButton'
 
 function formatPrice(cents: number, currency: string) {
   return `${currency} ${(cents / 100).toFixed(2)}`
@@ -112,17 +113,17 @@ export function CartModal() {
             )}
 
             {checkoutError && <p role="alert" className="error">{checkoutError}</p>}
-            <button
-              className="cart-checkout"
-              onClick={placeOrder}
-              disabled={placingOrder || hasSoldOutInCart}
-            >
-              {placingOrder
-                ? 'Placing order…'
-                : shop?.demo
-                  ? `Place demo order (${count} item${count === 1 ? '' : 's'})`
-                  : `Place order (${count} item${count === 1 ? '' : 's'})`}
-            </button>
+            <DragToConfirmButton
+              label={
+                shop?.demo
+                  ? `Drag to place demo order (${count} item${count === 1 ? '' : 's'})`
+                  : `Drag to place order (${count} item${count === 1 ? '' : 's'})`
+              }
+              pendingLabel="Placing order…"
+              onConfirm={placeOrder}
+              disabled={hasSoldOutInCart}
+              pending={placingOrder}
+            />
           </>
         )}
       </div>
