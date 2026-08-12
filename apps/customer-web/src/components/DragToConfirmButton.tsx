@@ -27,18 +27,27 @@ function ArrowIcon() {
   )
 }
 
-// The repeating chevrons that hint "drag this way" before any interaction —
-// a standard affordance for slide-to-confirm controls. Three, fading in and
-// sweeping left to right on a loop.
-function DragHint() {
+// Three chevrons, pulsing in a staggered loop — a standard slide-to-confirm
+// affordance. Rendered flanking the label on both sides, both pointing the
+// drag direction, so the hint reads regardless of which side draws the eye.
+function ChevronGroup({ side }: { side: 'left' | 'right' }) {
   return (
-    <div className="drag-confirm-hint" aria-hidden="true">
+    <div className={`drag-confirm-hint drag-confirm-hint-${side}`} aria-hidden="true">
       {[0, 1, 2].map((i) => (
         <svg key={i} width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ animationDelay: `${i * 0.15}s` }}>
           <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       ))}
     </div>
+  )
+}
+
+function DragHint() {
+  return (
+    <>
+      <ChevronGroup side="left" />
+      <ChevronGroup side="right" />
+    </>
   )
 }
 

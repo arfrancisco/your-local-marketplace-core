@@ -1263,7 +1263,6 @@ button.link {
 }
 .drag-confirm-hint {
   position: absolute;
-  right: 1rem;
   top: 0;
   bottom: 0;
   display: flex;
@@ -1272,6 +1271,8 @@ button.link {
   color: #c9b896;
   pointer-events: none;
 }
+.drag-confirm-hint-left { left: 3.5rem; }
+.drag-confirm-hint-right { right: 1rem; }
 .drag-confirm-hint svg {
   stroke: currentColor;
   animation: drag-chevron-pulse 1.2s ease-in-out infinite;
