@@ -84,7 +84,7 @@ export function CartModal() {
             </ul>
 
             <div className="row spread cart-total">
-              <strong>Subtotal</strong>
+              <strong>Subtotal ({count} item{count === 1 ? '' : 's'})</strong>
               <strong>{formatPrice(subtotalCents, currency)}</strong>
             </div>
 
@@ -114,11 +114,7 @@ export function CartModal() {
 
             {checkoutError && <p role="alert" className="error">{checkoutError}</p>}
             <DragToConfirmButton
-              label={
-                shop?.demo
-                  ? `Drag to place demo order (${count} item${count === 1 ? '' : 's'})`
-                  : `Drag to place order (${count} item${count === 1 ? '' : 's'})`
-              }
+              label={shop?.demo ? 'Drag to place demo order' : 'Drag to place order'}
               pendingLabel="Placing order…"
               onConfirm={placeOrder}
               disabled={hasSoldOutInCart}
