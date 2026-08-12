@@ -38,19 +38,6 @@ module Carts
         )
       end
 
-      # Structural abuse/cost control: nothing else bounds how many orders
-      # (and therefore how many order-lifecycle SMS) a single account can
-      # generate — Item#sold_out? returns false whenever stock_count is nil,
-      # and checkout itself has no throttle. This stops the abuse at its
-      # source rather than just slowing it down with a resettable time
-      # window; also reasonable product hygiene independent of SMS.
-      if @cart.customer_profile.orders.in_flight.count >= MAX_IN_FLIGHT_ORDERS
-        raise ApiError.new(
-          "You have 3 orders in progress — let one finish or cancel it before placing another.",
-          code: "too_many_in_flight_orders", status: :forbidden
-        )
-      end
-
       raise ApiError::UnprocessableEntity, "Cart is empty" if @cart.cart_items.empty?
       unless Shop::FULFILLMENT_METHODS.include?(@fulfillment_method) &&
              @cart.shop.fulfillment_methods.include?(@fulfillment_method)
@@ -71,6 +58,25 @@ module Carts
       order = nil
       conversation = nil
       ActiveRecord::Base.transaction do
+        # Locked for the rest of this transaction so a concurrent checkout
+        # request for the same customer (double-tap, two tabs/devices, a
+        # client retry) can't both pass the in-flight count check before
+        # either commits — same shape of race, same fix, as the row lock in
+        # Orders::TransitionStatus. Nothing else bounds how many orders (and
+        # therefore how many order-lifecycle SMS) one account can generate
+        # — Item#sold_out? returns false whenever stock_count is nil, and
+        # checkout itself has no throttle — so this is a structural cap, not
+        # a resettable time window, and it has to actually hold under
+        # concurrent requests to mean anything.
+        @cart.customer_profile.lock!
+
+        if @cart.customer_profile.orders.in_flight.count >= MAX_IN_FLIGHT_ORDERS
+          raise ApiError.new(
+            "You have 3 orders in progress — let one finish or cancel it before placing another.",
+            code: "too_many_in_flight_orders", status: :forbidden
+          )
+        end
+
         order = build_order
         order.save!
         build_order_items(order)

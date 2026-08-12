@@ -153,5 +153,15 @@ RSpec.describe Carts::Checkout do
       order = described_class.new(cart: cart, fulfillment_method: "pickup").call
       expect(order).to be_persisted
     end
+
+    it "locks the customer_profile row before checking the count, so a concurrent checkout for the same customer can't slip past the cap" do
+      # Same shape of proof as Orders::TransitionStatus's row-lock spec: a
+      # single-threaded test can't reproduce true concurrent contention, but
+      # it can prove the lock is actually part of the code path the cap
+      # depends on, not just present somewhere unrelated in the file.
+      expect(cart.customer_profile).to receive(:lock!).and_call_original
+
+      described_class.new(cart: cart, fulfillment_method: "pickup").call
+    end
   end
 end
