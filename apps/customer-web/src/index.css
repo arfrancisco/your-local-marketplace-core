@@ -703,7 +703,11 @@ button.link {
 .modal.sheet {
   align-self: flex-end;
   width: 100%;
-  max-width: 420px;
+  /* Same 860px content column as .container/.bottom-bar-inner — on a wide
+     viewport this fills out to match the rest of the page instead of
+     staying pinned to a narrow mobile-sized width; on mobile, max-width
+     simply never gets reached, so the layout is unchanged there. */
+  max-width: 860px;
   max-height: 85vh;
   overflow-y: auto;
   border-radius: 16px 16px 0 0;
