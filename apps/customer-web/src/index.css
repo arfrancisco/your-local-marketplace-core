@@ -1226,17 +1226,29 @@ button.link {
   background: #eaf3ec;
   border-radius: inherit;
 }
-.drag-confirm-label {
+/* Grid, not three independently absolutely-positioned layers — a fixed
+   left/right offset for the hints meant a long label ("...demo order") on a
+   narrow track could overlap them. Each hint gets its own column sized to
+   its content; the label's middle column gets whatever's left and can never
+   collide with either side, at any label length or track width. */
+.drag-confirm-content {
   position: absolute;
   inset: 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  justify-content: center;
-  padding: 0 3rem;
+  gap: 0.35rem;
+  padding: 0 1rem 0 3.5rem;
+  pointer-events: none;
+}
+.drag-confirm-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   text-align: center;
   font-weight: 600;
   color: #3b2a20;
-  pointer-events: none;
 }
 .drag-confirm-handle {
   position: absolute;
@@ -1266,17 +1278,12 @@ button.link {
   50% { opacity: 1; }
 }
 .drag-confirm-hint {
-  position: absolute;
-  top: 0;
-  bottom: 0;
   display: flex;
   align-items: center;
   gap: 0.05rem;
   color: #c9b896;
-  pointer-events: none;
 }
-.drag-confirm-hint-left { left: 3.5rem; }
-.drag-confirm-hint-right { right: 1rem; }
+.drag-confirm-hint.hidden { visibility: hidden; }
 .drag-confirm-hint svg {
   stroke: currentColor;
   animation: drag-chevron-pulse 1.2s ease-in-out infinite;

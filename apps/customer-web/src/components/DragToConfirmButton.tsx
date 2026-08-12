@@ -30,24 +30,18 @@ function ArrowIcon() {
 // Three chevrons, pulsing in a staggered loop — a standard slide-to-confirm
 // affordance. Rendered flanking the label on both sides, both pointing the
 // drag direction, so the hint reads regardless of which side draws the eye.
-function ChevronGroup({ side }: { side: 'left' | 'right' }) {
+// `hidden` (not conditional rendering) keeps both grid columns always
+// present at their content width, so hiding/showing the hint never
+// reflows the label between center positions.
+function ChevronGroup({ hidden }: { hidden: boolean }) {
   return (
-    <div className={`drag-confirm-hint drag-confirm-hint-${side}`} aria-hidden="true">
+    <div className={`drag-confirm-hint${hidden ? ' hidden' : ''}`} aria-hidden="true">
       {[0, 1, 2].map((i) => (
         <svg key={i} width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ animationDelay: `${i * 0.15}s` }}>
           <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       ))}
     </div>
-  )
-}
-
-function DragHint() {
-  return (
-    <>
-      <ChevronGroup side="left" />
-      <ChevronGroup side="right" />
-    </>
   )
 }
 
@@ -128,8 +122,11 @@ export function DragToConfirmButton({ label, pendingLabel, onConfirm, disabled, 
   return (
     <div ref={trackRef} className={`drag-confirm-track${locked ? ' locked' : ''}`}>
       <div className="drag-confirm-fill" style={{ width: `${percent}%` }} />
-      <span className="drag-confirm-label">{pending ? pendingLabel : label}</span>
-      {showHint && <DragHint />}
+      <div className="drag-confirm-content">
+        <ChevronGroup hidden={!showHint} />
+        <span className="drag-confirm-label">{pending ? pendingLabel : label}</span>
+        <ChevronGroup hidden={!showHint} />
+      </div>
       <button
         type="button"
         className="drag-confirm-handle"
