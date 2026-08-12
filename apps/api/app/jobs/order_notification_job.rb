@@ -84,10 +84,15 @@ class OrderNotificationJob < ApplicationJob
 
   # SMS-text-only truncation — the real shop name is never mutated/persisted.
   # Shop names can run long (creative pun names are a project convention);
-  # this keeps every message in one SMS segment regardless.
+  # this keeps every message in one SMS segment regardless. Plain ASCII
+  # "..." deliberately, not "…" (U+2026) — a single non-GSM-7 character
+  # forces the whole message into UCS-2 encoding, which cuts segment
+  # capacity from 160 chars to 70 and would triple the SMS cost for exactly
+  # the long-name case this is meant to handle cheaply. Truncated to 17, not
+  # 20, so the "..." suffix keeps the total near the original budget.
   def shop_name(order)
     name = order.shop.name
-    name.length > 20 ? "#{name[0, 20]}…" : name
+    name.length > 20 ? "#{name[0, 17]}..." : name
   end
 
   # A separately-set env var for the same value as CORS_ORIGINS' first entry

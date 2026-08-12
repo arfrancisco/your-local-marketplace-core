@@ -190,14 +190,18 @@ RSpec.describe OrderNotificationJob do
   end
 
   describe "shop name truncation" do
-    it "truncates a long shop name to 20 chars with a trailing ellipsis, without touching the stored name" do
+    it "truncates a long shop name to 17 chars plus a plain-ASCII ellipsis, without touching the stored name" do
       long_name = "The Best Pun-tastic Sandwich Shop in Town"
       shop.update!(name: long_name)
       order.update!(status: "accepted")
       event = create_event(to_status: "accepted", from_status: "placed", actor_user: vendor_user)
 
       expect(Semaphore::Client).to receive(:send_message) do |text:, **|
-        expect(text).to include("Your order from #{long_name[0, 20]}… (#{ref})")
+        # Plain "..." deliberately, not "…" (U+2026) -- a single non-GSM-7
+        # character would force the whole message into UCS-2 encoding,
+        # tripling the SMS segment cost for exactly this long-name case.
+        expect(text).to include("Your order from #{long_name[0, 17]}... (#{ref})")
+        expect(text).not_to include("…")
       end
 
       described_class.perform_now(event.id)
