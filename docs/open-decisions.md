@@ -40,10 +40,16 @@ make before going live to real neighbors.
 6. **Rating direction** — customer-rates-vendor only, or mutual ratings?
    (Current build: customer-rates-order after completion. Mutual is a later
    question.)
-7. **Notification channels** — email, SMS, push, in-app? Which are required
-   for the pilot? (Note the known push-delivery unreliability documented in
-   the personal-os project may or may not apply here — this is a separate
-   app.)
+7. **Notification channels (resolved for the interim, pending an Android
+   app).** SMS, at 4 order-lifecycle points: a new order notifies the
+   vendor; accepted, ready-for-pickup/out-for-delivery, and completed each
+   notify the customer. Chosen because every account already has a
+   verified mobile number (mandatory since the SMS-registration swap), and
+   push notifications aren't available until a mobile app exists. Each of
+   the 4 notification types is individually toggleable from Account
+   settings in both web apps (default on). In-app chat messages already
+   cover the same events for anyone with the app open; email/push remain
+   unbuilt and would need their own decision if ever added.
 8. **Currency, tax, receipts** — single currency assumed for now; are receipts
    or tax handling needed for the pilot?
 9. **Multiple shops per user** — may one user operate more than one shop?

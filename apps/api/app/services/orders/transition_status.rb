@@ -39,6 +39,16 @@ module Orders
     # follow-up nudge into the order's chat (see #call).
     RATING_REMINDER_DELAY = 24.hours
 
+    # Which to_status values fire an OrderNotificationJob SMS. Owned here
+    # (not by the job) so this file keeps deciding locally "which to_status
+    # triggers which side effect" the same way it already does for
+    # TIMESTAMP_COLUMNS/SYSTEM_MESSAGE_TEXT, rather than reaching into the
+    # job's namespace for a shared constant. "placed" isn't here — it's
+    # never reached via #call (see the SYSTEM_MESSAGE_TEXT comment above);
+    # Carts::Checkout enqueues that one directly. rejected/cancelled/
+    # preparing deliberately do not notify.
+    NOTIFIABLE_STATUSES = %w[accepted ready_for_pickup out_for_delivery completed].freeze
+
     def initialize(order:, to_status:, actor_user:, reason: nil, reason_code: nil)
       @order = order
       @to_status = to_status
@@ -55,13 +65,27 @@ module Orders
 
       validate_cancellation_reason! if @to_status == "cancelled"
 
+      order_status_event = nil
       ActiveRecord::Base.transaction do
+        # Locks the order row first so two concurrent requests for the same
+        # transition (double-tap "Accept" from two tabs) can't both pass
+        # can_transition_to? before either commits. lock! reloads @order
+        # under the row lock, so the second request to reach here blocks
+        # until the first commits, then sees the first's write and re-fails
+        # can_transition_to? here — the check above alone only catches the
+        # non-concurrent case.
+        @order.lock!
+        unless @order.can_transition_to?(@to_status)
+          raise ApiError::UnprocessableEntity,
+                "Cannot move an order from #{@order.status} to #{@to_status}"
+        end
+
         from_status = @order.status
         attrs = { status: @to_status }
         timestamp_column = TIMESTAMP_COLUMNS[@to_status]
         attrs[timestamp_column] = Time.current if timestamp_column
         @order.update!(attrs)
-        @order.order_status_events.create!(
+        order_status_event = @order.order_status_events.create!(
           from_status: from_status,
           to_status: @to_status,
           actor_user: @actor_user,
@@ -73,6 +97,7 @@ module Orders
 
       post_system_message
       RatingReminderJob.set(wait: RATING_REMINDER_DELAY).perform_later(@order.id) if @to_status == "completed"
+      OrderNotificationJob.perform_later(order_status_event.id) if NOTIFIABLE_STATUSES.include?(@to_status)
       @order
     end
 

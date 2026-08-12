@@ -127,6 +127,8 @@ export const api = {
   login: (email: string, password: string) =>
     request<{ token: string; user: User }>('/auth/login', 'POST', { email, password }),
   me: () => request<{ user: User }>('/me'),
+  updateMe: (payload: { sms_notify_order_placed?: boolean }) =>
+    request<{ user: User }>('/me', 'PATCH', { user: payload }),
 
   sendFeedback: (payload: { message: string; email?: string; page_url?: string }) =>
     request<{ status: string }>('/feedback', 'POST', payload),

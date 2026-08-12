@@ -84,6 +84,13 @@ export interface User {
   mobile_verified: boolean
   email_marketing_opt_in: boolean
   sms_marketing_opt_in: boolean
+  // Per-event SMS toggles for order-lifecycle notifications, all default
+  // true. sms_notify_order_placed also exists on the underlying user record
+  // but is vendor-only (a vendor is notified when a customer places an
+  // order) and is never returned to this app.
+  sms_notify_order_accepted: boolean
+  sms_notify_order_ready: boolean
+  sms_notify_order_completed: boolean
   last_signed_in_at: string | null
   created_at: string
   customer_profile: {

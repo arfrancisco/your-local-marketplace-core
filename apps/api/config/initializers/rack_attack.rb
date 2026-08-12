@@ -78,6 +78,14 @@ class Rack::Attack
     req.ip if req.get? && req.path.start_with?("/api/v1/shops")
   end
 
+  # Short-link redirects (order-lifecycle SMS): public, unauthenticated, and
+  # backed by a short random code, so this is generous for the same reason
+  # discovery/ip is above — not because a redirect is expensive, but to
+  # blunt casual code-enumeration scraping.
+  throttle("short_links/ip", limit: 120, period: 60) do |req|
+    req.ip if req.get? && req.path.start_with?("/s/")
+  end
+
   # Client crash reports (see Api::V1::ClientErrorsController): public and
   # unauthenticated by design, since a browser can crash before the user
   # signs in. Fingerprint dedup only collapses *identical* reports, so a

@@ -703,7 +703,11 @@ button.link {
 .modal.sheet {
   align-self: flex-end;
   width: 100%;
-  max-width: 420px;
+  /* Same 860px content column as .container/.bottom-bar-inner — on a wide
+     viewport this fills out to match the rest of the page instead of
+     staying pinned to a narrow mobile-sized width; on mobile, max-width
+     simply never gets reached, so the layout is unchanged there. */
+  max-width: 860px;
   max-height: 85vh;
   overflow-y: auto;
   border-radius: 16px 16px 0 0;
@@ -1201,6 +1205,92 @@ button.link {
 /* ------------------------------------------------------------------------ */
 
 .cart-checkout { width: 100%; margin-top: 0.85rem; }
+
+/* Requires a drag gesture, not a tap, to place the order — see
+   DragToConfirmButton.tsx for why. */
+.drag-confirm-track {
+  position: relative;
+  width: 100%;
+  height: 3rem;
+  margin-top: 0.85rem;
+  border-radius: 999px;
+  border: 1px solid #ddccb5;
+  background: #fffdf9;
+  overflow: hidden;
+  user-select: none;
+}
+.drag-confirm-track.locked { opacity: 0.7; }
+.drag-confirm-fill {
+  position: absolute;
+  inset: 0;
+  background: #eaf3ec;
+  border-radius: inherit;
+}
+/* Grid, not three independently absolutely-positioned layers — a fixed
+   left/right offset for the hints meant a long label ("...demo order") on a
+   narrow track could overlap them. Each hint gets its own column sized to
+   its content; the label's middle column gets whatever's left and can never
+   collide with either side, at any label length or track width. */
+.drag-confirm-content {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 1rem 0 3.5rem;
+  pointer-events: none;
+}
+.drag-confirm-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  font-weight: 600;
+  color: #3b2a20;
+}
+.drag-confirm-handle {
+  position: absolute;
+  top: 0.25rem;
+  left: 0.25rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  border: none;
+  background: #3b2a20;
+  color: #fff;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+  padding: 0;
+}
+.drag-confirm-handle:active { cursor: grabbing; }
+.drag-confirm-handle:disabled { cursor: default; }
+
+/* Repeating chevron hint, shown only before any interaction starts — see
+   DragToConfirmButton.tsx's showHint logic. */
+@keyframes drag-chevron-pulse {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+.drag-confirm-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.05rem;
+  color: #c9b896;
+}
+.drag-confirm-hint.hidden { visibility: hidden; }
+.drag-confirm-hint svg {
+  stroke: currentColor;
+  animation: drag-chevron-pulse 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .drag-confirm-hint svg { animation: none; opacity: 0.6; }
+}
 
 /* ------------------------------------------------------------------------ */
 /* Shop detail hero (cover photo + overlaid back button + identity card)     */

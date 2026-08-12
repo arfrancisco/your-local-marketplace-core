@@ -39,6 +39,9 @@ export function HamburgerMenu({ email, onClose, onFeedback, onSignOut }: Props) 
             <Link to="/shops" onClick={onClose}>Home</Link>
           </li>
           <li>
+            <Link to="/account" onClick={onClose}>Account</Link>
+          </li>
+          <li>
             <button type="button" onClick={onFeedback}>Send feedback</button>
           </li>
           <li>

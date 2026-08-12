@@ -10,13 +10,6 @@ require "json"
 class VerificationDeliveryJob < ApplicationJob
   queue_as :default
 
-  # The dedicated OTP endpoint (not the generic /messages one) routes over a
-  # priority lane reserved for OTP traffic — still arrives during telco
-  # congestion, unlike regular SMS — at 2 credits/message instead of 1.
-  # Since all of our Semaphore traffic is OTP delivery, this is a strict
-  # improvement with no downside.
-  SEMAPHORE_ENDPOINT = "https://api.semaphore.co/api/v4/otp".freeze
-
   def perform(challenge_id, code)
     challenge = VerificationChallenge.find_by(id: challenge_id)
     return if challenge.nil? || challenge.consumed?
@@ -59,25 +52,17 @@ class VerificationDeliveryJob < ApplicationJob
   end
 
   def deliver_sms(challenge, code)
-    api_key = ENV["SEMAPHORE_API_KEY"]
-    return if api_key.blank?
-
-    sender_name = ENV["SEMAPHORE_SENDER_NAME"]
-    form = {
-      apikey: api_key,
+    # {otp} is Semaphore's placeholder — substituted with the `code` param.
+    # We pass our own already-generated code explicitly rather than letting
+    # Semaphore auto-generate one, since ours is already hashed and stored in
+    # verification_challenges; the code actually delivered has to be the one
+    # we validate against. Transport itself (apikey/sendername/timeout/error
+    # handling) lives in Semaphore::Client, shared with OrderNotificationJob.
+    Semaphore::Client.send_otp(
       number: challenge.sent_to,
-      # {otp} is Semaphore's placeholder — substituted with the `code` param
-      # below. We pass our own already-generated code explicitly rather than
-      # letting Semaphore auto-generate one, since ours is already hashed
-      # and stored in verification_challenges; the code actually delivered
-      # has to be the one we validate against.
-      message: "Your KapitMarket PH verification code is {otp}. It expires in 10 minutes.",
-      code: code
-    }
-    form[:sendername] = sender_name if sender_name.present?
-
-    uri = URI(SEMAPHORE_ENDPOINT)
-    post_form(uri, form)
+      code: code,
+      message: "Your KapitMarket PH verification code is {otp}. It expires in 10 minutes."
+    )
   end
 
   def post_json(uri, body, headers: {})
@@ -85,12 +70,6 @@ class VerificationDeliveryJob < ApplicationJob
     request["Content-Type"] = "application/json"
     headers.each { |k, v| request[k] = v }
     request.body = body.to_json
-    perform_request(uri, request)
-  end
-
-  def post_form(uri, form)
-    request = Net::HTTP::Post.new(uri)
-    request.set_form_data(form)
     perform_request(uri, request)
   end
 

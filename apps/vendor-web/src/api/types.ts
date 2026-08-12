@@ -194,4 +194,8 @@ export interface User {
   id: number
   email: string
   vendor_profile: { id: number; display_name: string; verification_status: string } | null
+  // Vendor-facing "notify me by SMS when a new order comes in" preference.
+  // Defaults true on the API; returned on every user payload same as the
+  // customer-web-only marketing opt-in fields.
+  sms_notify_order_placed: boolean
 }

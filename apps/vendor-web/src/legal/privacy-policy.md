@@ -147,7 +147,9 @@ for third-party advertising.
   - **Railway** — hosts our application servers.
   - **Resend** — sends verification emails and (once built) marketing
     emails.
-  - **Semaphore** — sends verification SMS and (once built) marketing SMS,
+  - **Semaphore** — sends verification SMS, order status update SMS (new
+    order, accepted, ready/dispatched, completed — each individually
+    controllable from your Account page), and (once built) marketing SMS,
     to Philippine mobile numbers.
 - **Legal and safety** — if required by law, court order, or to protect
   the rights, property, or safety of our users or the public.

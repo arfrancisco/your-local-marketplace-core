@@ -27,6 +27,32 @@ RSpec.describe VerificationDeliveryJob do
     [challenge, code]
   end
 
+  def issue_sms_challenge
+    challenge, code = VerificationChallenge.issue!(
+      user: user, channel: "sms", purpose: "mobile_verification", sent_to: user.mobile_number
+    )
+    [challenge, code]
+  end
+
+  # This refactor (see Semaphore::Client) moved the SMS transport out of this
+  # job and into a shared class, without changing what gets sent — this is
+  # the live, auth-blocking registration path, so a regression here (dropped
+  # sendername, wrong endpoint, lost {otp} placeholder) would block real
+  # registrations. Covers the delegation itself; Semaphore::Client's own
+  # HTTP/timeout/error-handling behavior is covered in
+  # spec/services/semaphore/client_spec.rb.
+  it "delivers an SMS challenge via Semaphore::Client.send_otp with the {otp} placeholder and the code to substitute" do
+    challenge, code = issue_sms_challenge
+
+    expect(Semaphore::Client).to receive(:send_otp).with(
+      number: challenge.sent_to,
+      code: code,
+      message: a_string_including("{otp}")
+    )
+
+    described_class.perform_now(challenge.id, code)
+  end
+
   it "does nothing and makes no HTTP call when the challenge is already consumed" do
     challenge, code = issue_email_challenge
     challenge.update!(consumed_at: Time.current)

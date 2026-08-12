@@ -110,4 +110,58 @@ RSpec.describe Carts::Checkout do
     expect { described_class.new(cart: cart, fulfillment_method: "pickup").call }
       .to raise_error(ApiError) { |e| expect(e.code).to eq("cancellation_restricted"); expect(e.status).to eq(:forbidden) }
   end
+
+  it "enqueues OrderNotificationJob with the 'placed' event row's id" do
+    order = nil
+    expect {
+      order = described_class.new(cart: cart, fulfillment_method: "pickup").call
+    }.to have_enqueued_job(OrderNotificationJob)
+
+    placed_event = order.order_status_events.find_by(to_status: "placed")
+    expect(placed_event).to be_present
+    expect(OrderNotificationJob).to have_been_enqueued.with(placed_event.id)
+  end
+
+  describe "in-flight order cap" do
+    def place_order(customer_profile:, item:, shop:)
+      order_cart = Carts::AddItem.new(customer_profile: customer_profile, shop: shop, item: item, quantity: 1).call
+      described_class.new(cart: order_cart, fulfillment_method: "pickup").call
+    end
+
+    it "rejects checkout once the customer already has 3 in-flight orders" do
+      3.times { place_order(customer_profile: customer.customer_profile, item: item, shop: shop) }
+
+      expect { described_class.new(cart: cart, fulfillment_method: "pickup").call }
+        .to raise_error(ApiError) { |e|
+          expect(e.code).to eq("too_many_in_flight_orders")
+          expect(e.status).to eq(:forbidden)
+        }
+    end
+
+    it "succeeds again once one of the 3 in-flight orders reaches a terminal status" do
+      orders = Array.new(3) { place_order(customer_profile: customer.customer_profile, item: item, shop: shop) }
+      orders.first.update!(status: "rejected")
+
+      order = described_class.new(cart: cart, fulfillment_method: "pickup").call
+      expect(order).to be_persisted
+    end
+
+    it "does not count another customer's in-flight orders" do
+      other_customer = create(:user, :customer, :mobile_verified)
+      3.times { place_order(customer_profile: other_customer.customer_profile, item: item, shop: shop) }
+
+      order = described_class.new(cart: cart, fulfillment_method: "pickup").call
+      expect(order).to be_persisted
+    end
+
+    it "locks the customer_profile row before checking the count, so a concurrent checkout for the same customer can't slip past the cap" do
+      # Same shape of proof as Orders::TransitionStatus's row-lock spec: a
+      # single-threaded test can't reproduce true concurrent contention, but
+      # it can prove the lock is actually part of the code path the cap
+      # depends on, not just present somewhere unrelated in the file.
+      expect(cart.customer_profile).to receive(:lock!).and_call_original
+
+      described_class.new(cart: cart, fulfillment_method: "pickup").call
+    end
+  end
 end

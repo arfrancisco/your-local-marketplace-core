@@ -4,13 +4,21 @@ import { useAuth } from '../auth'
 
 interface Props {
   onClose: () => void
+  // Pre-fills the message field — used by OrderPage's "Report an issue"
+  // action to carry order/shop context along without a dedicated backend
+  // field for it (FeedbackSubmission is just a free-text message column;
+  // this reuses that rather than building a parallel reporting feature).
+  initialMessage?: string
 }
 
 // Beta feedback/complaints intake — reachable from the header at all times,
-// signed in or not, since browsing itself is public too.
-export function FeedbackModal({ onClose }: Props) {
+// signed in or not, since browsing itself is public too. Also reused,
+// pre-filled with order/shop context, as the order page's "Report an
+// issue" action — same intake, same admin review queue, no separate
+// vendor-report feature.
+export function FeedbackModal({ onClose, initialMessage }: Props) {
   const { user } = useAuth()
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState(initialMessage ?? '')
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)

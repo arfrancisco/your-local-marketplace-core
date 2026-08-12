@@ -99,7 +99,10 @@ describe('ShopDetailPage cart flow', () => {
     await screen.findByText('Adobo Bowl')
     await userEvent.click(addButton())
     await userEvent.click(await screen.findByRole('button', { name: /cart, 1 item/i }))
-    await userEvent.click(screen.getByRole('button', { name: /place order/i }))
+    // The checkout handle now requires a drag gesture, not a plain click —
+    // a keyboard Enter still confirms directly (see DragToConfirmButton).
+    screen.getByRole('button', { name: /place order/i }).focus()
+    await userEvent.keyboard('{Enter}')
 
     expect(await screen.findByText('Login page')).toBeInTheDocument()
     expect(api.checkout).not.toHaveBeenCalled()
@@ -148,7 +151,10 @@ describe('ShopDetailPage cart flow', () => {
     await userEvent.click(cartIcon)
     expect(await screen.findByText('Your cart')).toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('button', { name: /place order/i }))
+    // The checkout handle now requires a drag gesture, not a plain click —
+    // a keyboard Enter still confirms directly (see DragToConfirmButton).
+    screen.getByRole('button', { name: /place order/i }).focus()
+    await userEvent.keyboard('{Enter}')
     expect(api.checkout).toHaveBeenCalledWith(1, 'pickup')
     expect(await screen.findByText('Order placed page')).toBeInTheDocument()
   })
@@ -205,7 +211,10 @@ describe('ShopDetailPage cart flow', () => {
     await userEvent.click(addButton())
 
     await userEvent.click(await screen.findByRole('button', { name: /cart, 1 item/i }))
-    await userEvent.click(screen.getByRole('button', { name: /place order/i }))
+    // The checkout handle now requires a drag gesture, not a plain click —
+    // a keyboard Enter still confirms directly (see DragToConfirmButton).
+    screen.getByRole('button', { name: /place order/i }).focus()
+    await userEvent.keyboard('{Enter}')
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/no longer available/i)
   })

@@ -5,6 +5,7 @@ class Order < ApplicationRecord
   has_many :order_items, dependent: :destroy
   has_many :order_status_events, dependent: :destroy
   has_many :ratings, dependent: :destroy
+  has_many :short_links, dependent: :destroy
   has_one :conversation, dependent: :destroy
 
   FULFILLMENT_METHODS = %w[pickup delivery].freeze
@@ -65,6 +66,11 @@ class Order < ApplicationRecord
   # versa) isn't a real transaction either.
   scope :demo, -> { where(customer_profile: CustomerProfile.demo).or(where(shop: Shop.demo)) }
   scope :real, -> { where(customer_profile: CustomerProfile.real).where(shop: Shop.real) }
+
+  # Not yet in a terminal state — used by Carts::Checkout's in-flight order
+  # cap (abuse/cost control for order-lifecycle SMS: nothing else bounds how
+  # many orders, and therefore how many SMS, a single account can generate).
+  scope :in_flight, -> { where.not(status: %w[completed rejected cancelled]) }
 
   before_validation :generate_public_reference, on: :create
 

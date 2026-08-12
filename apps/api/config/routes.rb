@@ -9,6 +9,13 @@ Rails.application.routes.draw do
   # Authorization header (see ApplicationCable::Connection).
   mount ActionCable.server => "/cable"
 
+  # SMS-notification short-link redirect (order-lifecycle SMS). Public,
+  # unauthenticated — the redirect itself reveals nothing; real
+  # authorization happens when the destination order page loads and fetches
+  # via the authenticated API. Must stay above the customer-web catch-all
+  # below, same ordering concern already documented there.
+  get "/s/:code", to: "short_links#show"
+
   namespace :api do
     namespace :v1 do
       # Readiness check that also verifies the database connection.

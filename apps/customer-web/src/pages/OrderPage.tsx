@@ -6,6 +6,7 @@ import { OrderChat } from '../OrderChat'
 import { Stars, RatingSummary, RatingForm } from '../components/Ratings'
 import { CancelOrderModal } from '../components/CancelOrderModal'
 import { OrderDetailActionsMenu } from '../components/OrderDetailActionsMenu'
+import { FeedbackModal } from '../components/FeedbackModal'
 import { OrderStatusStepper } from '../components/OrderStatusStepper'
 import { colorFor, emojiFor } from '../visuals'
 import type { Order, Photo } from '../api/types'
@@ -71,6 +72,7 @@ export function OrderPage() {
   const [loading, setLoading] = useState(true)
   const [viewingPhoto, setViewingPhoto] = useState<Photo | null>(null)
   const [showCancelModal, setShowCancelModal] = useState(false)
+  const [showReportModal, setShowReportModal] = useState(false)
 
   useEffect(() => {
     api.getOrder(orderId).then((res) => setOrder(res.order)).finally(() => setLoading(false))
@@ -118,7 +120,17 @@ export function OrderPage() {
         Order details <span className="muted order-reference">{order.public_reference}</span>
       </h2>
       <div className="card order-detail-section">
-        {canCancel && <OrderDetailActionsMenu onCancelOrder={() => setShowCancelModal(true)} />}
+        <OrderDetailActionsMenu
+          canCancel={canCancel}
+          onCancelOrder={() => {
+            setShowReportModal(false)
+            setShowCancelModal(true)
+          }}
+          onReportIssue={() => {
+            setShowCancelModal(false)
+            setShowReportModal(true)
+          }}
+        />
         <ul className="list">
           {order.items.map((line) => (
             <li key={line.id}>
@@ -160,6 +172,13 @@ export function OrderPage() {
             setOrder(updated)
             setShowCancelModal(false)
           }}
+        />
+      )}
+
+      {showReportModal && (
+        <FeedbackModal
+          onClose={() => setShowReportModal(false)}
+          initialMessage={`Regarding order ${order.public_reference} (${order.shop_name}):\n\n`}
         />
       )}
     </div>

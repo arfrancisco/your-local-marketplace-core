@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 
 interface Props {
+  canCancel: boolean
   onCancelOrder: () => void
+  onReportIssue: () => void
 }
 
 // The order-details card's kebab menu — mirrors vendor-web's component of
-// the same name (duplicated per ADR 0001, not shared). Customers only ever
-// have one action available here (cancel), but it still gets the same
-// menu treatment rather than a bare button, for the same reason vendor-web
-// does: a corner kebab reads as "more actions live here" without crowding
-// the card, and this can grow later without another redesign.
-export function OrderDetailActionsMenu({ onCancelOrder }: Props) {
+// the same name (duplicated per ADR 0001, not shared). "Report an issue"
+// is always available (an unresponsive vendor is exactly as likely on an
+// order that's past the cancel window as one that isn't); "Cancel order"
+// only shows while the order is still cancellable.
+export function OrderDetailActionsMenu({ canCancel, onCancelOrder, onReportIssue }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -47,14 +48,26 @@ export function OrderDetailActionsMenu({ onCancelOrder }: Props) {
           <button
             role="menuitem"
             type="button"
-            className="menu-item-danger"
             onClick={() => {
               setOpen(false)
-              onCancelOrder()
+              onReportIssue()
             }}
           >
-            Cancel order
+            Report an issue
           </button>
+          {canCancel && (
+            <button
+              role="menuitem"
+              type="button"
+              className="menu-item-danger"
+              onClick={() => {
+                setOpen(false)
+                onCancelOrder()
+              }}
+            >
+              Cancel order
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -20,6 +20,36 @@ RSpec.describe "Rack::Attack throttling", type: :request do
     Rack::Attack.cache.store = original_store
   end
 
+  it "throttles public discovery at 120 requests per minute per IP" do
+    headers = auth_headers(create(:user, :customer, :verified))
+
+    120.times { get "/api/v1/shops", headers: headers }
+    get "/api/v1/shops", headers: headers
+
+    expect(response).to have_http_status(:too_many_requests)
+    expect(json.dig("error", "code")).to eq("rate_limited")
+  end
+
+  it "throttles short-link redirects at 120 requests per minute per IP" do
+    order = create(:order)
+    short_link = ShortLink.for(order: order, audience: "customer")
+
+    120.times { get "/s/#{short_link.code}" }
+    get "/s/#{short_link.code}"
+
+    expect(response).to have_http_status(:too_many_requests)
+    expect(json.dig("error", "code")).to eq("rate_limited")
+  end
+
+  it "does not throttle a short-link redirect under the limit" do
+    order = create(:order)
+    short_link = ShortLink.for(order: order, audience: "customer")
+
+    get "/s/#{short_link.code}"
+
+    expect(response).to have_http_status(:found)
+  end
+
   def register_params(i)
     {
       user: {

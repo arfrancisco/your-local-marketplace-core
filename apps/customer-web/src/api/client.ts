@@ -123,6 +123,12 @@ export interface CompleteProfilePayload {
   }
 }
 
+export interface UpdateMePayload {
+  sms_notify_order_accepted?: boolean
+  sms_notify_order_ready?: boolean
+  sms_notify_order_completed?: boolean
+}
+
 export interface UpdateAddressPayload {
   recipient_name?: string
   mobile_number?: string
@@ -170,6 +176,7 @@ export const api = {
   login: (email: string, password: string) =>
     request<{ token: string; user: User }>('/auth/login', 'POST', { email, password }),
   me: () => request<{ user: User }>('/me'),
+  updateMe: (payload: UpdateMePayload) => request<{ user: User }>('/me', 'PATCH', { user: payload }),
 
   requestMobileVerification: () => request<{ message?: string }>('/verifications/mobile', 'POST'),
   confirmMobileVerification: (code: string) =>

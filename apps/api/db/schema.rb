@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_10_100018) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_11_100001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -326,6 +326,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_100018) do
     t.index ["vendor_profile_id"], name: "index_shops_on_vendor_profile_id"
   end
 
+  create_table "short_links", force: :cascade do |t|
+    t.string "audience", null: false
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.bigint "order_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_short_links_on_code", unique: true
+    t.index ["order_id", "audience"], name: "index_short_links_on_order_id_and_audience", unique: true
+    t.index ["order_id"], name: "index_short_links_on_order_id"
+  end
+
   create_table "tags", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -347,6 +358,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_100018) do
     t.datetime "mobile_verified_at"
     t.string "password_digest", null: false
     t.boolean "sms_marketing_opt_in", default: false, null: false
+    t.boolean "sms_notify_order_accepted", default: true, null: false
+    t.boolean "sms_notify_order_completed", default: true, null: false
+    t.boolean "sms_notify_order_placed", default: true, null: false
+    t.boolean "sms_notify_order_ready", default: true, null: false
     t.string "status", default: "active", null: false
     t.datetime "terms_accepted_at"
     t.string "terms_version"
@@ -430,6 +445,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_100018) do
   add_foreign_key "ratings", "orders"
   add_foreign_key "ratings", "users", column: "reviewer_user_id"
   add_foreign_key "shops", "vendor_profiles"
+  add_foreign_key "short_links", "orders"
   add_foreign_key "vendor_customer_notes", "customer_profiles"
   add_foreign_key "vendor_customer_notes", "orders"
   add_foreign_key "vendor_customer_notes", "vendor_profiles"
