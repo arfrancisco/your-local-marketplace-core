@@ -25,8 +25,8 @@ Nothing here needs hand-editing, but feel free.
 |---|---|---|---|---|---|
 | 1 | Product and its three refusals | 2026-08-06 | 2026-08-07 | 6/6 | solid |
 | 2 | Shape and shipping | 2026-08-07 | 2026-08-10 | 4/6 | ok |
-| 3 | Identity and authentication | 2026-08-10 | - | - | - |
-| 4 | Authorization | - | - | - | - |
+| 3 | Identity and authentication | 2026-08-10 | 2026-08-13 | 4/6 | ok |
+| 4 | Authorization | 2026-08-13 | - | - | - |
 | 5 | Data model and the snapshot rule | - | - | - | - |
 | 6 | Discovery | - | - | - | - |
 | 7 | Cart and checkout | - | - | - | - |
@@ -38,6 +38,37 @@ Nothing here needs hand-editing, but feel free.
 ## Session log
 
 Newest first.
+
+### 2026-08-13 — Quiz: lesson 3 · Taught: lesson 4
+
+Score 4/6 on lesson 3. Confidence: ok.
+- Missed: the WebSocket-rejected-but-REST-works scenario — picked "CORS is
+  blocking the socket origin" over "the client needs the token as a
+  `?token=` query param, since the handshake can't carry an `Authorization`
+  header." CORS was the plausible-sounding general-purpose answer; the real
+  cause is `ApplicationCable::Connection` reading `request.params[:token]`.
+- Missed: the production admin-404 scenario — picked "the admin doesn't
+  have permission for that action" over "the admin namespace was never
+  drawn because `ADMIN_ENABLED` isn't set." Both misses share a pattern:
+  reaching for a plausible general mechanism (CORS, granular permissions)
+  instead of the specific one this codebase actually uses — worth watching
+  for on the mixed-review round, since it's a "guessing the generic
+  explanation" habit rather than a lesson-specific gap.
+- Correctly answered: capability-based identity (vendor_profile presence,
+  not a role column), the SHA-256-vs-BCrypt reasoning, the stale
+  "Authenticated" route-comment question on shop discovery, and the
+  live-code check on `ApiToken.authenticate` — confirmed expired and
+  never-existed tokens both just return nil from the same `active.find_by`
+  scope, no separate expiry signal.
+- Delivered lesson 4 in full: default-deny `ApplicationPolicy`, the
+  walk-to-user-id ownership pattern repeated per policy (no `Ownable`
+  mixin), `ConversationPolicy`'s nil-guard tying back to lesson 3's
+  capability model, `OrderPolicy`'s two-owner shape and why orders/chat
+  aren't namespaced under `vendor/` the way shops/items are, the
+  three-layer split for a transition request (policy / controller / service,
+  403/403/422), query-scoping as the strongest boundary (vendor notes, cart
+  items, unlisted shops — 404 not 403, since 403 would itself leak
+  existence), and the admin side's audit-log-instead-of-Pundit design.
 
 ### 2026-08-10 — Quiz: lesson 2 · Taught: lesson 3
 
@@ -97,5 +128,5 @@ the three misconceptions.
 
 ## Next up
 
-**Day 4 — quiz on lesson 3** (6 questions), then **lesson 4 —
-authorization.**
+**Day 5 — quiz on lesson 4** (6 questions), then **lesson 5 —
+the data model and the snapshot rule.**
