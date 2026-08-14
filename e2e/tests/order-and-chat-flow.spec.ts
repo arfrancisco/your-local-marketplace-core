@@ -10,9 +10,11 @@ import { test, expect, type Browser } from '@playwright/test'
 //   shop, not a chat message — ADR 0009, revised) -> customer and vendor
 //   exchange chat messages in real time (no reload) -> the Orders tab's red
 //   dot picks up a message sent while the customer is elsewhere in the app
-//   (via TabBar.tsx's real 45s poll, not a forced reload) -> vendor accepts
-//   the order via an explicit status button -> customer sees the updated
-//   status.
+//   (via TabBar.tsx's real 45s poll, not a forced reload) -> clicking the
+//   Orders tab navigates to the list (which shows its own matching per-row
+//   dot), and opening the order itself marks it read, clearing the tab
+//   bar's dot on its next poll -> vendor accepts the order via an explicit
+//   status button -> customer sees the updated status.
 
 const CUSTOMER_BASE = process.env.CUSTOMER_WEB_URL ?? 'http://localhost:5173'
 const VENDOR_BASE = process.env.VENDOR_WEB_URL ?? 'http://localhost:5174'
@@ -29,11 +31,12 @@ async function newPage(browser: Browser) {
 }
 
 test('vendor opening message, checkout, real-time chat, and status transition', async ({ browser }) => {
-  // Well over the config's default 30s — the Orders-tab-dot step below
-  // deliberately waits out a real 45s poll interval (TabBar.tsx's
+  // Well over the config's default 30s — the two Orders-tab-dot steps below
+  // each deliberately wait out a real 45s poll interval (TabBar.tsx's
   // useOrdersUnreadDot) rather than forcing a reload, to actually prove the
-  // polling mechanism works end-to-end.
-  test.setTimeout(120_000)
+  // polling mechanism works end-to-end in both directions (dot appearing,
+  // then clearing).
+  test.setTimeout(300_000)
 
   const vendor = await newPage(browser)
   const customer = await newPage(browser)
@@ -84,8 +87,18 @@ test('vendor opening message, checkout, real-time chat, and status transition', 
     // inline automatically — open it before checkout. Matched by its
     // accessible name (CartButton.tsx's aria-label, "Cart, N item(s)"), not
     // a class, since it's just an icon+label tab like the other four.
-    await customer.getByRole('button', { name: /^cart,/i }).click()
-    await expect(customer.getByText('Your cart')).toBeVisible()
+    //
+    // Waiting for the label to actually show a nonzero count (rather than
+    // matching any "Cart, ..." label and clicking immediately) is load-
+    // bearing, not cosmetic: the add-to-cart click fires an async request
+    // that CartContext awaits internally, so a bare "click add, then click
+    // cart" can win the race and open the modal before the item lands,
+    // showing "Your cart is empty." — confirmed by hitting exactly that
+    // failure locally before this wait was added. Matches any nonzero
+    // count, not just "1 item", since this reused seed account can carry a
+    // leftover item from an earlier local run.
+    await customer.getByRole('button', { name: /^cart, [1-9]/i }).click()
+    await expect(customer.getByRole('heading', { name: 'Your cart' })).toBeVisible()
 
     // "Pizza My Heart" (db/seeds.rb) is a seeded demo shop, so the checkout
     // handle reads "Drag to place demo order" here, not "Drag to place
@@ -180,6 +193,40 @@ test('vendor opening message, checkout, real-time chat, and status transition', 
     // mount, same as the very first chat step did).
     await customer.goto(`${CUSTOMER_BASE}/orders/${orderId}`)
     await customer.waitForSelector('.chat-composer')
+  })
+
+  await test.step('clicking the Orders tab navigates to the list, and opening the order clears the dot', async () => {
+    // The order page's mount effect (useOrderChat.ts) already marked this
+    // order read just above, so re-navigate away first — otherwise this
+    // step would trivially pass with nothing left to actually clear.
+    await customer.getByRole('link', { name: /^home$/i }).click()
+    await customer.waitForURL('**/shops')
+    await vendor.fill('.chat-composer textarea', 'One more update for you.')
+    await vendor.click('.chat-composer .send-btn')
+    await expect(customer.getByLabel('Unread update')).toBeVisible({ timeout: 60_000 })
+
+    // Not anchored (unlike the Home-tab locator above): when the dot is
+    // visible its own aria-label ("Unread update") folds into this link's
+    // accessible name too (TabBar.tsx renders it as a sibling span inside
+    // the same <Link>), so the name here is "Unread update Orders", not
+    // "Orders" alone — confirmed by hitting exactly that mismatch locally.
+    await customer.getByRole('link', { name: /orders/i }).click()
+    await customer.waitForURL('**/orders')
+    // OrdersPage.tsx renders its own per-row dot off the same
+    // has_unread_messages field the tab bar's dot reads — confirms both
+    // surfaces agree, not just the tab bar in isolation.
+    const orderRow = customer.locator(`a[href="/orders/${orderId}"]`)
+    await expect(orderRow.locator('.unread-dot')).toBeVisible()
+
+    await orderRow.click()
+    await customer.waitForURL(`**/orders/${orderId}`)
+    await customer.waitForSelector('.chat-composer')
+    // Opening the order's chat marks it read server-side immediately
+    // (useOrderChat.ts's mount effect), but the tab bar's dot only reflects
+    // that on its next poll tick, not instantly — wait out a real interval
+    // rather than forcing a reload, same reasoning as the dot-appearing
+    // step above, just proving the mechanism clears in the other direction.
+    await expect(customer.getByLabel('Unread update')).not.toBeVisible({ timeout: 60_000 })
   })
 
   await test.step('vendor accepts the order via an explicit status button, customer sees it', async () => {
