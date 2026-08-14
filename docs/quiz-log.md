@@ -26,8 +26,8 @@ Nothing here needs hand-editing, but feel free.
 | 1 | Product and its three refusals | 2026-08-06 | 2026-08-07 | 6/6 | solid |
 | 2 | Shape and shipping | 2026-08-07 | 2026-08-10 | 4/6 | ok |
 | 3 | Identity and authentication | 2026-08-10 | 2026-08-13 | 4/6 | ok |
-| 4 | Authorization | 2026-08-13 | - | - | - |
-| 5 | Data model and the snapshot rule | - | - | - | - |
+| 4 | Authorization | 2026-08-13 | pending | pending | pending |
+| 5 | Data model and the snapshot rule | 2026-08-14 | - | - | - |
 | 6 | Discovery | - | - | - | - |
 | 7 | Cart and checkout | - | - | - | - |
 | 8 | Order lifecycle | - | - | - | - |
@@ -38,6 +38,25 @@ Nothing here needs hand-editing, but feel free.
 ## Session log
 
 Newest first.
+
+### 2026-08-14 — Quiz: lesson 4 (posted, awaiting answers) · Taught: lesson 5
+
+This session ran automated/scheduled with no live user present, so the
+6 lesson-4 questions were posted in the session as text (not via the
+one-at-a-time interactive flow) instead of graded live. Score/confidence
+for lesson 4 are pending until Alain answers in that session; grade and
+fill in the Mastery row + this entry then, citing files for anything
+missed.
+
+Delivered lesson 5 in full: the four-cluster shape (identity / catalog /
+commerce / conversation), `db/schema.rb` over the stale `docs/erd.md`,
+the slug-generated-once-and-stable behavior, one-shop-per-vendor as a
+soft model validation (open decision #9), the cart-has-no-price /
+order-snapshots-everything distinction via `Carts::Checkout`, the two
+deliberate live-read exceptions (opening message/QR, customer
+name/address) and the terms-vs-context principle behind them, the three
+audit trails and which question each answers, and the ratings
+DB-uniqueness-is-the-real-guarantee point.
 
 ### 2026-08-13 — Quiz: lesson 3 · Taught: lesson 4
 
@@ -128,5 +147,6 @@ the three misconceptions.
 
 ## Next up
 
-**Day 5 — quiz on lesson 4** (6 questions), then **lesson 5 —
-the data model and the snapshot rule.**
+**Answer the lesson 4 quiz** posted in the 2026-08-14 session (6 questions,
+still open — grade it there when Alain replies, and backfill this file).
+Then **lesson 6 — discovery: how a customer finds a shop.**
