@@ -51,6 +51,14 @@ ops. Stay in your lane.
   method), check whether the tests that used to cover it were updated or
   deleted along with it — a stale test that still imports a deleted module
   is worse than no test, since it hides the gap.
+- **Behavioral changes without matching e2e/doc updates.** If the diff
+  changes what the app *does* — a navigation destination, a flow, an
+  interaction pattern — check whether `e2e/tests/` was updated alongside
+  it, and whether relevant docs (`docs/architecture.md`, `docs/manual/`
+  once the `docs` agent populates it) were too, not just unit tests. This
+  repo has a real pattern of shipping behavior changes with only unit
+  coverage updated; flag the gap even if unit coverage looks solid
+  otherwise.
 
 ## Report format
 

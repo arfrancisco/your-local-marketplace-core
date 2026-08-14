@@ -76,4 +76,8 @@ policy, etc.) that need an answer before this goes live to real neighbors.
   service objects for order placement / status transitions / ratings.
 - Prices/names are snapshotted into `order_items` at placement, never re-read
   live. Orders are historical records.
+- Behavioral changes (a new flow, a changed navigation destination, a
+  changed interaction) need matching e2e coverage and doc updates
+  (`docs/architecture.md`, `docs/manual/` once populated) in the same
+  change, not deferred as a follow-up.
 - Commit/push only when asked. Host: Railway (compute) + R2 (media).
