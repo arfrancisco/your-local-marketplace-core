@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes, Link } from 'react-router-dom'
 import { useAuth } from './auth'
+import { OrdersPollProvider } from './useOrdersPoll'
 import { Footer } from './components/Footer'
 import { RatingNudgeModal } from './components/RatingNudgeModal'
 import { TabBar } from './components/TabBar'
@@ -54,7 +55,7 @@ function MobileVerificationBanner() {
 
 export default function App() {
   return (
-    <>
+    <OrdersPollProvider>
       <BetaBanner />
       <MobileVerificationBanner />
       <RatingNudgeModal />
@@ -85,6 +86,6 @@ export default function App() {
       </main>
 
       <TabBar />
-    </>
+    </OrdersPollProvider>
   )
 }

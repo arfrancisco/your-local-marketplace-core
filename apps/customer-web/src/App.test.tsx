@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, within, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './auth'
@@ -94,6 +94,44 @@ describe('Header', () => {
     const header = await screen.findByRole('banner')
     expect(within(header).getByRole('link', { name: /prisma kapitmarket/i })).toHaveAttribute('href', '/shops')
     expect(within(header).queryByRole('button', { name: /^menu$/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('OrdersPollProvider', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    vi.mocked(api.listShops).mockResolvedValue({ shops: [] })
+    vi.mocked(api.listOrders).mockResolvedValue({ orders: [] })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  // App mounts both TabBar (via useOrdersUnreadDot) and RatingNudgeModal,
+  // and each calls useOrdersPoll(). Before this was backed by a shared
+  // context, each call ran its own independent fetch+interval, so two
+  // consumers meant two listOrders() requests per poll tick. This pins the
+  // fix at the level that actually matters — a real integrated render, not
+  // just useOrdersPoll.test.tsx's single-hook isolation, which can't catch
+  // request-count regressions between multiple consumers.
+  it('shares one listOrders() poll across TabBar and RatingNudgeModal, not one each', async () => {
+    vi.useFakeTimers()
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
+
+    renderApp()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    expect(api.listOrders).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(45_000)
+    })
+    expect(api.listOrders).toHaveBeenCalledTimes(2)
   })
 })
 

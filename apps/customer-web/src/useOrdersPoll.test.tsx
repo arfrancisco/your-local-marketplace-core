@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
-import { useOrdersPoll, ORDERS_POLL_MS } from './useOrdersPoll'
+import { useOrdersPoll, OrdersPollProvider, ORDERS_POLL_MS } from './useOrdersPoll'
 import { AuthProvider } from './auth'
 import { api, setToken } from './api/client'
 import type { Order, User } from './api/types'
@@ -78,7 +78,11 @@ vi.mock('./api/client', async (importOriginal) => {
 
 function renderHookWithAuth() {
   return renderHook(() => useOrdersPoll(), {
-    wrapper: ({ children }) => <AuthProvider>{children}</AuthProvider>,
+    wrapper: ({ children }) => (
+      <AuthProvider>
+        <OrdersPollProvider>{children}</OrdersPollProvider>
+      </AuthProvider>
+    ),
   })
 }
 

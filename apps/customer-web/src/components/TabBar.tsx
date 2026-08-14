@@ -17,9 +17,10 @@ const ACTIVE_ORDER_STATUSES: OrderStatus[] = [
 
 // Pure derivation over useOrdersPoll's shared snapshot (does any in-flight
 // order have an unread chat message) — no polling logic of its own. Used to
-// live here as its own independent fetch+interval; consolidated into
-// useOrdersPoll so this and RatingNudgeModal's rate-your-order nudge share
-// one listOrders() poll instead of each running an uncoordinated copy.
+// live here as its own independent fetch+interval; now reads from
+// OrdersPollProvider's single shared poll (see useOrdersPoll.tsx), so this
+// and RatingNudgeModal's rate-your-order nudge don't run a second copy of
+// the same request.
 function useOrdersUnreadDot(): boolean {
   const orders = useOrdersPoll()
   return orders.some((o) => ACTIVE_ORDER_STATUSES.includes(o.status) && o.has_unread_messages)
