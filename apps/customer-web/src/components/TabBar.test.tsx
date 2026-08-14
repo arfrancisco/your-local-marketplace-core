@@ -112,28 +112,21 @@ describe('TabBar', () => {
     expect(screen.queryByRole('link', { name: /^vendor$/i })).not.toBeInTheDocument()
   })
 
-  it('shows all five tabs once signed in, Account (not Sign-in) among them', async () => {
+  it('shows Orders and Account once signed in, but no Vendor tab without a vendor_profile', async () => {
     setToken('tok123')
     vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
     renderBar()
 
     expect(await screen.findByRole('link', { name: /^orders$/i })).toHaveAttribute('href', '/orders')
-    expect(screen.getByRole('link', { name: /^vendor$/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^account$/i })).toHaveAttribute('href', '/account')
     expect(screen.queryByRole('link', { name: /^sign in$/i })).not.toBeInTheDocument()
+    // Becoming a vendor is something to discover on the Account page (which
+    // already fully renders eligibility state and "Start selling"), not a
+    // bottom-bar destination pointing at a shop that doesn't exist yet.
+    expect(screen.queryByRole('link', { name: /^vendor$/i })).not.toBeInTheDocument()
   })
 
-  it('routes the Vendor tab to /account for a signed-in customer with no vendor_profile', async () => {
-    setToken('tok123')
-    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
-    renderBar()
-
-    await waitFor(() => {
-      expect(screen.getByRole('link', { name: /^vendor$/i })).toHaveAttribute('href', '/account')
-    })
-  })
-
-  it('routes the Vendor tab to a real cross-app <a> for an existing vendor', async () => {
+  it('shows the Vendor tab, routed to a real cross-app <a>, only once the customer actually has a vendor_profile', async () => {
     setToken('tok123')
     vi.mocked(api.me).mockResolvedValue({
       user: baseUser({

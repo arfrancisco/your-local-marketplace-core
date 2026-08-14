@@ -1,6 +1,6 @@
-import { Link, NavLink, type NavLinkRenderProps } from 'react-router-dom'
+import { NavLink, type NavLinkRenderProps } from 'react-router-dom'
 import { useAuth } from '../auth'
-import type { OrderStatus, User } from '../api/types'
+import type { OrderStatus } from '../api/types'
 import { useOrdersPoll } from '../useOrdersPoll'
 import { vendorWebUrl } from '../vendorWeb'
 import { CartButton } from './CartButton'
@@ -108,52 +108,42 @@ function tabClass({ isActive }: NavLinkRenderProps) {
   return `tab-bar-item${isActive ? ' active' : ''}`
 }
 
-// Vendor tab — signed-in only (TabBar hides it entirely when signed out,
-// same as Orders — neither "become a vendor" nor "go to your shop" means
-// anything without an account). Two destinations depending on vendor
-// state: a real cross-app <a> (vendorWebUrl) for an existing vendor —
-// kept as a permanent shortcut back to their shop even though they mostly
-// live in vendor-web once they cross over — or /account for a signed-in,
-// not-yet-vendor customer (AccountPage already fully renders eligibility
-// state and "Start selling"). Deliberately not a NavLink — the active-tab
-// highlighting bullet only names Home/Orders/Account, and this tab's own
-// destinations already belong to other tabs (or another app entirely), so
-// it never claims "active" here.
-function VendorTab({ user }: { user: User }) {
-  const icon = (
-    <span className="tab-bar-icon-wrap">
-      <VendorIcon />
-    </span>
-  )
-  const label = <span className="tab-bar-label">Vendor</span>
-
-  if (user.vendor_profile) {
-    return (
-      <a href={vendorWebUrl('/shops')} className="tab-bar-item">
-        {icon}
-        {label}
-      </a>
-    )
-  }
+// Vendor tab — only rendered for an existing vendor (TabBar checks
+// user?.vendor_profile before mounting this at all), as a permanent
+// shortcut back to their shop even though they mostly live in vendor-web
+// once they cross over. A signed-in customer with no vendor_profile yet
+// gets no Vendor tab at all — becoming a vendor is something to discover
+// on the Account page (which already fully renders eligibility state and
+// "Start selling"), not a bottom-bar destination pointing at a shop that
+// doesn't exist yet. A real cross-app <a>, not React Router's Link — this
+// is a genuine origin change to vendor-web. Deliberately not a NavLink —
+// the active-tab highlighting bullet only names Home/Orders/Account, and
+// this tab's destination belongs to another app entirely, so it never
+// claims "active" here.
+function VendorTab() {
   return (
-    <Link to="/account" className="tab-bar-item">
-      {icon}
-      {label}
-    </Link>
+    <a href={vendorWebUrl('/shops')} className="tab-bar-item">
+      <span className="tab-bar-icon-wrap">
+        <VendorIcon />
+      </span>
+      <span className="tab-bar-label">Vendor</span>
+    </a>
   )
 }
 
-// Persistent bottom bar — the one nav surface for every auth state,
+// Persistent bottom bar — the one nav surface for every auth/vendor state,
 // replacing the old hamburger drawer plus the previous cart-summary/
 // track-my-order bottom bar. Present on every route (rendered once in
-// App.tsx, outside the router's <Routes>). Not always 5 tabs: Orders and
-// Vendor need an account to mean anything (there's no order history or
-// vendor concept for an anonymous visitor), so both are hidden entirely
-// when signed out rather than shown pointing at a dead end — Home and
-// Cart stay (browsing and the anonymous local cart both already work
-// signed out), and Account becomes the sign-in entry point in their
-// place. `.tab-bar-item { flex: 1 }` means fewer visible tabs just
-// redistribute the row evenly, no separate signed-out layout needed.
+// App.tsx, outside the router's <Routes>). Not always 5 tabs: Orders needs
+// an account to mean anything (no order history for an anonymous visitor)
+// and Vendor needs an actual vendor_profile (no shop to jump to otherwise —
+// discovering "become a vendor" lives on the Account page, not the bottom
+// bar), so both are hidden entirely rather than shown pointing at a dead
+// end. Home and Cart stay for everyone (browsing and the anonymous local
+// cart both already work signed out), and Account becomes the sign-in
+// entry point when signed out. `.tab-bar-item { flex: 1 }` means fewer
+// visible tabs just redistribute the row evenly, no separate layout per
+// state needed.
 export function TabBar() {
   const { user } = useAuth()
   const hasUnread = useOrdersUnreadDot()
@@ -180,7 +170,7 @@ export function TabBar() {
 
         <CartButton />
 
-        {user && <VendorTab user={user} />}
+        {user?.vendor_profile && <VendorTab />}
 
         <NavLink to={user ? '/account' : '/login'} className={tabClass}>
           <span className="tab-bar-icon-wrap">
