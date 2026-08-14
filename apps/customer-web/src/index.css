@@ -104,22 +104,20 @@ body { margin: 0; position: relative; }
   background: #fffdf9;
   border-bottom: 1px solid #ecdfcd;
 }
-/* Same 860px column as .container/.bottom-bar-inner, centered — .topbar's
-   own background/border still span the full viewport (intentional), but
-   without this the brand block and .header-actions (absolutely positioned
-   against whatever their nearest positioned ancestor is) anchored to the
-   true window edges on wide viewports instead of the content column below. */
+/* Same 860px column as .container/.tab-bar-inner, centered — .topbar's own
+   background/border still span the full viewport (intentional), but without
+   this the brand block anchored to the true window edges on wide viewports
+   instead of the content column below. Header is just this one block now
+   (no more header-actions cluster to balance against), so a simple centered
+   flex row replaces the old 3-column grid. */
 .topbar-inner {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
+  display: flex;
+  justify-content: center;
   max-width: 860px;
   margin: 0 auto;
   padding: 0.85rem 1.25rem;
 }
-.topbar-inner > .brand-block { grid-column: 2; justify-self: center; text-align: center; }
-.topbar-inner > *:last-child { grid-column: 3; justify-self: end; }
+.brand-block { text-align: center; }
 .brand {
   font-family: 'Poppins', 'Fraunces', sans-serif;
   font-weight: 800;
@@ -137,9 +135,9 @@ body { margin: 0; position: relative; }
   letter-spacing: 0.04em;
 }
 
-/* Bottom padding reserves room for the fixed .bottom-bar (cart + track-order)
-   below every page, so the last bit of content never ends up hidden behind
-   it — the bar is always present (the cart icon shows on every page). */
+/* Bottom padding reserves room for the fixed .tab-bar below every page, so
+   the last bit of content never ends up hidden behind it — the bar is
+   always present, on every route and auth state. */
 .container { max-width: 860px; margin: 1.5rem auto; padding: 0 1rem 5rem; }
 
 /* Solid panel for hero text sitting on the photo background — the blurred
@@ -603,63 +601,6 @@ button.link {
 .line-total { min-width: 80px; text-align: right; }
 .cart-total { margin: 0.5rem 0; padding-top: 0.5rem; border-top: 1px solid #ecdfcd; }
 
-/* Fixed action bar across the bottom of the screen (App.tsx's BottomBar) —
-   cart icon always on the right; .bar-primary (cart summary, or "track your
-   order" once the cart is empty) grows to fill the space next to it via
-   flex: 1, rather than the two floating as separate stacked chips. A single
-   opaque bar reads as one deliberate control surface: two big, clearly
-   separated tap targets instead of two small ones close together, and its
-   own background means it never visually blends into (or covers) page
-   content scrolling underneath — .container's bottom padding, below, keeps
-   content from ever landing behind it. */
-.bottom-bar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 40;
-  background: #fffdf9;
-  border-top: 1px solid #ecdfcd;
-  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
-}
-/* Same 860px column as .container, centered — without this, the bar's own
-   background spans the full viewport (correctly) but its content (cart
-   summary text, cart button) drifted apart to the true left/right window
-   edges on wide viewports instead of lining up with the content column
-   above it. */
-.bottom-bar-inner {
-  max-width: 860px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  padding: 0.65rem 1rem;
-}
-/* Brand indigo (#4f46e5, same hue as .brand) rather than the default dark
-   button fill — this is the one action in the bar that isn't the cart, so
-   it gets the accent color instead of blending into every other button. */
-.bar-primary {
-  flex: 1;
-  border-radius: 999px;
-  padding: 0.7rem 1.25rem;
-  background: #4f46e5;
-  border-color: #4f46e5;
-}
-.bar-primary:hover { background: #4338ca; }
-/* Plain bold text, not a pill — the cart icon next to it is the actual
-   tappable action, so this just reports what's in the cart. */
-.cart-summary-bar {
-  flex: 1;
-  text-align: left;
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  font-weight: 700;
-  color: #2b2420;
-}
-
 /* Modal */
 .modal-backdrop {
   position: fixed;
@@ -695,15 +636,15 @@ button.link {
 .modal.wide { max-width: 480px; }
 
 /* Anchored to the bottom of the screen instead of centred — the cart uses
-   this so its contents (qty steppers, "Place order") land near the cart icon
-   that opens it (bottom bar, see .bottom-bar), reachable by thumb without
-   the reach-and-recenter of a dialog floating mid-screen.
+   this so its contents (qty steppers, "Place order") land near the cart tab
+   that opens it (see .tab-bar), reachable by thumb without the
+   reach-and-recenter of a dialog floating mid-screen.
    align-self: flex-end overrides .modal-backdrop's align-items: center on
-   the cross axis only, the same trick .modal.drawer uses on the main axis. */
+   the cross axis only. */
 .modal.sheet {
   align-self: flex-end;
   width: 100%;
-  /* Same 860px content column as .container/.bottom-bar-inner — on a wide
+  /* Same 860px content column as .container/.tab-bar-inner — on a wide
      viewport this fills out to match the rest of the page instead of
      staying pinned to a narrow mobile-sized width; on mobile, max-width
      simply never gets reached, so the layout is unchanged there. */
@@ -871,7 +812,7 @@ button.link {
 
 /* Persistent footer (App.tsx) — Terms/Privacy, reachable on every page, not
    just at signup. Sits inside .container as its last child, so it renders
-   above the padding that's reserved for the fixed .bottom-bar rather than
+   above the padding that's reserved for the fixed .tab-bar rather than
    getting hidden behind it. Muted/small — this is a footer, not a CTA. */
 .app-footer {
   margin-top: 1.5rem;
@@ -1049,35 +990,9 @@ button.link {
 
 
 /* ------------------------------------------------------------------------ */
-/* Header icon cluster (hamburger only — cart floats bottom-right instead)   */
+/* Icon buttons (ItemDetailModal's Back button; the tab bar's Cart tab       */
+/* reuses the bump-animation convention below but not this circular shape)  */
 /* ------------------------------------------------------------------------ */
-
-/* position: absolute relative to .topbar-inner, the 860px content column
-   (not the viewport, and not .topbar itself, which spans full width) — it's
-   anchored inside the header itself and scrolls away with it, rather than
-   staying pinned in the corner as the page scrolls beneath it, and lines up
-   with the content column's edge on wide viewports instead of the true
-   window edge. Vertically centered via the top:0/bottom:0/margin:auto trick
-   rather than a transform — a transform here would make this element a
-   containing block for its own position:fixed descendants (the hamburger's
-   drawer/backdrop), which broke the drawer's positioning relative to the
-   viewport. */
-.header-actions {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 1.25rem;
-  margin: auto 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-/* Signed-out header CTA (App.tsx's HeaderActions) — replaces the hamburger
-   for anonymous visitors so Sign in is one tap away instead of buried in a
-   drawer. Layers onto .link-button; only needs to add nowrap here. */
-.header-cta-btn { white-space: nowrap; }
 
 .icon-btn {
   position: relative;
@@ -1152,53 +1067,80 @@ button.link {
 .cart-icon-btn.bump { animation: cart-bump 300ms ease-out; }
 
 /* ------------------------------------------------------------------------ */
-/* Slide-in drawer (hamburger menu + cart)                                   */
+/* Persistent 5-tab bottom bar (TabBar.tsx) — replaces the old hamburger     */
+/* drawer plus the previous cart-summary/track-my-order bottom bar. One nav */
+/* surface for every auth state, present on every route. A structurally     */
+/* different bar than the old .bottom-bar (icon-above-label tabs, not a     */
+/* status line + cart icon), so this gets its own classes rather than       */
+/* overloading the retired ones.                                            */
 /* ------------------------------------------------------------------------ */
 
-/* A .modal variant anchored to the right edge instead of centred — same
-   backdrop, same surface, just pushed over and made full height. */
-.modal.drawer {
-  margin-left: auto;
-  margin-right: 0;
-  align-self: stretch;
-  max-width: 340px;
-  overflow-y: auto;
-  animation: drawer-in 180ms ease-out;
+/* Same fixed-footer treatment the old .bottom-bar used: opaque surface so
+   content scrolling underneath never shows through or gets misclicked, plus
+   .container's bottom padding keeps page content from ending up hidden
+   behind it. */
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  background: #fffdf9;
+  border-top: 1px solid #ecdfcd;
+  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
 }
-@keyframes drawer-in {
-  from { transform: translateX(110%); }
-  to { transform: translateX(0); }
+/* Same 860px column as .container, centered — without this the bar's own
+   background spans the full viewport (correctly) but its five tabs would
+   drift apart to the true left/right window edges on wide viewports instead
+   of lining up with the content column above it. */
+.tab-bar-inner {
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
 }
-
-.drawer-identity { margin: 0 0 0.75rem; padding-right: 2rem; }
-.drawer-nav { margin: 0; display: flex; flex-direction: column; }
-.drawer-nav li { padding: 0.15rem 0; border-top: 1px solid #ecdfcd; }
-.drawer-nav li:first-child { border-top: none; }
-/* Become-a-vendor CTA — a real button in a list of plain links, so it needs
-   its own breathing room instead of the tight single-line list rhythm. */
-.drawer-nav li.drawer-cta { padding: 0.6rem 0; }
-/* .drawer-nav a below (higher specificity than .link-button alone) would
-   otherwise stretch this to a full-width, unpadded plain link — chain the
-   classes so the button styling wins. */
-.drawer-nav a.link-button {
-  display: inline-block;
-  width: auto;
-  padding: 0.5rem 0.9rem;
-  color: #fff;
-}
-.drawer-nav a.link-button:hover { color: #fff; }
-.drawer-nav a,
-.drawer-nav .inline-link {
-  display: block;
-  width: 100%;
-  padding: 0.7rem 0;
-  text-align: left;
-  color: #2b2420;
+/* Each tab is an equal-width flex column (icon above label) rather than a
+   fixed width — five equal tap targets that share the bar evenly regardless
+   of viewport width, matching the reference 5-icon-above-label design. */
+.tab-bar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.5rem 0.25rem 0.6rem;
+  background: none;
+  border: none;
+  color: #8a7862;
   text-decoration: none;
-  font-size: 1rem;
+  font-size: 0.7rem;
+  font-weight: 600;
 }
-.drawer-nav a:hover,
-.drawer-nav .inline-link:hover { color: #4f7a5c; }
+/* Brand indigo for the active tab, same hue as .brand/.icon-btn — everything
+   else (icon + label) inherits it via currentColor, so this one rule tints
+   both at once. */
+.tab-bar-item.active { color: #4f46e5; }
+.tab-bar-icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+.tab-bar-label { line-height: 1; }
+
+/* Orders tab's unread-chat flag — same red dot as OrdersPage's per-row
+   .unread-dot, just repositioned to sit as a small badge on the tab's icon
+   instead of inline after row text. */
+.tab-bar-dot {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  margin-left: 0;
+}
 
 /* ------------------------------------------------------------------------ */
 /* Cart drawer                                                               */
@@ -1393,35 +1335,19 @@ button.link {
   .container { padding: 0 0.75rem 4.5rem; }
   .hero { padding: 1.15rem 1rem; }
 
-  /* The centered brand block and the header-actions cluster both claim the
-     same top-right territory at narrow widths — left-align and shrink the
-     brand instead of letting them collide. */
-  /* header-actions is position:absolute (out of grid flow entirely, anchored
-     to .topbar-inner) at every width, so the desktop's 3-column "1fr auto 1fr"
-     template was actually splitting the topbar's width 50/50 between two
-     mostly-empty tracks here — cutting the brand block down to about half
-     the viewport and wrapping the tagline. One column, full width, is all
-     this needs once the actions cluster no longer occupies a real grid cell
-     to balance against. */
-  .topbar-inner { padding: 0.65rem 0.9rem; grid-template-columns: 1fr; }
-  .topbar-inner > .brand-block {
-    grid-column: 1;
-    justify-self: start;
-    text-align: left;
-  }
+  .topbar-inner { padding: 0.65rem 0.9rem; }
   /* Poppins 800 runs noticeably wider than the Fraunces serif this replaced
      at the same size — without shrinking a bit, "Prisma KapitMarket" wraps
-     to two lines in the space left by the fixed header-actions cluster. At
-     this size neither it nor the tagline below actually reach far enough
-     right to need a reserved gap for the icon cluster anymore. */
+     to two lines at narrow widths. */
   .brand { font-size: 1.05rem; white-space: nowrap; }
 
-  .header-actions { right: 0.75rem; gap: 0.4rem; }
   .icon-btn { width: 38px; height: 38px; font-size: 1.05rem; }
   .cart-badge { min-width: 17px; height: 17px; line-height: 17px; font-size: 0.65rem; }
 
-  .bottom-bar-inner { padding: 0.55rem 0.75rem; gap: 0.5rem; }
-  .bar-primary { font-size: 0.85rem; padding: 0.55rem 0.95rem; }
+  /* Tighter tab bar on narrow screens — five equal-width tabs have less
+     room each to work with than the old two-item bottom bar did. */
+  .tab-bar-item { padding: 0.4rem 0.15rem 0.5rem; gap: 0.15rem; font-size: 0.62rem; }
+  .tab-bar-icon-wrap { width: 22px; height: 22px; }
 
   /* Centered dialogs become full-width bottom sheets; the side drawer (nav,
      cart) keeps its own edge-anchored layout via .modal.drawer's existing

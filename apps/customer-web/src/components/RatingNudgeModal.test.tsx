@@ -3,12 +3,9 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { RatingNudgeModal } from './RatingNudgeModal'
 import { AuthProvider } from '../auth'
+import { OrdersPollProvider, ORDERS_POLL_MS } from '../useOrdersPoll'
 import { api, setToken } from '../api/client'
 import type { Order } from '../api/types'
-
-// Matches the poll cadence duplicated (with a comment) from App.tsx's
-// ACTIVE_ORDER_REFRESH_MS — kept in sync by hand here too.
-const POLL_MS = 45_000
 
 const { authUser } = vi.hoisted(() => ({
   authUser: {
@@ -67,7 +64,9 @@ function makeOrder(overrides: Partial<Order>): Order {
 function renderModal() {
   return render(
     <AuthProvider>
-      <RatingNudgeModal />
+      <OrdersPollProvider>
+        <RatingNudgeModal />
+      </OrdersPollProvider>
     </AuthProvider>,
   )
 }
@@ -134,7 +133,7 @@ describe('RatingNudgeModal', () => {
     // unrated, but its localStorage flag is already set, so it must not pop
     // back up.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(POLL_MS)
+      await vi.advanceTimersByTimeAsync(ORDERS_POLL_MS)
     })
 
     expect(api.listOrders).toHaveBeenCalledTimes(2)

@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, within, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './auth'
@@ -60,10 +59,12 @@ function renderApp(initialEntries = ['/shops']) {
   )
 }
 
-async function openMenu() {
-  await userEvent.click(await screen.findByRole('button', { name: /^menu$/i }))
-}
-
+// Header no longer branches on auth state at all — it's just the brand
+// block on every route, for every visitor. The old hamburger/Sign-in-CTA
+// branching this used to test is gone; per-auth-state nav now lives entirely
+// in the persistent tab bar (see TabBar.tsx / TabBar.test.tsx, which covers
+// the Home/Orders/Cart/Vendor/Account tabs and their auth-dependent
+// destinations in isolation rather than through a full App render).
 describe('Header', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -72,55 +73,65 @@ describe('Header', () => {
     vi.mocked(api.listOrders).mockResolvedValue({ orders: [] })
   })
 
-  it('shows a Sign in CTA instead of the hamburger when signed out', async () => {
+  // Scoped to the header (role "banner") specifically, not the whole page —
+  // a whole-document query for "Sign in" would also match the tab bar's own
+  // Account-tab-as-Sign-in link when signed out (TabBar.tsx), which is a
+  // real, separate link and not what this test is about.
+  it('renders just the brand block when signed out', async () => {
     renderApp()
 
-    expect(await screen.findByRole('link', { name: /prisma kapitmarket/i })).toHaveAttribute('href', '/shops')
-    expect(screen.getByRole('button', { name: /^cart, empty$/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^menu$/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /^sign in$/i })).toHaveAttribute('href', '/login')
+    const header = await screen.findByRole('banner')
+    expect(within(header).getByRole('link', { name: /prisma kapitmarket/i })).toHaveAttribute('href', '/shops')
+    expect(within(header).queryByRole('button', { name: /^menu$/i })).not.toBeInTheDocument()
+    expect(within(header).queryByRole('link', { name: /^sign in$/i })).not.toBeInTheDocument()
   })
 
-  it('shows the hamburger instead of the Sign in CTA when signed in', async () => {
+  it('renders the same brand-only header when signed in', async () => {
     setToken('tok123')
     vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
     renderApp()
 
-    expect(await screen.findByRole('button', { name: /^menu$/i })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /^sign in$/i })).not.toBeInTheDocument()
+    const header = await screen.findByRole('banner')
+    expect(within(header).getByRole('link', { name: /prisma kapitmarket/i })).toHaveAttribute('href', '/shops')
+    expect(within(header).queryByRole('button', { name: /^menu$/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('OrdersPollProvider', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    vi.mocked(api.listShops).mockResolvedValue({ shops: [] })
+    vi.mocked(api.listOrders).mockResolvedValue({ orders: [] })
   })
 
-  it('shows an explicit Home link in the drawer when signed in', async () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  // App mounts both TabBar (via useOrdersUnreadDot) and RatingNudgeModal,
+  // and each calls useOrdersPoll(). Before this was backed by a shared
+  // context, each call ran its own independent fetch+interval, so two
+  // consumers meant two listOrders() requests per poll tick. This pins the
+  // fix at the level that actually matters — a real integrated render, not
+  // just useOrdersPoll.test.tsx's single-hook isolation, which can't catch
+  // request-count regressions between multiple consumers.
+  it('shares one listOrders() poll across TabBar and RatingNudgeModal, not one each', async () => {
+    vi.useFakeTimers()
     setToken('tok123')
     vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
-    renderApp()
-    await openMenu()
-    expect(await screen.findByRole('link', { name: /^home$/i })).toHaveAttribute('href', '/shops')
-  })
 
-  it('shows a vendor dashboard link (a real <a>, not client-side nav) when the user has a vendor_profile', async () => {
-    setToken('tok123')
-    vi.mocked(api.me).mockResolvedValue({
-      user: baseUser({
-        vendor_profile: { id: 1, display_name: "Lola's Kitchen", verification_status: 'verified' },
-      }),
+    renderApp()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
     })
-    renderApp()
-    await openMenu()
+    expect(api.listOrders).toHaveBeenCalledTimes(1)
 
-    const link = await screen.findByRole('link', { name: /vendor dashboard/i })
-    expect(link.tagName).toBe('A')
-    expect(link).toHaveAttribute('href', '/vendor/shops')
-  })
-
-  it('hides the vendor dashboard link for a customer with no vendor_profile', async () => {
-    setToken('tok123')
-    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
-    renderApp()
-    await openMenu()
-
-    await screen.findByRole('link', { name: /my account/i })
-    expect(screen.queryByRole('link', { name: /vendor dashboard/i })).not.toBeInTheDocument()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(45_000)
+    })
+    expect(api.listOrders).toHaveBeenCalledTimes(2)
   })
 })
 

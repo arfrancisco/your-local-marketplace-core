@@ -1,13 +1,9 @@
-import { useEffect, useState } from 'react'
-import { Navigate, Route, Routes, Link, useNavigate } from 'react-router-dom'
+import { Navigate, Route, Routes, Link } from 'react-router-dom'
 import { useAuth } from './auth'
-import { api } from './api/client'
-import type { Order, OrderStatus } from './api/types'
-import { CartButton } from './components/CartButton'
+import { OrdersPollProvider } from './useOrdersPoll'
 import { Footer } from './components/Footer'
-import { useCart } from './CartContext'
-import { HamburgerMenu } from './components/HamburgerMenu'
 import { RatingNudgeModal } from './components/RatingNudgeModal'
+import { TabBar } from './components/TabBar'
 import { ShopsPage } from './pages/ShopsPage'
 import { ShopDetailPage } from './pages/ShopDetailPage'
 import { LoginPage } from './pages/LoginPage'
@@ -20,30 +16,11 @@ import { OrderPage } from './pages/OrderPage'
 import { OrderPlacedPage } from './pages/OrderPlacedPage'
 import { OrdersPage } from './pages/OrdersPage'
 
-// position: fixed so this stays pinned in the top right as the page scrolls
-// under it; the top offset lines it up with the top bar at scroll 0, below
-// the beta banner. The cart moved to the fixed bottom bar (BottomBar, below)
-// so it doesn't crowd the header on narrow screens.
-//
-// Signed-out visitors get a direct Sign in CTA here instead of the
-// hamburger — the drawer buried it behind an extra tap, and signing in is
-// the one thing this app most wants a first-time visitor to find. Just the
-// one button (not a separate Sign up alongside it) — the login page itself
-// already has a "Don't have an account? Create one" link, so a second
-// button here would just be the same destination twice. Feedback
-// (previously reachable from the drawer even when signed out) moved to the
-// footer, which is present on every route regardless of auth state.
-// Signed-in users keep the hamburger as before.
-function HeaderActions() {
-  const { user } = useAuth()
-
-  return (
-    <div className="header-actions">
-      {user ? <HamburgerMenu /> : <Link to="/login" className="link-button header-cta-btn">Sign in</Link>}
-    </div>
-  )
-}
-
+// Just the brand block now, unconditionally, for every auth state — the
+// persistent 5-tab bar below (TabBar) is the one nav surface now, so the
+// header no longer branches on signed-in/out to show a hamburger or a Sign
+// in CTA (both retired; Sign in is one tap away via the Account/Vendor tabs
+// for a signed-out visitor instead).
 function Header() {
   return (
     <header className="topbar">
@@ -52,93 +29,8 @@ function Header() {
           <Link to="/shops" className="brand">Prisma KapitMarket</Link>
           <p className="brand-tagline">By the community, for the community</p>
         </div>
-        <HeaderActions />
       </div>
     </header>
-  )
-}
-
-const ACTIVE_ORDER_STATUSES: OrderStatus[] = [
-  'placed',
-  'accepted',
-  'preparing',
-  'ready_for_pickup',
-  'out_for_delivery',
-]
-
-const ACTIVE_ORDER_REFRESH_MS = 45_000
-
-function formatPrice(cents: number, currency: string) {
-  return `${currency} ${(cents / 100).toFixed(2)}`
-}
-
-// Fills the bar's flex space with a running total once there's something in
-// the cart, instead of leaving it blank next to the cart icon — the current
-// task (finish this order) takes priority over the track-your-order
-// reminder below, which only shows once the cart is empty again. Plain bold
-// text rather than a pill button (unlike the track-your-order case below) —
-// the round cart icon already reads as the tappable action, so this doesn't
-// need its own button chrome competing for attention next to it.
-function CartSummaryButton() {
-  const { count, subtotalCents, currency, openCart } = useCart()
-  if (count === 0) return null
-
-  return (
-    <button className="cart-summary-bar" onClick={openCart}>
-      {count} item{count === 1 ? '' : 's'} · {formatPrice(subtotalCents, currency)}
-    </button>
-  )
-}
-
-// Global (not page-scoped) — a signed-in customer with an order in flight
-// should be able to jump back to it from anywhere, not just from /orders.
-// Lives in the bottom bar, growing to fill the space next to the cart icon
-// (flex: 1, in CSS) rather than floating as its own separate chip — a single
-// wide tap target is easier to hit accurately than two small ones stacked
-// close together.
-function ActiveOrderButton() {
-  const { user } = useAuth()
-  const navigate = useNavigate()
-  const [activeOrders, setActiveOrders] = useState<Order[]>([])
-
-  useEffect(() => {
-    if (!user) {
-      setActiveOrders([])
-      return
-    }
-    let cancelled = false
-    function refresh() {
-      api
-        .listOrders()
-        .then((res) => {
-          if (cancelled) return
-          setActiveOrders(res.orders.filter((o) => ACTIVE_ORDER_STATUSES.includes(o.status)))
-        })
-        .catch(() => {
-          // Best-effort — a failed poll just leaves the button as it was.
-        })
-    }
-    refresh()
-    const interval = setInterval(refresh, ACTIVE_ORDER_REFRESH_MS)
-    return () => {
-      cancelled = true
-      clearInterval(interval)
-    }
-  }, [user?.id])
-
-  if (!user || activeOrders.length === 0) return null
-
-  function onClick() {
-    if (activeOrders.length === 1) navigate(`/orders/${activeOrders[0].id}`)
-    else navigate('/orders')
-  }
-
-  return (
-    <button className="bar-primary" onClick={onClick}>
-      {activeOrders.length === 1
-        ? 'Track my order'
-        : `Track my orders (${activeOrders.length})`}
-    </button>
   )
 }
 
@@ -161,37 +53,9 @@ function MobileVerificationBanner() {
   )
 }
 
-// The bar's flex-1 slot shows one thing at a time: the cart summary whenever
-// there's something in the cart (the task at hand), falling back to the
-// track-your-order reminder only once the cart is empty. Showing both
-// together would just recreate the clutter this bar replaced.
-function BottomBarStatus() {
-  const { count } = useCart()
-  if (count > 0) return <CartSummaryButton />
-  return <ActiveOrderButton />
-}
-
-// A single fixed bar across the bottom of the screen, not two separate
-// floating chips — two small buttons stacked close together (the previous
-// design) were easy to mispress with a thumb, and had no background of their
-// own, so they visually blended into (and covered) whatever page content
-// happened to scroll underneath. The bar's own opaque surface fixes both:
-// clear separation between the two actions, and content never hides behind
-// it (.container reserves matching bottom padding).
-function BottomBar() {
-  return (
-    <div className="bottom-bar">
-      <div className="bottom-bar-inner">
-        <BottomBarStatus />
-        <CartButton />
-      </div>
-    </div>
-  )
-}
-
 export default function App() {
   return (
-    <>
+    <OrdersPollProvider>
       <BetaBanner />
       <MobileVerificationBanner />
       <RatingNudgeModal />
@@ -214,14 +78,14 @@ export default function App() {
         </Routes>
 
         {/* Inside .container, not a sibling after it — .container reserves
-            5rem of bottom padding for the fixed BottomBar (see its comment
-            below), so content here, footer included, never ends up hidden
-            behind it. A sibling footer outside .container wouldn't get that
-            protection. */}
+            5rem of bottom padding for the fixed tab bar (see TabBar.tsx and
+            its .tab-bar CSS), so content here, footer included, never ends
+            up hidden behind it. A sibling footer outside .container
+            wouldn't get that protection. */}
         <Footer />
       </main>
 
-      <BottomBar />
-    </>
+      <TabBar />
+    </OrdersPollProvider>
   )
 }

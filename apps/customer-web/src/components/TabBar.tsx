@@ -1,0 +1,185 @@
+import { NavLink, type NavLinkRenderProps } from 'react-router-dom'
+import { useAuth } from '../auth'
+import type { OrderStatus } from '../api/types'
+import { useOrdersPoll } from '../useOrdersPoll'
+import { vendorWebUrl } from '../vendorWeb'
+import { CartButton } from './CartButton'
+
+// Same set ActiveOrderButton used to filter on (see App.tsx's git history) —
+// an order still "in flight" from a customer's point of view.
+const ACTIVE_ORDER_STATUSES: OrderStatus[] = [
+  'placed',
+  'accepted',
+  'preparing',
+  'ready_for_pickup',
+  'out_for_delivery',
+]
+
+// Pure derivation over useOrdersPoll's shared snapshot (does any in-flight
+// order have an unread chat message) — no polling logic of its own. Used to
+// live here as its own independent fetch+interval; now reads from
+// OrdersPollProvider's single shared poll (see useOrdersPoll.tsx), so this
+// and RatingNudgeModal's rate-your-order nudge don't run a second copy of
+// the same request.
+function useOrdersUnreadDot(): boolean {
+  const orders = useOrdersPoll()
+  return orders.some((o) => ACTIVE_ORDER_STATUSES.includes(o.status) && o.has_unread_messages)
+}
+
+// Plain stroked outline icons, matching this app's zero-icon-library
+// convention (see e.g. CartButton.tsx's CartIcon, ShopsPage.tsx's
+// SearchIcon). stroke="currentColor" (not a hardcoded color) so the same
+// icon tints gray or brand-indigo depending on .tab-bar-item's active state,
+// via CSS alone.
+function HomeIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 11.5 12 4l8 7.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6 10v9a1 1 0 0 0 1 1h4v-5h2v5h4a1 1 0 0 0 1-1v-9"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function OrdersIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M6 3h9l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M9 11h6M9 15h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+// Simple storefront outline — a placeholder per the plan, easily swappable
+// later, not blocking.
+function VendorIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 9V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3 9h18l-1 3a2.5 2.5 0 0 1-4.5 1.5A2.5 2.5 0 0 1 13.5 15a2.5 2.5 0 0 1-2-1.5A2.5 2.5 0 0 1 9 15a2.5 2.5 0 0 1-2-1.5A2.5 2.5 0 0 1 2.5 12L3 9Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M5 13v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function AccountIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="2" />
+      <path
+        d="M4.5 20a7.5 7.5 0 0 1 15 0"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function tabClass({ isActive }: NavLinkRenderProps) {
+  return `tab-bar-item${isActive ? ' active' : ''}`
+}
+
+// Vendor tab — only rendered for an existing vendor (TabBar checks
+// user?.vendor_profile before mounting this at all), as a permanent
+// shortcut back to their shop even though they mostly live in vendor-web
+// once they cross over. A signed-in customer with no vendor_profile yet
+// gets no Vendor tab at all — becoming a vendor is something to discover
+// on the Account page (which already fully renders eligibility state and
+// "Start selling"), not a bottom-bar destination pointing at a shop that
+// doesn't exist yet. A real cross-app <a>, not React Router's Link — this
+// is a genuine origin change to vendor-web. Deliberately not a NavLink —
+// the active-tab highlighting bullet only names Home/Orders/Account, and
+// this tab's destination belongs to another app entirely, so it never
+// claims "active" here.
+function VendorTab() {
+  return (
+    <a href={vendorWebUrl('/shops')} className="tab-bar-item">
+      <span className="tab-bar-icon-wrap">
+        <VendorIcon />
+      </span>
+      <span className="tab-bar-label">Vendor</span>
+    </a>
+  )
+}
+
+// Persistent bottom bar — the one nav surface for every auth/vendor state,
+// replacing the old hamburger drawer plus the previous cart-summary/
+// track-my-order bottom bar. Present on every route (rendered once in
+// App.tsx, outside the router's <Routes>). Not always 5 tabs: Orders needs
+// an account to mean anything (no order history for an anonymous visitor)
+// and Vendor needs an actual vendor_profile (no shop to jump to otherwise —
+// discovering "become a vendor" lives on the Account page, not the bottom
+// bar), so both are hidden entirely rather than shown pointing at a dead
+// end. Home and Cart stay for everyone (browsing and the anonymous local
+// cart both already work signed out), and Account becomes the sign-in
+// entry point when signed out. `.tab-bar-item { flex: 1 }` means fewer
+// visible tabs just redistribute the row evenly, no separate layout per
+// state needed.
+export function TabBar() {
+  const { user } = useAuth()
+  const hasUnread = useOrdersUnreadDot()
+
+  return (
+    <nav className="tab-bar" aria-label="Primary">
+      <div className="tab-bar-inner">
+        <NavLink to="/shops" className={tabClass}>
+          <span className="tab-bar-icon-wrap">
+            <HomeIcon />
+          </span>
+          <span className="tab-bar-label">Home</span>
+        </NavLink>
+
+        {user && (
+          <NavLink to="/orders" className={tabClass}>
+            <span className="tab-bar-icon-wrap">
+              <OrdersIcon />
+              {hasUnread && <span className="unread-dot tab-bar-dot" aria-label="Unread update" />}
+            </span>
+            <span className="tab-bar-label">Orders</span>
+          </NavLink>
+        )}
+
+        <CartButton />
+
+        {user?.vendor_profile && <VendorTab />}
+
+        <NavLink to={user ? '/account' : '/login'} className={tabClass}>
+          <span className="tab-bar-icon-wrap">
+            <AccountIcon />
+          </span>
+          <span className="tab-bar-label">{user ? 'Account' : 'Sign in'}</span>
+        </NavLink>
+      </div>
+    </nav>
+  )
+}
