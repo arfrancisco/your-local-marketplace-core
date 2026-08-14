@@ -108,14 +108,18 @@ function tabClass({ isActive }: NavLinkRenderProps) {
   return `tab-bar-item${isActive ? ' active' : ''}`
 }
 
-// Vendor tab — three different destinations depending on auth/vendor state,
-// per the plan: a real cross-app <a> (vendorWebUrl) for an existing vendor,
-// /account for a signed-in eligible-or-not customer (AccountPage already
-// fully renders eligibility state and "Start selling"), /login when signed
-// out. Deliberately not a NavLink — the active-tab highlighting bullet only
-// names Home/Orders/Account, and this tab's own destinations already belong
-// to other tabs (or another app entirely), so it never claims "active" here.
-function VendorTab({ user }: { user: User | null }) {
+// Vendor tab — signed-in only (TabBar hides it entirely when signed out,
+// same as Orders — neither "become a vendor" nor "go to your shop" means
+// anything without an account). Two destinations depending on vendor
+// state: a real cross-app <a> (vendorWebUrl) for an existing vendor —
+// kept as a permanent shortcut back to their shop even though they mostly
+// live in vendor-web once they cross over — or /account for a signed-in,
+// not-yet-vendor customer (AccountPage already fully renders eligibility
+// state and "Start selling"). Deliberately not a NavLink — the active-tab
+// highlighting bullet only names Home/Orders/Account, and this tab's own
+// destinations already belong to other tabs (or another app entirely), so
+// it never claims "active" here.
+function VendorTab({ user }: { user: User }) {
   const icon = (
     <span className="tab-bar-icon-wrap">
       <VendorIcon />
@@ -123,7 +127,7 @@ function VendorTab({ user }: { user: User | null }) {
   )
   const label = <span className="tab-bar-label">Vendor</span>
 
-  if (user?.vendor_profile) {
+  if (user.vendor_profile) {
     return (
       <a href={vendorWebUrl('/shops')} className="tab-bar-item">
         {icon}
@@ -131,26 +135,25 @@ function VendorTab({ user }: { user: User | null }) {
       </a>
     )
   }
-  if (user) {
-    return (
-      <Link to="/account" className="tab-bar-item">
-        {icon}
-        {label}
-      </Link>
-    )
-  }
   return (
-    <Link to="/login" className="tab-bar-item">
+    <Link to="/account" className="tab-bar-item">
       {icon}
       {label}
     </Link>
   )
 }
 
-// Persistent 5-tab bottom bar — the one nav surface for every auth state,
+// Persistent bottom bar — the one nav surface for every auth state,
 // replacing the old hamburger drawer plus the previous cart-summary/
 // track-my-order bottom bar. Present on every route (rendered once in
-// App.tsx, outside the router's <Routes>).
+// App.tsx, outside the router's <Routes>). Not always 5 tabs: Orders and
+// Vendor need an account to mean anything (there's no order history or
+// vendor concept for an anonymous visitor), so both are hidden entirely
+// when signed out rather than shown pointing at a dead end — Home and
+// Cart stay (browsing and the anonymous local cart both already work
+// signed out), and Account becomes the sign-in entry point in their
+// place. `.tab-bar-item { flex: 1 }` means fewer visible tabs just
+// redistribute the row evenly, no separate signed-out layout needed.
 export function TabBar() {
   const { user } = useAuth()
   const hasUnread = useOrdersUnreadDot()
@@ -165,23 +168,25 @@ export function TabBar() {
           <span className="tab-bar-label">Home</span>
         </NavLink>
 
-        <NavLink to="/orders" className={tabClass}>
-          <span className="tab-bar-icon-wrap">
-            <OrdersIcon />
-            {hasUnread && <span className="unread-dot tab-bar-dot" aria-label="Unread update" />}
-          </span>
-          <span className="tab-bar-label">Orders</span>
-        </NavLink>
+        {user && (
+          <NavLink to="/orders" className={tabClass}>
+            <span className="tab-bar-icon-wrap">
+              <OrdersIcon />
+              {hasUnread && <span className="unread-dot tab-bar-dot" aria-label="Unread update" />}
+            </span>
+            <span className="tab-bar-label">Orders</span>
+          </NavLink>
+        )}
 
         <CartButton />
 
-        <VendorTab user={user} />
+        {user && <VendorTab user={user} />}
 
-        <NavLink to="/account" className={tabClass}>
+        <NavLink to={user ? '/account' : '/login'} className={tabClass}>
           <span className="tab-bar-icon-wrap">
             <AccountIcon />
           </span>
-          <span className="tab-bar-label">Account</span>
+          <span className="tab-bar-label">{user ? 'Account' : 'Sign in'}</span>
         </NavLink>
       </div>
     </nav>

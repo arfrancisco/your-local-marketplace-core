@@ -98,22 +98,31 @@ describe('TabBar', () => {
     vi.mocked(api.listOrders).mockResolvedValue({ orders: [] })
   })
 
-  it('renders all five tabs with the right destinations when signed out', async () => {
+  // Orders and Vendor both need an account to mean anything — neither an
+  // order history nor a vendor-upgrade path exists for an anonymous
+  // visitor — so they're not just disabled but absent entirely signed
+  // out, and Account becomes the sign-in entry point in their place.
+  it('shows only Home, Cart, and Sign-in when signed out — Orders and Vendor are absent, not just inert', async () => {
     renderBar()
 
     expect(await screen.findByRole('link', { name: /^home$/i })).toHaveAttribute('href', '/shops')
-    expect(screen.getByRole('link', { name: /^orders$/i })).toHaveAttribute('href', '/orders')
     expect(screen.getByRole('button', { name: /^cart, empty$/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /^vendor$/i })).toHaveAttribute('href', '/login')
-    expect(screen.getByRole('link', { name: /^account$/i })).toHaveAttribute('href', '/account')
+    expect(screen.getByRole('link', { name: /^sign in$/i })).toHaveAttribute('href', '/login')
+    expect(screen.queryByRole('link', { name: /^orders$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /^vendor$/i })).not.toBeInTheDocument()
   })
 
-  // Note: the Vendor tab shows a link with the same accessible name ("Vendor")
-  // in every auth state (only its destination changes), so a plain
-  // findByRole would resolve against the initial signed-out render (href
-  // "/login") before api.me() resolves — it doesn't wait for the *attribute*
-  // to change, only for a matching element to exist. waitFor on the
-  // attribute itself avoids that race.
+  it('shows all five tabs once signed in, Account (not Sign-in) among them', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
+    renderBar()
+
+    expect(await screen.findByRole('link', { name: /^orders$/i })).toHaveAttribute('href', '/orders')
+    expect(screen.getByRole('link', { name: /^vendor$/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^account$/i })).toHaveAttribute('href', '/account')
+    expect(screen.queryByRole('link', { name: /^sign in$/i })).not.toBeInTheDocument()
+  })
+
   it('routes the Vendor tab to /account for a signed-in customer with no vendor_profile', async () => {
     setToken('tok123')
     vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
@@ -140,6 +149,8 @@ describe('TabBar', () => {
   })
 
   it('marks the Home tab active on /shops and /shops/:slug, and no other tab', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
     renderBar(['/shops/pizza-my-heart'])
 
     expect(await screen.findByRole('link', { name: /^home$/i })).toHaveClass('active')
@@ -148,6 +159,8 @@ describe('TabBar', () => {
   })
 
   it('marks the Orders tab active on /orders/:id, and no other tab', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
     renderBar(['/orders/123'])
 
     expect(await screen.findByRole('link', { name: /^orders$/i })).toHaveClass('active')
@@ -156,6 +169,8 @@ describe('TabBar', () => {
   })
 
   it('marks the Account tab active on /account', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
     renderBar(['/account'])
 
     expect(await screen.findByRole('link', { name: /^account$/i })).toHaveClass('active')
@@ -205,10 +220,11 @@ describe('TabBar', () => {
     expect(screen.queryByLabelText('Unread update')).not.toBeInTheDocument()
   })
 
-  it('shows no dot when signed out, regardless of listOrders', async () => {
+  it('never renders the Orders tab (or its dot) when signed out, regardless of listOrders', async () => {
     renderBar()
 
-    await screen.findByRole('link', { name: /^orders$/i })
+    await screen.findByRole('link', { name: /^sign in$/i })
+    expect(screen.queryByRole('link', { name: /^orders$/i })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Unread update')).not.toBeInTheDocument()
     expect(api.listOrders).not.toHaveBeenCalled()
   })

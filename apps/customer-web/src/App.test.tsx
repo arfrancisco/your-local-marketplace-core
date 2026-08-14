@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './auth'
@@ -73,12 +73,17 @@ describe('Header', () => {
     vi.mocked(api.listOrders).mockResolvedValue({ orders: [] })
   })
 
+  // Scoped to the header (role "banner") specifically, not the whole page —
+  // a whole-document query for "Sign in" would also match the tab bar's own
+  // Account-tab-as-Sign-in link when signed out (TabBar.tsx), which is a
+  // real, separate link and not what this test is about.
   it('renders just the brand block when signed out', async () => {
     renderApp()
 
-    expect(await screen.findByRole('link', { name: /prisma kapitmarket/i })).toHaveAttribute('href', '/shops')
-    expect(screen.queryByRole('button', { name: /^menu$/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /^sign in$/i })).not.toBeInTheDocument()
+    const header = await screen.findByRole('banner')
+    expect(within(header).getByRole('link', { name: /prisma kapitmarket/i })).toHaveAttribute('href', '/shops')
+    expect(within(header).queryByRole('button', { name: /^menu$/i })).not.toBeInTheDocument()
+    expect(within(header).queryByRole('link', { name: /^sign in$/i })).not.toBeInTheDocument()
   })
 
   it('renders the same brand-only header when signed in', async () => {
@@ -86,8 +91,9 @@ describe('Header', () => {
     vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
     renderApp()
 
-    expect(await screen.findByRole('link', { name: /prisma kapitmarket/i })).toHaveAttribute('href', '/shops')
-    expect(screen.queryByRole('button', { name: /^menu$/i })).not.toBeInTheDocument()
+    const header = await screen.findByRole('banner')
+    expect(within(header).getByRole('link', { name: /prisma kapitmarket/i })).toHaveAttribute('href', '/shops')
+    expect(within(header).queryByRole('button', { name: /^menu$/i })).not.toBeInTheDocument()
   })
 })
 
