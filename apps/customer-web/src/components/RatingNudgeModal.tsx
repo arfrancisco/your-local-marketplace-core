@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api/client'
 import { useAuth } from '../auth'
+import { useOrdersPoll } from '../useOrdersPoll'
 import { RatingForm } from './Ratings'
 import type { Order } from '../api/types'
 
@@ -27,12 +27,6 @@ function markShown(orderId: number): void {
   }
 }
 
-// Independent poll on the same cadence as ActiveOrderButton's (App.tsx,
-// ACTIVE_ORDER_REFRESH_MS = 45s) — deliberately a *second*, separate poll,
-// not a refactor of that one, so this stays additive and doesn't risk that
-// already-shipped/tested component.
-const POLL_MS = 45_000
-
 // Global, always-mounted nudge: pops up the rating form for a just-completed,
 // still-unrated order from anywhere in the app, not just that order's own
 // page. Opens at most once per order, ever, per browser — the localStorage
@@ -41,55 +35,38 @@ const POLL_MS = 45_000
 // the only ongoing nudges for that order.
 export function RatingNudgeModal() {
   const { user } = useAuth()
+  const orders = useOrdersPoll()
   const [order, setOrder] = useState<Order | null>(null)
 
+  // Decide inside the setOrder updater, not before it: if a modal is
+  // already open (current != null), this tick must neither replace it nor
+  // mark some other candidate as shown — marking a candidate shown without
+  // ever actually displaying its modal would burn its one-time popup for
+  // nothing. Deferring the decision to here makes "already open" and
+  // "mark + open" mutually exclusive by construction. Runs on every
+  // useOrdersPoll snapshot (shared poll, per useOrdersPoll.ts), not a
+  // separate poll of its own.
   useEffect(() => {
     if (!user) {
       setOrder(null)
       return
     }
 
-    let cancelled = false
+    setOrder((current) => {
+      if (current) return current
 
-    function poll() {
-      api
-        .listOrders()
-        .then((res) => {
-          if (cancelled) return
-          // Decide inside the setOrder updater, not before it: if a modal is
-          // already open (current != null), this tick must neither replace
-          // it nor mark some other candidate as shown — marking a candidate
-          // shown without ever actually displaying its modal would burn its
-          // one-time popup for nothing. Deferring the decision to here makes
-          // "already open" and "mark + open" mutually exclusive by
-          // construction.
-          setOrder((current) => {
-            if (current) return current
+      const candidates = orders.filter((o) => o.status === 'completed' && !o.rating && !alreadyShown(o.id))
+      if (candidates.length === 0) return current
 
-            const candidates = res.orders.filter((o) => o.status === 'completed' && !o.rating && !alreadyShown(o.id))
-            if (candidates.length === 0) return current
+      // Never stack multiple modals — pick the oldest-completed one.
+      const oldest = candidates.reduce((a, b) =>
+        (a.completed_at ?? '') <= (b.completed_at ?? '') ? a : b,
+      )
 
-            // Never stack multiple modals — pick the oldest-completed one.
-            const oldest = candidates.reduce((a, b) =>
-              (a.completed_at ?? '') <= (b.completed_at ?? '') ? a : b,
-            )
-
-            markShown(oldest.id)
-            return oldest
-          })
-        })
-        .catch(() => {
-          // Best-effort — a failed poll just tries again next tick.
-        })
-    }
-
-    poll()
-    const interval = setInterval(poll, POLL_MS)
-    return () => {
-      cancelled = true
-      clearInterval(interval)
-    }
-  }, [user?.id])
+      markShown(oldest.id)
+      return oldest
+    })
+  }, [user, orders])
 
   if (!order) return null
 

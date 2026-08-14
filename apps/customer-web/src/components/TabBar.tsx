@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react'
 import { Link, NavLink, type NavLinkRenderProps } from 'react-router-dom'
 import { useAuth } from '../auth'
-import { api } from '../api/client'
 import type { OrderStatus, User } from '../api/types'
+import { useOrdersPoll } from '../useOrdersPoll'
 import { vendorWebUrl } from '../vendorWeb'
 import { CartButton } from './CartButton'
 
@@ -16,43 +15,14 @@ const ACTIVE_ORDER_STATUSES: OrderStatus[] = [
   'out_for_delivery',
 ]
 
-const ACTIVE_ORDER_REFRESH_MS = 45_000
-
-// Reuses the same poll-every-45s mechanism the old ActiveOrderButton used
-// (listOrders(), filtered to in-flight statuses) rather than adding a second
-// poller — just computes a boolean (does any in-flight order have an unread
-// chat message) instead of a "track my order" button.
+// Pure derivation over useOrdersPoll's shared snapshot (does any in-flight
+// order have an unread chat message) — no polling logic of its own. Used to
+// live here as its own independent fetch+interval; consolidated into
+// useOrdersPoll so this and RatingNudgeModal's rate-your-order nudge share
+// one listOrders() poll instead of each running an uncoordinated copy.
 function useOrdersUnreadDot(): boolean {
-  const { user } = useAuth()
-  const [hasUnread, setHasUnread] = useState(false)
-
-  useEffect(() => {
-    if (!user) {
-      setHasUnread(false)
-      return
-    }
-    let cancelled = false
-    function refresh() {
-      api
-        .listOrders()
-        .then((res) => {
-          if (cancelled) return
-          const active = res.orders.filter((o) => ACTIVE_ORDER_STATUSES.includes(o.status))
-          setHasUnread(active.some((o) => o.has_unread_messages))
-        })
-        .catch(() => {
-          // Best-effort — a failed poll just leaves the dot as it was.
-        })
-    }
-    refresh()
-    const interval = setInterval(refresh, ACTIVE_ORDER_REFRESH_MS)
-    return () => {
-      cancelled = true
-      clearInterval(interval)
-    }
-  }, [user?.id])
-
-  return hasUnread
+  const orders = useOrdersPoll()
+  return orders.some((o) => ACTIVE_ORDER_STATUSES.includes(o.status) && o.has_unread_messages)
 }
 
 // Plain stroked outline icons, matching this app's zero-icon-library

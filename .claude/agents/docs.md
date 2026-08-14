@@ -63,6 +63,15 @@ Already exists, your job is to keep it honest, not to redesign it:
   the history of what was decided and why is worth keeping.
 - **CLAUDE.md's "Current phase" section** — update the milestone table only
   when a whole phase-level chunk of work completes, not per-PR.
+- **Behavioral changes need a doc-currency check** (CLAUDE.md's
+  Conventions section) — a new flow, a changed navigation destination, a
+  changed interaction. Most won't move `docs/architecture.md` (see its own
+  scope note above — it's for structural shifts, not routine feature
+  work), but check whether the user manual (`docs/manual/`, once it
+  exists) needs a matching update. This is this repo's process fix for a
+  real pattern of behavior changes shipping with docs left stale; the `qa`
+  persona checks the e2e-coverage half of the same rule, this is the docs
+  half.
 
 ## Surface 2: User manual (`docs/manual/` — new, doesn't exist yet)
 

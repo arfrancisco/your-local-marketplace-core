@@ -91,6 +91,28 @@ describe('AccountPage vendor eligibility', () => {
     expect(screen.queryByRole('button', { name: /start selling/i })).not.toBeInTheDocument()
   })
 
+  it('shows every reason when blocked by more than one at once', async () => {
+    vi.mocked(api.me).mockResolvedValue({
+      user: baseUser({ eligible: false, reasons: ['not_resident', 'not_willing_to_verify'] }),
+    })
+    renderPage()
+
+    expect(await screen.findByText(/limited to residents\/tenants of the community/i)).toBeInTheDocument()
+    expect(screen.getByText(/require willingness to verify residency/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /start selling/i })).not.toBeInTheDocument()
+  })
+
+  it('shows the already-a-vendor state with a link to the shop dashboard, not the reasons list', async () => {
+    vi.mocked(api.me).mockResolvedValue({
+      user: baseUser({ eligible: false, reasons: ['already_vendor'] }),
+    })
+    renderPage()
+
+    expect(await screen.findByText(/you're already a vendor/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /go to your shop/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /start selling/i })).not.toBeInTheDocument()
+  })
+
   it('shows a verify-email action when ineligible due to an unverified email', async () => {
     const user = baseUser({ eligible: false, reasons: ['email_not_verified'] })
     user.email_verified = false
