@@ -3,30 +3,39 @@ import { useCart } from '../CartContext'
 
 const BUMP_MS = 300
 
-// Plain stroked SVG, not the 🛒 emoji this replaces — matches this app's
-// zero-icon-library convention (see e.g. ShopsPage.tsx's SearchIcon) and
-// renders as a flat, consistent white glyph instead of a platform-specific,
-// multi-color emoji drawing.
+// Plain stroked SVG, not an emoji or the old wheeled-cart glyph — matches
+// this app's zero-icon-library convention (see e.g. ShopsPage.tsx's
+// SearchIcon). A shopping-bag outline (handle + rectangular body) instead of
+// the previous wheeled-cart path, to fit the tab bar's icon+label convention
+// alongside Home/Orders/Vendor/Account. stroke="currentColor" (not a
+// hardcoded white) so it tints via CSS the same way the other tab icons do.
 function CartIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
-        d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L22 6H6"
-        stroke="#fff"
+        d="M6 8h12l1 12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L6 8Z"
+        stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx="9" cy="21" r="1.5" fill="#fff" />
-      <circle cx="18" cy="21" r="1.5" fill="#fff" />
+      <path
+        d="M9 8V6a3 3 0 0 1 6 0v2"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   )
 }
 
-// Persistent cart icon. Lives in the fixed bottom bar (App.tsx's BottomBar,
-// alongside the active-order button) rather than sitting in the top header
-// cluster with the hamburger, so it stays reachable without crowding the
-// brand/tagline on narrow screens — on every page, not just the shop page.
+// Cart tab. Lives in the persistent tab bar (TabBar.tsx) alongside
+// Home/Orders/Vendor/Account — same trigger mechanism as before
+// (useCart().openCart()) and the same bump-on-add animation and count badge,
+// just relocated into the tab bar's icon-above-label slot instead of a
+// standalone floating circular button. Cart has no dedicated route, so
+// unlike the other tabs it's never "active" (no NavLink here).
 export function CartButton() {
   const { count, openCart } = useCart()
   const [bumping, setBumping] = useState(false)
@@ -46,12 +55,15 @@ export function CartButton() {
 
   return (
     <button
-      className={`icon-btn cart-icon-btn ${bumping ? 'bump' : ''}`}
+      className={`tab-bar-item cart-icon-btn ${bumping ? 'bump' : ''}`}
       onClick={openCart}
       aria-label={count > 0 ? `Cart, ${count} item${count === 1 ? '' : 's'}` : 'Cart, empty'}
     >
-      <CartIcon />
-      {count > 0 && <span className="cart-badge">{count}</span>}
+      <span className="tab-bar-icon-wrap">
+        <CartIcon />
+        {count > 0 && <span className="cart-badge">{count}</span>}
+      </span>
+      <span className="tab-bar-label">Cart</span>
     </button>
   )
 }

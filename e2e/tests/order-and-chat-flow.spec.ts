@@ -8,8 +8,11 @@ import { test, expect, type Browser } from '@playwright/test'
 //   vendor sets their shop's opening message -> customer checks out -> both
 //   sides see it as a pinned panel above the order's chat (read live off the
 //   shop, not a chat message — ADR 0009, revised) -> customer and vendor
-//   exchange chat messages in real time (no reload) -> vendor accepts the
-//   order via an explicit status button -> customer sees the updated status.
+//   exchange chat messages in real time (no reload) -> the Orders tab's red
+//   dot picks up a message sent while the customer is elsewhere in the app
+//   (via TabBar.tsx's real 45s poll, not a forced reload) -> vendor accepts
+//   the order via an explicit status button -> customer sees the updated
+//   status.
 
 const CUSTOMER_BASE = process.env.CUSTOMER_WEB_URL ?? 'http://localhost:5173'
 const VENDOR_BASE = process.env.VENDOR_WEB_URL ?? 'http://localhost:5174'
@@ -26,6 +29,12 @@ async function newPage(browser: Browser) {
 }
 
 test('vendor opening message, checkout, real-time chat, and status transition', async ({ browser }) => {
+  // Well over the config's default 30s — the Orders-tab-dot step below
+  // deliberately waits out a real 45s poll interval (TabBar.tsx's
+  // useOrdersUnreadDot) rather than forcing a reload, to actually prove the
+  // polling mechanism works end-to-end.
+  test.setTimeout(120_000)
+
   const vendor = await newPage(browser)
   const customer = await newPage(browser)
 
@@ -71,9 +80,11 @@ test('vendor opening message, checkout, real-time chat, and status transition', 
     await customer.click(`text=${SHOP_NAME}`)
     await customer.waitForURL('**/shops/pizza-my-heart')
     await customer.click('button[aria-label="Add Pepperoni Slice to cart"]')
-    // Cart summary is a fixed bottom bar (item count + subtotal), not shown
-    // inline automatically — open it before checkout.
-    await customer.click('.cart-summary-bar')
+    // Cart is a tab in the persistent bottom bar now (TabBar.tsx), not shown
+    // inline automatically — open it before checkout. Matched by its
+    // accessible name (CartButton.tsx's aria-label, "Cart, N item(s)"), not
+    // a class, since it's just an icon+label tab like the other four.
+    await customer.getByRole('button', { name: /^cart,/i }).click()
     await expect(customer.getByText('Your cart')).toBeVisible()
 
     // "Pizza My Heart" (db/seeds.rb) is a seeded demo shop, so the checkout
@@ -139,6 +150,36 @@ test('vendor opening message, checkout, real-time chat, and status transition', 
     await vendor.fill('.chat-composer textarea', 'Ready in 10 minutes!')
     await vendor.click('.chat-composer .send-btn')
     await expect(customer.getByText('Ready in 10 minutes!')).toBeVisible() // no reload on the customer side
+  })
+
+  await test.step('Orders tab shows a red dot after a new message arrives while off the order page', async () => {
+    // While the customer is actively viewing this order's chat,
+    // useOrderChat.ts marks every incoming message read immediately (see
+    // its "received" handler) — so for a message to ever register as
+    // unread, the customer needs to have navigated away from the order
+    // page (unsubscribing from that order's ActionCable channel) before the
+    // vendor sends it. The Home tab is the persistent bottom bar's own
+    // "leave this page" affordance, so use that rather than a raw goto.
+    await customer.getByRole('link', { name: /^home$/i }).click()
+    await customer.waitForURL('**/shops')
+    await expect(customer.getByLabel('Unread update')).not.toBeVisible()
+
+    await vendor.fill('.chat-composer textarea', 'Almost done, hang tight!')
+    await vendor.click('.chat-composer .send-btn')
+
+    // The Orders tab's dot is driven by TabBar.tsx's useOrdersUnreadDot,
+    // which polls listOrders() every 45s (reusing the old ActiveOrderButton's
+    // exact polling mechanism) rather than pushing live like chat does — so
+    // this waits out a real interval tick instead of forcing a reload, to
+    // actually prove the polling mechanism itself picks the message up, not
+    // just that a fresh page load would show it.
+    await expect(customer.getByLabel('Unread update')).toBeVisible({ timeout: 60_000 })
+
+    // Back on the order page for the remaining steps below, which assume
+    // the customer is there (and this also exercises mark-as-read again on
+    // mount, same as the very first chat step did).
+    await customer.goto(`${CUSTOMER_BASE}/orders/${orderId}`)
+    await customer.waitForSelector('.chat-composer')
   })
 
   await test.step('vendor accepts the order via an explicit status button, customer sees it', async () => {

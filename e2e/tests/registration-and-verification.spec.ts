@@ -85,10 +85,10 @@ test('full flow: register, verify mobile, complete profile as a resident', async
   })
 
   await test.step('lands in the app, signed in', async () => {
-    // Nav is behind a hamburger menu now — "My account" isn't on-screen
-    // until it's opened.
-    await page.getByRole('button', { name: 'Menu' }).click()
-    await expect(page.getByText('My account')).toBeVisible()
+    // Account is a permanent tab in the bottom bar now (TabBar.tsx) — no
+    // menu to open first.
+    await page.getByRole('link', { name: /^account$/i }).click()
+    await expect(page.getByRole('heading', { name: 'My account' })).toBeVisible()
   })
 })
 
