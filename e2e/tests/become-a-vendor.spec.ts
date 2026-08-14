@@ -164,6 +164,12 @@ test('full upgrade flow: register, blocked on email verification, verify it, bec
     await expect(page.getByText('Adobo Rice Bowl')).toBeVisible()
     await expect(page).toHaveURL(/\/items$/)
   })
+
+  await test.step('the bottom bar\'s ☰ menu links back to the public marketplace on customer-web', async () => {
+    await page.getByRole('button', { name: 'Menu' }).click()
+    await page.getByRole('link', { name: 'Back to marketplace' }).click()
+    await expect(page).toHaveURL(`${CUSTOMER_BASE}/shops`)
+  })
 })
 
 test('/onboarding is a static splash, independent of whether the vendor already has a shop', async ({ page }) => {

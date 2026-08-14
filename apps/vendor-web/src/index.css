@@ -2,6 +2,13 @@
   font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   color: #1c2024;
   background: #f6f7f9;
+  /* BottomBar's own rendered height (App.tsx) — bottom-bar-inner's
+     0.65rem top+bottom padding (1.3rem) plus the 42px (2.625rem) .icon-btn
+     circle it holds ≈ 3.925rem; rounded up to 4rem for a small safety
+     margin (border-top, sub-pixel rounding). Declared on :root, not
+     .bottom-bar itself, so .container/.order-actions-bar/.order-detail-page
+     — none of which are descendants of .bottom-bar — can all read it too. */
+  --nav-bar-height: 4rem;
 }
 
 * { box-sizing: border-box; }
@@ -64,7 +71,12 @@ body { margin: 0; }
 }
 .brand { font-weight: 600; text-decoration: none; color: inherit; }
 
-.container { max-width: 760px; margin: 1.5rem auto; padding: 0 1rem; }
+/* Bottom padding reserves room for the fixed .bottom-bar (the ☰ trigger)
+   below every signed-in page, so the last bit of content (including the
+   footer, now rendered inside here — see App.tsx) never ends up hidden
+   behind it. Mirrors customer-web's own .container reserve for its bottom
+   bar (same reasoning, see its index.css). */
+.container { max-width: 760px; margin: 1.5rem auto; padding: 0 1rem calc(var(--nav-bar-height) + 1rem); }
 
 .card {
   background: #fff;
@@ -573,22 +585,67 @@ button:disabled { opacity: 0.6; cursor: default; }
 }
 .button-progress:hover:not(:disabled) { background: #1e3a8a; }
 
-/* Hamburger menu drawer — the header's nav links live in here now
-   (HamburgerMenu.tsx). Same .modal-backdrop/.modal markup as FeedbackModal,
+/* Fixed bar across the bottom of the screen (App.tsx's BottomBar) — the ☰
+   trigger that used to sit in the header lives here now. Mirrors
+   customer-web's own .bottom-bar/.bottom-bar-inner: same class names
+   (reused deliberately, not reinvented, for consistency across the two
+   apps), same reasoning — one deliberate, always-reachable control surface
+   at the thumb, with its own opaque background so page content scrolling
+   underneath is never visually swallowed. --nav-bar-height (root, above) is
+   this bar's own measured rendered height; .order-actions-bar and
+   .order-detail-page (OrderDetailPage) key off the same variable so that
+   bar stacks directly above this one instead of overlapping it. */
+.bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
+}
+/* Same 760px column as .container, right-aligned — the ☰ trigger is
+   currently this bar's only content. */
+.bottom-bar-inner {
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0.65rem 1rem;
+}
+
+/* Generic round action button — same shape/sizing convention as
+   customer-web's own .icon-btn, in this app's default dark (#111827,
+   already used by e.g. .send-btn) instead of customer-web's brand indigo
+   (vendor-web has no equivalent accent hue). Only the bottom bar's ☰
+   trigger uses this today. */
+.icon-btn {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  line-height: 1;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+  background: #111827;
+  border-color: #111827;
+  color: #fff;
+  cursor: pointer;
+}
+.icon-btn:hover { background: #1f2937; }
+
+/* Hamburger menu drawer — the nav links live in here now
+   (HamburgerMenu.tsx), opened from the bottom bar's ☰ trigger above rather
+   than the header. Same .modal-backdrop/.modal markup as FeedbackModal,
    just pinned to the right edge and full height instead of centered, so
    there's one modal convention in this app rather than two. Sitting at the
    backdrop's z-index 50 it also covers any open onboarding TourCallout
    (z-index 40) rather than colliding with it. */
-.hamburger-btn {
-  background: none;
-  border: none;
-  color: inherit;
-  font-size: 1.4rem;
-  line-height: 1;
-  padding: 0.25rem 0.5rem;
-  cursor: pointer;
-}
-
 .drawer-backdrop {
   align-items: stretch;
   justify-content: flex-end;
@@ -1088,16 +1145,24 @@ h2.section { margin-top: 1.5rem; }
    bottom bar now, not a card in the normal flow — same reasoning as
    customer-web's .bottom-bar (BottomBar in App.tsx): one deliberate control
    surface, always reachable without scrolling, and it never gets buried
-   under a growing chat/notes section. .order-detail-page's bottom padding,
-   below, reserves the space so the bar never covers page content
-   scrolling underneath it. Buttons stay trimmed smaller than the app's
-   default size, same as before. */
-.order-detail-page { padding-bottom: 5rem; }
+   under a growing chat/notes section. Sits above the app-wide nav bottom
+   bar now (bottom: var(--nav-bar-height) instead of 0) so the two stack
+   instead of overlapping.
+   .order-detail-page's own bottom padding, below, only needs to cover
+   *this* bar's own height (unchanged from before the nav bar existed) —
+   .container's padding-bottom (see above) already reserves
+   var(--nav-bar-height) + 1rem on every page, order-detail-page included
+   (it's rendered inside .container), so adding var(--nav-bar-height) again
+   here would double-count it and leave an oversized empty gap at the
+   bottom of the page. The flat 4rem below is deliberately *not*
+   nav-bar-height-aware for that reason. Buttons stay trimmed smaller than
+   the app's default size, same as before. */
+.order-detail-page { padding-bottom: 4rem; }
 .order-actions-bar {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: var(--nav-bar-height);
   z-index: 40;
   background: #fff;
   border-top: 1px solid #e5e7eb;
@@ -1123,8 +1188,11 @@ h2.section { margin-top: 1.5rem; }
 }
 /* .order-actions-bar already occupies the page's bottom edge — lift the
    help-tour button above it instead of the usual 1.25rem so it doesn't sit
-   on top of the real action buttons. */
-.order-detail-page .help-tour-anchor { bottom: 5.25rem; }
+   on top of the real action buttons. Its own top edge is now
+   var(--nav-bar-height) higher than before (stacked above the nav bottom
+   bar, see .order-actions-bar above), so this follows it up by the same
+   amount to keep the same 0.25rem gap it always had. */
+.order-detail-page .help-tour-anchor { bottom: calc(var(--nav-bar-height) + 5.25rem); }
 .order-status-badge.status-needs-action { background: #fef3c7; color: #7c5700; }
 .order-status-badge.status-in-progress { background: #dbeafe; color: #1e40af; }
 .order-status-badge.status-ready { background: #ccfbf1; color: #0f766e; }
