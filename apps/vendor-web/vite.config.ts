@@ -19,11 +19,5 @@ export default defineConfig(({ command }) => ({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/setupTests.ts',
-    // Force the default relative /shops path regardless of what local dev's
-    // .env.local sets — unit tests assert against that default, and dotenv
-    // files aren't actually excluded from Vitest's env loading just because
-    // they're named *.local. Mirrors customer-web's own
-    // VITE_VENDOR_WEB_BASE_URL pin in its vite.config.ts.
-    env: { VITE_CUSTOMER_WEB_BASE_URL: '' },
   },
 }))

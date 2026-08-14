@@ -37,52 +37,26 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
-// Just the brand link now — nav lives in the drawer, opened from the bottom
-// bar's ☰ trigger (BottomBar, below), not from here.
 function Header() {
-  const { user } = useAuth()
-  if (!user) return null
-  return (
-    <header className="topbar">
-      <Link to="/shops" className="brand">Vendor console</Link>
-    </header>
-  )
-}
-
-function BetaBanner() {
-  return (
-    <div className="beta-banner">
-      Beta test — please bear with us while we smooth out the experience.
-    </div>
-  )
-}
-
-// Fixed bar across the bottom of the screen — mirrors customer-web's own
-// BottomBar (App.tsx there): same .bottom-bar/.bottom-bar-inner classes,
-// same reasoning, a persistent control surface reachable by thumb instead
-// of a trigger buried in the header. Self-contained (owns its own
-// menuOpen/feedbackOpen state and the ☰ trigger itself) — the same shape
-// customer-web's own HamburgerMenu used to have before *its* move into a
-// bottom bar, so App.tsx doesn't need to prop-drill this state anywhere.
-function BottomBar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   if (!user) return null
   return (
-    <div className="bottom-bar">
-      <div className="bottom-bar-inner">
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label="Menu"
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen(true)}
-        >
-          ☰
-        </button>
-      </div>
+    <header className="topbar">
+      <Link to="/shops" className="brand">Vendor console</Link>
+      {/* Nav lives in the drawer now, not inline — one ☰ button is all the
+          header carries, which is what keeps it readable at phone widths. */}
+      <button
+        type="button"
+        className="hamburger-btn"
+        aria-label="Menu"
+        aria-expanded={menuOpen}
+        onClick={() => setMenuOpen(true)}
+      >
+        ☰
+      </button>
       {menuOpen && (
         <HamburgerMenu
           email={user.email}
@@ -92,6 +66,14 @@ function BottomBar() {
         />
       )}
       {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
+    </header>
+  )
+}
+
+function BetaBanner() {
+  return (
+    <div className="beta-banner">
+      Beta test — please bear with us while we smooth out the experience.
     </div>
   )
 }
@@ -115,17 +97,9 @@ export default function App() {
           <Route path="/orders/:id" element={<RequireAuth><OrderDetailPage /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/shops" replace />} />
         </Routes>
-
-        {/* Inside .container, not a sibling after it, so .container's
-            bottom padding (reserved for the fixed BottomBar) protects the
-            footer too — same reasoning as customer-web's own Footer
-            placement (see its App.tsx comment). Previously a sibling after
-            </main>; harmless before there was any fixed bottom element, but
-            would now risk the footer sitting behind the new bar. */}
-        <Footer />
       </main>
 
-      <BottomBar />
+      <Footer />
     </>
   )
 }
