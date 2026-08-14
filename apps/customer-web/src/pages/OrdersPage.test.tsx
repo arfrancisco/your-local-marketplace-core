@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { OrdersPage } from './OrdersPage'
-import { api } from '../api/client'
-import type { Order } from '../api/types'
+import { AuthProvider } from '../auth'
+import { api, setToken } from '../api/client'
+import type { Order, User } from '../api/types'
 
 vi.mock('../api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/client')>()
@@ -12,10 +13,37 @@ vi.mock('../api/client', async (importOriginal) => {
     ...actual,
     api: {
       ...actual.api,
+      me: vi.fn(),
       listOrders: vi.fn(),
     },
   }
 })
+
+function baseUser(): User {
+  return {
+    id: 1,
+    email: 'neighbor@example.com',
+    mobile_number: '09171234567',
+    first_name: 'Juan',
+    last_name: 'Dela Cruz',
+    status: 'active',
+    email_verified: true,
+    mobile_verified: true,
+    email_marketing_opt_in: false,
+    sms_marketing_opt_in: false,
+    sms_notify_order_accepted: true,
+    sms_notify_order_ready: true,
+    sms_notify_order_completed: true,
+    last_signed_in_at: '2026-08-01T00:00:00Z',
+    created_at: '2026-01-01T00:00:00Z',
+    customer_profile: {
+      id: 1, display_name: 'Juan', default_address_id: 1,
+      is_resident: true, willing_to_verify_residency: true,
+    },
+    vendor_profile: null,
+    vendor_eligibility: { eligible: true, reasons: [] },
+  }
+}
 
 function makeOrder(overrides: Partial<Order>): Order {
   return {
@@ -52,8 +80,13 @@ function makeOrder(overrides: Partial<Order>): Order {
 
 function renderPage() {
   return render(
-    <MemoryRouter>
-      <OrdersPage />
+    <MemoryRouter initialEntries={['/orders']}>
+      <AuthProvider>
+        <Routes>
+          <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/login" element={<p>Login page</p>} />
+        </Routes>
+      </AuthProvider>
     </MemoryRouter>,
   )
 }
@@ -61,6 +94,15 @@ function renderPage() {
 describe('OrdersPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
+    setToken('fake-token')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
+  })
+
+  it('redirects a logged-out visitor to sign in', async () => {
+    setToken(null)
+    renderPage()
+    expect(await screen.findByText('Login page')).toBeInTheDocument()
   })
 
   it('renders the empty state when there are no orders, with no filter pills', async () => {

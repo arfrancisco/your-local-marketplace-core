@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AccountPage } from './AccountPage'
 import { AuthProvider } from '../auth'
-import { api, setToken, ApiError } from '../api/client'
+import { api, setToken, getToken, ApiError } from '../api/client'
 import type { User } from '../api/types'
 
 function baseUser(vendorEligibility: User['vendor_eligibility']): User {
@@ -59,6 +59,7 @@ function renderPage() {
         <Routes>
           <Route path="/account" element={<AccountPage />} />
           <Route path="/login" element={<p>Login page</p>} />
+          <Route path="/shops" element={<p>Shops page</p>} />
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -104,6 +105,17 @@ describe('AccountPage vendor eligibility', () => {
     setToken(null)
     renderPage()
     expect(await screen.findByText('Login page')).toBeInTheDocument()
+  })
+
+  it('signs out and navigates to /shops, clearing the stored token', async () => {
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser({ eligible: true, reasons: [] }) })
+    renderPage()
+
+    await screen.findByText(/eligible to start selling/i)
+    await userEvent.click(screen.getByRole('button', { name: /^sign out$/i }))
+
+    expect(await screen.findByText('Shops page')).toBeInTheDocument()
+    expect(getToken()).toBeNull()
   })
 })
 

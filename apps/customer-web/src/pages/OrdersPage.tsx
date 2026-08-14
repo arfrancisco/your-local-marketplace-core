@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
+import { useAuth } from '../auth'
 import { api } from '../api/client'
 import type { Order } from '../api/types'
 import {
@@ -21,16 +22,25 @@ function formatPrice(cents: number, currency: string) {
 // longer anything to watch) — completed, rejected/cancelled. "All" is just
 // those pills combined, not literally every order, so old orders don't
 // clutter the default view.
+//
+// Signed-out guard added now that Orders is a permanent tab in the bottom
+// bar (TabBar.tsx) rather than a menu item only a signed-in visitor could
+// even reach — same redirect-with-return_to pattern AccountPage.tsx already
+// uses.
 export function OrdersPage() {
+  const { user, loading: authLoading } = useAuth()
   const [orders, setOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
+  const [ordersLoading, setOrdersLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | StatusGroupKey>('all')
 
   useEffect(() => {
-    api.listOrders().then((res) => setOrders(res.orders)).finally(() => setLoading(false))
-  }, [])
+    if (!user) return
+    api.listOrders().then((res) => setOrders(res.orders)).finally(() => setOrdersLoading(false))
+  }, [user?.id])
 
-  if (loading) return <p>Loading your orders…</p>
+  if (authLoading) return <p>Loading…</p>
+  if (!user) return <Navigate to="/login?return_to=/orders" replace />
+  if (ordersLoading) return <p>Loading your orders…</p>
 
   const visible = orders.filter((o) =>
     filter === 'all' ? PILL_GROUPS.includes(groupKeyForStatus(o.status)) : STATUS_GROUPS[filter].statuses.includes(o.status)

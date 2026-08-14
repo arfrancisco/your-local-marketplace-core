@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { api, ApiError } from '../api/client'
 import type { Address, User } from '../api/types'
@@ -236,7 +236,8 @@ function NotificationPreferences({ user, onSaved }: { user: User; onSaved: (user
 }
 
 export function AccountPage() {
-  const { user, loading } = useAuth()
+  const { user, loading, logout } = useAuth()
+  const navigate = useNavigate()
   // Local overrides applied after verification/vendor actions return a fresh
   // user (e.g. from /verifications/email/confirm). Derived, not mirrored via
   // an effect, so there's no render where `user` is populated but this value
@@ -245,9 +246,32 @@ export function AccountPage() {
   const profile = override ?? user
   const [vendorError, setVendorError] = useState<string | null>(null)
   const [startingVendor, setStartingVendor] = useState(false)
+  // Set alongside logout() in handleSignOut, in the same batch — suppresses
+  // the signed-out guard below for the one render where `user` has already
+  // gone null but the explicit navigate('/shops') hasn't taken effect yet.
+  // Without this, that guard and handleSignOut's own navigate race each
+  // other, and the guard can win: bouncing straight to a login screen right
+  // after clicking "Sign out" reads like an error, not a confirmation.
+  const [signingOut, setSigningOut] = useState(false)
 
   if (loading) return <p>Loading…</p>
-  if (!profile) return <Navigate to="/login?return_to=/account" replace />
+  if (!profile) {
+    // Mid sign-out: `user` has already gone null but navigate('/shops')
+    // (called alongside logout(), same batch) hasn't taken effect yet.
+    // Render nothing rather than either the full profile UI below (which
+    // assumes a non-null profile) or the signed-out redirect (see
+    // `signingOut`'s own comment above for why not).
+    if (signingOut) return null
+    return <Navigate to="/login?return_to=/account" replace />
+  }
+
+  // /shops is the same landing spot a fresh, signed-out visitor gets
+  // everywhere else in the app (Home tab, catch-all route).
+  function handleSignOut() {
+    setSigningOut(true)
+    logout()
+    navigate('/shops')
+  }
 
   async function startSelling() {
     setVendorError(null)
@@ -354,6 +378,11 @@ export function AccountPage() {
           </ul>
         )}
         {vendorError && <p role="alert" className="error">{vendorError}</p>}
+      </div>
+
+      <div className="card">
+        <h2>Session</h2>
+        <button onClick={handleSignOut}>Sign out</button>
       </div>
     </div>
   )
