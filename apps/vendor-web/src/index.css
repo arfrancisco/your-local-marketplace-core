@@ -64,7 +64,10 @@ body { margin: 0; }
 }
 .brand { font-weight: 600; text-decoration: none; color: inherit; }
 
-.container { max-width: 760px; margin: 1.5rem auto; padding: 0 1rem; }
+/* Bottom padding reserves room for the fixed TabBar below every page (see
+   .tab-bar further down), so content here, footer included, never ends up
+   hidden behind it. Matches customer-web's own .container convention. */
+.container { max-width: 760px; margin: 1.5rem auto; padding: 0 1rem 5rem; }
 
 .card {
   background: #fff;
@@ -374,7 +377,10 @@ button:disabled { opacity: 0.6; cursor: default; }
    class name that means "add item" specifically. */
 .help-tour-anchor {
   position: fixed;
-  bottom: 1.25rem;
+  /* 1.25rem original breathing room + 3.75rem for the app-wide TabBar,
+     which now sits at the bottom of every page (not just OrderDetailPage,
+     which layers a further override below on top of this). */
+  bottom: 5rem;
   left: max(1rem, calc((100vw - 760px) / 2 + 1rem));
   z-index: 40;
 }
@@ -572,61 +578,6 @@ button:disabled { opacity: 0.6; cursor: default; }
   border-color: #1e40af;
 }
 .button-progress:hover:not(:disabled) { background: #1e3a8a; }
-
-/* Hamburger menu drawer — the header's nav links live in here now
-   (HamburgerMenu.tsx). Same .modal-backdrop/.modal markup as FeedbackModal,
-   just pinned to the right edge and full height instead of centered, so
-   there's one modal convention in this app rather than two. Sitting at the
-   backdrop's z-index 50 it also covers any open onboarding TourCallout
-   (z-index 40) rather than colliding with it. */
-.hamburger-btn {
-  background: none;
-  border: none;
-  color: inherit;
-  font-size: 1.4rem;
-  line-height: 1;
-  padding: 0.25rem 0.5rem;
-  cursor: pointer;
-}
-
-.drawer-backdrop {
-  align-items: stretch;
-  justify-content: flex-end;
-  padding: 0;
-}
-.drawer {
-  width: 260px;
-  max-width: 80vw;
-  height: 100%;
-  border-radius: 0;
-  text-align: left;
-  padding: 1.25rem 1rem;
-  animation: drawer-in 0.18s ease-out;
-}
-@keyframes drawer-in {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-
-.drawer-email { margin: 0.25rem 0 1rem; word-break: break-all; }
-.drawer-links { list-style: none; padding: 0; margin: 0; }
-.drawer-links li { border-top: 1px solid #e5e7eb; }
-.drawer-links a,
-.drawer-links button {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 0.75rem 0.25rem;
-  background: none;
-  border: none;
-  border-radius: 0;
-  color: inherit;
-  font: inherit;
-  text-decoration: none;
-  cursor: pointer;
-}
-.drawer-links a:hover,
-.drawer-links button:hover { background: #f3f4f6; }
 
 /* Open/close shop control — the single loudest thing on the vendor
    dashboard (ShopDashboardPage.tsx), since a shop that is silently closed is
@@ -957,7 +908,9 @@ h2.section { margin-top: 1.5rem; }
    the button itself is unpositioned now, sized/shaped only. */
 .add-item-fab-anchor {
   position: fixed;
-  bottom: 1.25rem;
+  /* 1.25rem original breathing room + 3.75rem for the app-wide TabBar,
+     which now sits at the bottom of every page. */
+  bottom: 5rem;
   /* Flush 1rem from the viewport edge on narrow screens (where .container
      fills the viewport, same as before) — but on a wide viewport, .container
      stops growing past 760px and stays centered, so pinning to the raw
@@ -1092,12 +1045,18 @@ h2.section { margin-top: 1.5rem; }
    below, reserves the space so the bar never covers page content
    scrolling underneath it. Buttons stay trimmed smaller than the app's
    default size, same as before. */
-.order-detail-page { padding-bottom: 5rem; }
+/* padding-bottom accounts for both this page's own action bar AND the
+   app-wide TabBar it now sits above (3.75rem, .order-actions-bar's own
+   height) — 5rem original + 3.75rem more, so content clears both. */
+.order-detail-page { padding-bottom: 8.75rem; }
+/* Sits directly above the app-wide TabBar (bottom: 3.75rem, that bar's own
+   height) instead of at the true page edge, so the two stack without
+   overlapping. */
 .order-actions-bar {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: 3.75rem;
   z-index: 40;
   background: #fff;
   border-top: 1px solid #e5e7eb;
@@ -1121,10 +1080,10 @@ h2.section { margin-top: 1.5rem; }
   padding: 0.35rem 0.65rem;
   font-size: 0.9rem;
 }
-/* .order-actions-bar already occupies the page's bottom edge — lift the
-   help-tour button above it instead of the usual 1.25rem so it doesn't sit
-   on top of the real action buttons. */
-.order-detail-page .help-tour-anchor { bottom: 5.25rem; }
+/* .order-actions-bar sits 3.75rem above the true page edge now (see above)
+   — lift the help-tour button the same amount further so it stays clear of
+   the real action buttons rather than landing on top of them. */
+.order-detail-page .help-tour-anchor { bottom: 9rem; }
 .order-status-badge.status-needs-action { background: #fef3c7; color: #7c5700; }
 .order-status-badge.status-in-progress { background: #dbeafe; color: #1e40af; }
 .order-status-badge.status-ready { background: #ccfbf1; color: #0f766e; }
@@ -1243,3 +1202,70 @@ h2.section { margin-top: 1.5rem; }
 /* A tad bigger than .muted's default 0.9rem — this is the customer's one
    address on file, worth reading at a glance, not a footnote. */
 .customer-address { color: #6b7280; font-size: 1rem; margin: 0.15rem 0; }
+
+/* ------------------------------------------------------------------------ */
+/* Bottom tab bar — the app-wide nav surface, replacing the retired         */
+/* hamburger drawer. Same recipe as customer-web's .tab-bar (see that       */
+/* app's index.css), with vendor-web's own neutral background/accent        */
+/* instead of the warm cream/indigo customer-web uses.                      */
+/* ------------------------------------------------------------------------ */
+
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
+}
+/* Same 760px column as .container, centered — otherwise the bar's tabs
+   would drift apart to the true left/right window edges on wide viewports
+   instead of lining up with the content column above it. */
+.tab-bar-inner {
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+}
+/* Each tab is an equal-width flex column (icon above label) — fewer visible
+   tabs (e.g. Inventory absent for a beat before useMyShop resolves) just
+   redistribute the row evenly, no separate layout per state needed. */
+.tab-bar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.5rem 0.25rem 0.6rem;
+  background: none;
+  border: none;
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+/* Same blue as .stepper-marker.step-current/.preview-banner's text — this
+   app's existing accent, reused here rather than customer-web's indigo. */
+.tab-bar-item.active { color: #1e40af; }
+.tab-bar-icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+.tab-bar-label { line-height: 1; }
+
+/* Home tab's attention flag — same red dot as OrderList's per-row
+   .unread-dot, repositioned as a small badge on the tab's icon. */
+.tab-bar-dot {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  margin-left: 0;
+}

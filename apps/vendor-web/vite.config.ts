@@ -19,5 +19,9 @@ export default defineConfig(({ command }) => ({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/setupTests.ts',
+    // Force the default relative customer-web path regardless of what local
+    // dev's .env.local sets — unit tests assert against that default.
+    // Mirrors customer-web's own vite.config.ts pin for VITE_VENDOR_WEB_BASE_URL.
+    env: { VITE_CUSTOMER_WEB_BASE_URL: '' },
   },
 }))

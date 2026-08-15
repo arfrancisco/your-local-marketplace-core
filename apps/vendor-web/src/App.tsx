@@ -1,9 +1,9 @@
-import { Navigate, Route, Routes, Link, useNavigate } from 'react-router-dom'
-import { useState, type ReactNode } from 'react'
+import { Navigate, Route, Routes, Link } from 'react-router-dom'
+import { type ReactNode } from 'react'
 import { useAuth } from './auth'
-import { FeedbackModal } from './components/FeedbackModal'
+import { MyShopProvider } from './useMyShop'
 import { Footer } from './components/Footer'
-import { HamburgerMenu } from './components/HamburgerMenu'
+import { TabBar } from './components/TabBar'
 import { LoginPage } from './pages/LoginPage'
 import { AccountPage } from './pages/AccountPage'
 import { ShopDashboardPage } from './pages/ShopDashboardPage'
@@ -37,35 +37,14 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+// Nav lives in the persistent bottom tab bar now (TabBar), not a drawer —
+// the header is just the brand link.
 function Header() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
-  const [feedbackOpen, setFeedbackOpen] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
+  const { user } = useAuth()
   if (!user) return null
   return (
     <header className="topbar">
       <Link to="/shops" className="brand">Vendor console</Link>
-      {/* Nav lives in the drawer now, not inline — one ☰ button is all the
-          header carries, which is what keeps it readable at phone widths. */}
-      <button
-        type="button"
-        className="hamburger-btn"
-        aria-label="Menu"
-        aria-expanded={menuOpen}
-        onClick={() => setMenuOpen(true)}
-      >
-        ☰
-      </button>
-      {menuOpen && (
-        <HamburgerMenu
-          email={user.email}
-          onClose={() => setMenuOpen(false)}
-          onFeedback={() => { setMenuOpen(false); setFeedbackOpen(true) }}
-          onSignOut={() => { setMenuOpen(false); logout(); navigate('/login') }}
-        />
-      )}
-      {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
     </header>
   )
 }
@@ -80,7 +59,7 @@ function BetaBanner() {
 
 export default function App() {
   return (
-    <>
+    <MyShopProvider>
       <BetaBanner />
       <Header />
       <main className="container">
@@ -97,9 +76,15 @@ export default function App() {
           <Route path="/orders/:id" element={<RequireAuth><OrderDetailPage /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/shops" replace />} />
         </Routes>
+
+        {/* Inside .container, not a sibling after it — .container now
+            reserves bottom padding for the fixed TabBar below every page
+            (see index.css), so content here, footer included, never ends
+            up hidden behind it. Matches customer-web's App.tsx. */}
+        <Footer />
       </main>
 
-      <Footer />
-    </>
+      <TabBar />
+    </MyShopProvider>
   )
 }
