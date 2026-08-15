@@ -193,11 +193,21 @@ test('full upgrade flow: register, blocked on email verification, verify it, bec
     await expect(page.getByRole('link', { name: /^marketplace$/i })).toHaveAttribute('href', `${CUSTOMER_BASE}/shops`)
   })
 
+  await test.step('Reviews tab actually navigates to the reviews page, not just present in the bar', async () => {
+    await page.getByRole('link', { name: /^reviews$/i }).click()
+    await expect(page.getByRole('heading', { name: 'Reviews' })).toBeVisible()
+    await expect(page).toHaveURL(/\/shops\/\d+\/reviews$/)
+  })
+
   await test.step('the dashboard kebab menu is retired — just plain Edit / Shop Preview links now, since Inventory and Reviews moved to the bottom tabs', async () => {
     await page.getByRole('link', { name: /^home$/i }).click()
     await expect(page.getByRole('button', { name: /shop actions menu/i })).not.toBeVisible()
     await expect(page.getByRole('link', { name: 'Edit' })).toHaveAttribute('href', /\/shops\/\d+\/edit/)
-    await expect(page.getByRole('link', { name: 'Shop Preview' })).toBeVisible()
+
+    // Shop Preview actually navigates too, not just present.
+    await page.getByRole('link', { name: 'Shop Preview' }).click()
+    await expect(page.getByRole('heading', { name: "Ana's Kitchen" })).toBeVisible()
+    await expect(page).toHaveURL(/\/shops\/\d+\/preview$/)
   })
 })
 
