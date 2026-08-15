@@ -26,11 +26,13 @@ function uniqueMobile() {
   return `+63917${Math.floor(1000000 + Math.random() * 8999999)}`
 }
 
-// Retries on 404 specifically — the challenge-issuing request (a button
-// click elsewhere on the page) can still be in flight server-side (bcrypt
-// on the code digest takes real time) even after the UI reflects it as
-// sent, so a single immediate GET here can race an insert that hasn't
-// committed yet.
+// Retries on 404 specifically. verifyEmailFromAccountPage already waits for
+// the UI to reflect "sent" before calling this, so that call site shouldn't
+// actually need a retry (the code digest is cached synchronously in the
+// same request that returns "sent", ahead of the async delivery job — see
+// Verifications::IssueChallenge). The retry earns its keep on the other
+// call site, registerEligibleResident's mobile-verification fetch, which
+// has no UI signal to wait on before calling this.
 async function fetchVerificationCode(page: Page, email: string, purpose: string): Promise<string> {
   const url = `${API_BASE}/api/v1/test_helpers/verification_code?email=${encodeURIComponent(email)}&purpose=${purpose}`
   let res = await page.request.get(url)

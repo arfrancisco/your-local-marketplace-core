@@ -30,9 +30,18 @@ cd apps/api
 bin/rails db:seed   # only needed once, or after a DB reset
 ENABLE_TEST_HELPERS=true RACK_ATTACK_ENABLED=false bin/rails server -p 3000
 
-# 3. vendor-web (apps/vendor-web)
+# 3. vendor-web (apps/vendor-web) — VITE_CUSTOMER_WEB_BASE_URL is required by
+#    become-a-vendor.spec.ts's bottom-tab-bar assertions: the TabBar's
+#    Marketplace link uses a relative path in production (one shared origin,
+#    customer-web served at the root), but locally the two apps are separate
+#    dev-server ports — different origins, where that relative path would
+#    just stay on vendor-web's own origin. This override points it at
+#    customer-web's real local URL instead (see
+#    apps/vendor-web/src/customerWeb.ts). Mirrors VITE_VENDOR_WEB_BASE_URL
+#    below, same reasoning in the other direction.
 cd apps/vendor-web
-npm run dev -- --port 5174
+VITE_CUSTOMER_WEB_BASE_URL=http://localhost:5173 \
+  npm run dev -- --port 5174
 
 # 4. customer-web (apps/customer-web) — override VITE_API_BASE_URL if your
 #    apps/customer-web/.env points at a different port than the API above.
@@ -113,4 +122,8 @@ returning vendor with an existing shop skips onboarding entirely. Note: the
 cross-app redirect carries the auth token across manually in this spec
 (`crossIntoVendorWeb`) to simulate production's same-origin behavior, since
 locally the two apps are genuinely different origins — see the
-`VITE_VENDOR_WEB_BASE_URL` note above.
+`VITE_VENDOR_WEB_BASE_URL` note above. Also asserts vendor-web's bottom
+TabBar (5 tabs, replacing the retired hamburger drawer) and confirms the
+dashboard's kebab menu is gone in favor of plain Edit/Shop Preview links —
+see the `VITE_CUSTOMER_WEB_BASE_URL` note above for the Marketplace tab's
+local-dev requirement.

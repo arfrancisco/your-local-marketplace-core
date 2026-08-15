@@ -197,4 +197,20 @@ describe('TabBar', () => {
     await screen.findByRole('link', { name: /^home$/i })
     expect(screen.queryByLabelText('Needs attention')).not.toBeInTheDocument()
   })
+
+  // The other two cases each isolate one half of the && — this one is the
+  // most common real-world state (an active order nobody's messaged about
+  // yet) and would catch either half regressing to an || or being dropped.
+  it('shows no dot when an in-flight order has no unread message', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
+    vi.mocked(api.listShops).mockResolvedValue({ shops: [baseShop()] })
+    vi.mocked(api.listVendorOrders).mockResolvedValue({
+      orders: [makeOrder({ status: 'placed', has_unread_messages: false })],
+    })
+    renderBar()
+
+    await screen.findByRole('link', { name: /^home$/i })
+    expect(screen.queryByLabelText('Needs attention')).not.toBeInTheDocument()
+  })
 })

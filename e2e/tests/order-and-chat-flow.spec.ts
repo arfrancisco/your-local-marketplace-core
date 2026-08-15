@@ -49,11 +49,12 @@ test('vendor opening message, checkout, real-time chat, and status transition', 
     await vendor.waitForURL('**/shops')
     // Vendor-web is a single-shop dashboard (not a shop list) — /shops lands
     // directly on this vendor's one shop, order management as the main
-    // content, and "Edit shop details" tucked behind the kebab ("⋮") menu.
+    // content, and a plain "Edit" link next to the shop identity (the
+    // kebab menu that used to hold this was retired once Inventory/Reviews
+    // moved to the bottom TabBar, leaving only Edit/Preview behind it).
     await expect(vendor.getByRole('heading', { name: SHOP_NAME })).toBeVisible()
 
-    await vendor.getByRole('button', { name: /shop actions menu/i }).click()
-    await vendor.click('text=Edit shop details')
+    await vendor.getByRole('link', { name: 'Edit' }).click()
     await vendor.waitForURL('**/shops/*/edit')
     // The edit form's fields populate asynchronously after fetching the shop;
     // wait for that before typing so the fetch doesn't clobber our input.
