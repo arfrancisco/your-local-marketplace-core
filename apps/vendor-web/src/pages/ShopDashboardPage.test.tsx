@@ -83,23 +83,15 @@ describe('ShopDashboardPage', () => {
     expect(api.listVendorOrders).toHaveBeenCalledWith(1)
     expect(await screen.findByText('No orders yet.')).toBeInTheDocument()
 
-    // Edit shop details / Inventory / Reviews move behind the kebab menu
-    // instead of being primary buttons — not visible until it's opened.
-    // (They're role="menuitem" once the menu is open, matching
-    // ItemActionsMenu's pattern, not the implicit "link" role.)
-    expect(screen.queryByRole('menuitem', { name: /edit shop details/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('menuitem', { name: 'Inventory' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('menuitem', { name: 'Reviews' })).not.toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('button', { name: /shop actions menu/i }))
-
-    expect(screen.getByRole('menuitem', { name: /edit shop details/i })).toHaveAttribute(
-      'href',
-      '/shops/1/edit',
-    )
-    expect(screen.getByRole('menuitem', { name: 'Inventory' })).toHaveAttribute('href', '/shops/1/items')
-    expect(screen.getByRole('menuitem', { name: 'Reviews' })).toHaveAttribute('href', '/shops/1/reviews')
-    expect(screen.getByRole('menuitem', { name: 'Preview shop' })).toHaveAttribute('href', '/shops/1/preview')
+    // Kebab menu retired entirely — just two plain text links now (Edit,
+    // Shop Preview), always visible, no click-to-open step. Inventory and
+    // Reviews moved out to the bottom TabBar as primary tabs instead (see
+    // TabBar.test.tsx) — neither shows up here at all.
+    expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute('href', '/shops/1/edit')
+    expect(screen.getByRole('link', { name: 'Shop Preview' })).toHaveAttribute('href', '/shops/1/preview')
+    expect(screen.queryByRole('button', { name: /shop actions menu/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Inventory' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Reviews' })).not.toBeInTheDocument()
   })
 
   it('offers no "New shop" link, since a vendor can only ever own one shop', async () => {

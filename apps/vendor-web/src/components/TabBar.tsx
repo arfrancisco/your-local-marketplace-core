@@ -68,6 +68,20 @@ function InventoryIcon() {
   )
 }
 
+function ReviewsIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 3.5 14.47 8.5l5.53.8-4 3.9.94 5.5-4.94-2.6-4.94 2.6.94-5.5-4-3.9 5.53-.8L12 3.5Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 // Storefront glyph — the marketplace vendor-web crosses back into.
 function MarketplaceIcon() {
   return (
@@ -94,14 +108,17 @@ function tabClass({ isActive }: NavLinkRenderProps) {
 
 // Persistent bottom bar — the one nav surface for a signed-in vendor,
 // replacing the old hamburger drawer. Rendered once in App.tsx, outside
-// <Routes>, present on every route. Only 4 tabs (not customer-web's 5):
-// no cart, and Orders stays embedded in the dashboard rather than getting
-// its own tab — the Home tab's attention dot is the vendor-side
-// equivalent of customer-web's Orders-tab dot, just placed where orders
-// actually live here. Renders nothing for a signed-out user or a signed-in
-// user with no vendor_profile — RequireAuth already gates every route on
-// that, this just mirrors the same condition rather than showing a bar
-// that points at pages the user can't reach.
+// <Routes>, present on every route. 5 tabs: no cart (unlike customer-web),
+// but Inventory and Reviews both moved here from DashboardActionsMenu's
+// kebab menu (see that component) since they're common enough destinations
+// to deserve direct tap targets rather than living behind a menu. Orders
+// stays embedded in the dashboard rather than getting its own tab — the
+// Home tab's attention dot is the vendor-side equivalent of customer-web's
+// Orders-tab dot, just placed where orders actually live here. Renders
+// nothing for a signed-out user or a signed-in user with no vendor_profile
+// — RequireAuth already gates every route on that, this just mirrors the
+// same condition rather than showing a bar that points at pages the user
+// can't reach.
 export function TabBar() {
   const { user } = useAuth()
   const shopId = useMyShop()
@@ -126,6 +143,15 @@ export function TabBar() {
               <InventoryIcon />
             </span>
             <span className="tab-bar-label">Inventory</span>
+          </NavLink>
+        )}
+
+        {shopId && (
+          <NavLink to={`/shops/${shopId}/reviews`} className={tabClass}>
+            <span className="tab-bar-icon-wrap">
+              <ReviewsIcon />
+            </span>
+            <span className="tab-bar-label">Reviews</span>
           </NavLink>
         )}
 

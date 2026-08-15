@@ -150,9 +150,10 @@ describe('TabBar', () => {
     await waitFor(() => {
       expect(screen.getByRole('link', { name: /^inventory$/i })).toHaveAttribute('href', '/shops/42/items')
     })
+    expect(screen.getByRole('link', { name: /^reviews$/i })).toHaveAttribute('href', '/shops/42/reviews')
   })
 
-  it('never renders Inventory when the vendor has no shop yet', async () => {
+  it('never renders Inventory or Reviews when the vendor has no shop yet', async () => {
     setToken('tok123')
     vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
     vi.mocked(api.listShops).mockResolvedValue({ shops: [] })
@@ -160,6 +161,7 @@ describe('TabBar', () => {
 
     await screen.findByRole('link', { name: /^home$/i })
     expect(screen.queryByRole('link', { name: /^inventory$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /^reviews$/i })).not.toBeInTheDocument()
   })
 
   it('marks the Home tab active only on the exact /shops route, not /shops/:id/items or /shops/:id/edit', async () => {

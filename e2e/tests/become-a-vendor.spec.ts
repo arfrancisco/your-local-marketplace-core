@@ -169,9 +169,10 @@ test('full upgrade flow: register, blocked on email verification, verify it, bec
     await expect(page).toHaveURL(`${VENDOR_BASE}/shops`)
   })
 
-  await test.step('add the first item via the inventory page, with no forced hand-off afterward', async () => {
-    await page.getByRole('button', { name: /shop actions menu/i }).click()
-    await page.getByRole('menuitem', { name: 'Inventory' }).click()
+  await test.step('add the first item via the inventory tab, with no forced hand-off afterward', async () => {
+    // Inventory lives in the bottom TabBar now, not the kebab menu (which
+    // only keeps "Edit shop details" and "Preview shop").
+    await page.getByRole('link', { name: /^inventory$/i }).click()
 
     await page.getByRole('button', { name: 'Add item' }).click()
     await page.getByLabel(/^Name/).fill('Adobo Rice Bowl')
@@ -182,11 +183,19 @@ test('full upgrade flow: register, blocked on email verification, verify it, bec
     await expect(page).toHaveURL(/\/items$/)
   })
 
-  await test.step('the bottom tab bar (replacing the retired hamburger drawer) is present with all 4 tabs, and Marketplace links back to customer-web', async () => {
+  await test.step('the bottom tab bar (replacing the retired hamburger drawer) is present with all 5 tabs, and Marketplace links back to customer-web', async () => {
     await expect(page.getByRole('link', { name: /^home$/i })).toHaveAttribute('href', '/shops')
     await expect(page.getByRole('link', { name: /^inventory$/i })).toBeVisible()
+    await expect(page.getByRole('link', { name: /^reviews$/i })).toBeVisible()
     await expect(page.getByRole('link', { name: /^account$/i })).toHaveAttribute('href', '/account')
     await expect(page.getByRole('link', { name: /^marketplace$/i })).toHaveAttribute('href', `${CUSTOMER_BASE}/shops`)
+  })
+
+  await test.step('the dashboard kebab menu is retired — just plain Edit / Shop Preview links now, since Inventory and Reviews moved to the bottom tabs', async () => {
+    await page.getByRole('link', { name: /^home$/i }).click()
+    await expect(page.getByRole('button', { name: /shop actions menu/i })).not.toBeVisible()
+    await expect(page.getByRole('link', { name: 'Edit' })).toHaveAttribute('href', /\/shops\/\d+\/edit/)
+    await expect(page.getByRole('link', { name: 'Shop Preview' })).toBeVisible()
   })
 })
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type KeyboardEvent, type PointerEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { Item } from '../api/types'
 import { colorFor, emojiFor } from '../visuals'
@@ -249,9 +249,6 @@ export function ItemsPage() {
   return (
     <div>
       <HelpTourButton onClick={openTour} label="Tour this page" />
-      <p className="back-link">
-        <Link className="button" to="/shops">← Back to dashboard</Link>
-      </p>
       <h1>Inventory</h1>
 
       <div className="row gap">

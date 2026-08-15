@@ -8,9 +8,8 @@ interface Props {
 // The order-details card's kebab menu — "Edit order" and "Cancel order",
 // each only rendered when its action is actually available right now — kept
 // as a real menu (not bare buttons) for consistency with this app's other
-// per-card kebabs (ItemActionsMenu, DashboardActionsMenu). Same open/close
-// interaction as those: trigger click, outside click via a document
-// mousedown listener, Escape.
+// per-card kebabs (ItemActionsMenu). Same open/close interaction as those:
+// trigger click, outside click via a document mousedown listener, Escape.
 export function OrderDetailActionsMenu({ onEditOrder, onCancelOrder }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
