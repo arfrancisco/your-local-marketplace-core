@@ -1,7 +1,13 @@
 module OrderSerializer
   module_function
 
-  def call(order, unread: false)
+  # shop_context lets a caller iterating many orders for the *same* shop
+  # (vendor's own order list — a vendor has exactly one shop) precompute
+  # these once and pass them in, instead of every order re-running the same
+  # ratings aggregate/attachment lookup. Callers whose orders span different
+  # shops (customer, admin) omit it and get the original per-order behavior.
+  def call(order, unread: false, shop_context: nil)
+    shop_context ||= build_shop_context(order.shop)
     {
       id: order.id,
       public_reference: order.public_reference,
@@ -13,9 +19,9 @@ module OrderSerializer
       shop_building: order.shop.building,
       # Same fields as ShopSerializer's public (non-payment-info) payload —
       # all already safe for any anonymous browser, so no less safe here.
-      shop_profile_photo: order.shop.profile_photo.attached? ? PhotoSerializer.one(order.shop.profile_photo.first) : nil,
-      shop_average_rating: order.shop.ratings.average(:score)&.round(1)&.to_f,
-      shop_ratings_count: order.shop.ratings.count,
+      shop_profile_photo: shop_context[:profile_photo],
+      shop_average_rating: shop_context[:average_rating],
+      shop_ratings_count: shop_context[:ratings_count],
       # Needed by the vendor's private customer-notes UI to look up prior
       # notes about this customer. Safe on the shared payload: this endpoint
       # is already gated to the order's two participants, so the customer
@@ -63,6 +69,14 @@ module OrderSerializer
 
   def customer_name(customer_profile)
     customer_profile.display_name.presence || customer_profile.user.email
+  end
+
+  def build_shop_context(shop)
+    {
+      profile_photo: shop.profile_photo.attached? ? PhotoSerializer.one(shop.profile_photo.first) : nil,
+      average_rating: shop.ratings.average(:score)&.round(1)&.to_f,
+      ratings_count: shop.ratings.count
+    }
   end
 
   def line(order_item)

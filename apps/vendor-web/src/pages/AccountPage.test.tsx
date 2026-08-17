@@ -19,9 +19,10 @@ vi.mock('../api/client', async (importOriginal) => {
 
 let mockUser: User | null = null
 let mockLoading = false
+const mockLogout = vi.fn()
 
 vi.mock('../auth', () => ({
-  useAuth: () => ({ user: mockUser, loading: mockLoading }),
+  useAuth: () => ({ user: mockUser, loading: mockLoading, logout: mockLogout }),
 }))
 
 const baseUser: User = {
@@ -87,5 +88,14 @@ describe('AccountPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not save your preferences')
     expect(screen.queryByText('Saved.')).not.toBeInTheDocument()
+  })
+
+  it('signing out calls logout() — the page\'s own signed-out guard handles landing on /login', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: /^sign out$/i }))
+
+    expect(mockLogout).toHaveBeenCalledTimes(1)
   })
 })

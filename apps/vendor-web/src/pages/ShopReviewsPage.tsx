@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Rating, Shop } from '../api/types'
 import { RatingList, RatingSummary } from '../components/Ratings'
@@ -7,9 +7,9 @@ import { RatingList, RatingSummary } from '../components/Ratings'
 const REVIEWS_PER_PAGE = 5
 
 // Read-only: vendors see their standing and what was said, but can't reply
-// to or remove a review. Its own page (linked from the dashboard) rather
-// than embedded in the edit-shop form, which is about the shop's own
-// settings, not what customers have said about it.
+// to or remove a review. Its own page (linked from the bottom TabBar)
+// rather than embedded in the edit-shop form, which is about the shop's
+// own settings, not what customers have said about it.
 export function ShopReviewsPage() {
   const { id } = useParams()
   const [shop, setShop] = useState<Shop | null>(null)
@@ -43,10 +43,6 @@ export function ShopReviewsPage() {
 
   return (
     <div>
-      <p className="back-link">
-        <Link className="button" to="/shops">← Back to dashboard</Link>
-      </p>
-
       <div className="row spread reviews-header">
         <h1>Reviews</h1>
         <RatingSummary

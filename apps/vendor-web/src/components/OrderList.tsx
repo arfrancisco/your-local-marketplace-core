@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api } from '../api/client'
-import type { Order } from '../api/types'
+import { useVendorOrdersPoll } from '../useVendorOrdersPoll'
 import {
   DROPDOWN_GROUPS,
   PILL_GROUPS,
@@ -16,29 +15,18 @@ function formatPrice(cents: number, currency: string) {
   return `${currency} ${(cents / 100).toFixed(2)}`
 }
 
-interface Props {
-  /** Restricts the list to one shop's orders. The dashboard always passes
-   * its one shop's id; omitted would show every order across the vendor's
-   * shops, though nothing currently renders this component without one. */
-  shopId?: number
-}
-
-// The fetch/filter/render logic behind the shop dashboard's order list.
+// The filter/render logic behind the shop dashboard's order list. Orders
+// come from the shared VendorOrdersPollProvider (App.tsx) — already scoped
+// to the vendor's one shop via useMyShop() internally — rather than a
+// one-shot fetch of its own, so this and TabBar's attention dot read the
+// same polled snapshot instead of each hitting the endpoint independently.
 // Filter is a small set of color-coded status-bucket pills (the common,
 // actionable statuses) plus a dropdown for the two less-urgent buckets
 // (completed, rejected/cancelled) — see src/orderStatus.ts for the bucket
 // definitions shared with OrderDetailPage.
-export function OrderList({ shopId }: Props) {
-  const [orders, setOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
+export function OrderList() {
+  const orders = useVendorOrdersPoll()
   const [filter, setFilter] = useState<'all' | StatusGroupKey>('all')
-
-  useEffect(() => {
-    setLoading(true)
-    api.listVendorOrders(shopId).then((res) => setOrders(res.orders)).finally(() => setLoading(false))
-  }, [shopId])
-
-  if (loading) return <p>Loading orders…</p>
 
   // "All" is just the combined pill buckets (needs action / in progress /
   // ready), not literally every order ever — completed and rejected/

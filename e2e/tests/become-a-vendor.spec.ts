@@ -26,10 +26,20 @@ function uniqueMobile() {
   return `+63917${Math.floor(1000000 + Math.random() * 8999999)}`
 }
 
+// Retries on 404 specifically. verifyEmailFromAccountPage already waits for
+// the UI to reflect "sent" before calling this, so that call site shouldn't
+// actually need a retry (the code digest is cached synchronously in the
+// same request that returns "sent", ahead of the async delivery job — see
+// Verifications::IssueChallenge). The retry earns its keep on the other
+// call site, registerEligibleResident's mobile-verification fetch, which
+// has no UI signal to wait on before calling this.
 async function fetchVerificationCode(page: Page, email: string, purpose: string): Promise<string> {
-  const res = await page.request.get(
-    `${API_BASE}/api/v1/test_helpers/verification_code?email=${encodeURIComponent(email)}&purpose=${purpose}`
-  )
+  const url = `${API_BASE}/api/v1/test_helpers/verification_code?email=${encodeURIComponent(email)}&purpose=${purpose}`
+  let res = await page.request.get(url)
+  for (let attempt = 0; attempt < 10 && res.status() === 404; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    res = await page.request.get(url)
+  }
   expect(res.ok(), `test_helpers/verification_code should 200 for ${purpose}`).toBeTruthy()
   const body = await res.json()
   return body.code
@@ -95,9 +105,18 @@ async function registerEligibleResident(page: Page, email: string) {
 // requires on top of registration's own mobile verification. Assumes the
 // caller is already on /account.
 async function verifyEmailFromAccountPage(page: Page, email: string) {
-  const code = await fetchVerificationCode(page, email, 'email_verification')
+  // The button click itself is what issues the code (VerificationAction's
+  // send() -> api.requestEmailVerification()) — fetching before clicking
+  // finds no challenge yet and 404s. The request also isn't instant (bcrypt
+  // on the code digest), so wait for the UI to actually reflect that it
+  // completed (the Code input replacing the button) rather than racing the
+  // raw HTTP GET against an in-flight POST.
   await page.getByRole('button', { name: 'Verify your email' }).click()
-  await page.getByPlaceholder('Code').fill(code)
+  // Exact: true — an unqualified substring match also catches the address
+  // delivery-note textarea's placeholder ("...gate code 1234...").
+  await page.getByPlaceholder('Code', { exact: true }).waitFor()
+  const code = await fetchVerificationCode(page, email, 'email_verification')
+  await page.getByPlaceholder('Code', { exact: true }).fill(code)
   await page.getByRole('button', { name: 'Confirm' }).click()
 }
 
@@ -152,9 +171,10 @@ test('full upgrade flow: register, blocked on email verification, verify it, bec
     await expect(page).toHaveURL(`${VENDOR_BASE}/shops`)
   })
 
-  await test.step('add the first item via the inventory page, with no forced hand-off afterward', async () => {
-    await page.getByRole('button', { name: /shop actions menu/i }).click()
-    await page.getByRole('menuitem', { name: 'Inventory' }).click()
+  await test.step('add the first item via the inventory tab, with no forced hand-off afterward', async () => {
+    // Inventory lives in the bottom TabBar now, not the kebab menu (which
+    // only keeps "Edit shop details" and "Preview shop").
+    await page.getByRole('link', { name: /^inventory$/i }).click()
 
     await page.getByRole('button', { name: 'Add item' }).click()
     await page.getByLabel(/^Name/).fill('Adobo Rice Bowl')
@@ -163,6 +183,31 @@ test('full upgrade flow: register, blocked on email verification, verify it, bec
 
     await expect(page.getByText('Adobo Rice Bowl')).toBeVisible()
     await expect(page).toHaveURL(/\/items$/)
+  })
+
+  await test.step('the bottom tab bar (replacing the retired hamburger drawer) is present with all 5 tabs, and Marketplace links back to customer-web', async () => {
+    await expect(page.getByRole('link', { name: /^home$/i })).toHaveAttribute('href', '/shops')
+    await expect(page.getByRole('link', { name: /^inventory$/i })).toBeVisible()
+    await expect(page.getByRole('link', { name: /^reviews$/i })).toBeVisible()
+    await expect(page.getByRole('link', { name: /^account$/i })).toHaveAttribute('href', '/account')
+    await expect(page.getByRole('link', { name: /^marketplace$/i })).toHaveAttribute('href', `${CUSTOMER_BASE}/shops`)
+  })
+
+  await test.step('Reviews tab actually navigates to the reviews page, not just present in the bar', async () => {
+    await page.getByRole('link', { name: /^reviews$/i }).click()
+    await expect(page.getByRole('heading', { name: 'Reviews' })).toBeVisible()
+    await expect(page).toHaveURL(/\/shops\/\d+\/reviews$/)
+  })
+
+  await test.step('the dashboard kebab menu is retired — just plain Edit / Shop Preview links now, since Inventory and Reviews moved to the bottom tabs', async () => {
+    await page.getByRole('link', { name: /^home$/i }).click()
+    await expect(page.getByRole('button', { name: /shop actions menu/i })).not.toBeVisible()
+    await expect(page.getByRole('link', { name: 'Edit' })).toHaveAttribute('href', /\/shops\/\d+\/edit/)
+
+    // Shop Preview actually navigates too, not just present.
+    await page.getByRole('link', { name: 'Shop Preview' }).click()
+    await expect(page.getByRole('heading', { name: "Ana's Kitchen" })).toBeVisible()
+    await expect(page).toHaveURL(/\/shops\/\d+\/preview$/)
   })
 })
 

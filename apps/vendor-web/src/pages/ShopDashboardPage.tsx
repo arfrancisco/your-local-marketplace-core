@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { Shop } from '../api/types'
 import { TourCallout } from '../components/TourCallout'
 import { HelpTourButton } from '../components/HelpTourButton'
 import { RatingSummary } from '../components/Ratings'
-import { DashboardActionsMenu } from '../components/DashboardActionsMenu'
 import { OrderList } from '../components/OrderList'
+import { useMyShopState } from '../useMyShop'
 import { colorFor, emojiFor } from '../visuals'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
@@ -25,8 +25,7 @@ const TOUR_STOPS = 4
 // details, inventory, reviews) live behind the kebab menu instead of as
 // primary buttons.
 export function ShopDashboardPage() {
-  const [shop, setShop] = useState<Shop | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { shop, loading, setShop } = useMyShopState()
   const [busy, setBusy] = useState(false)
   const [pendingStatusChange, setPendingStatusChange] = useState<'open' | 'close' | null>(null)
   const [statusError, setStatusError] = useState<string | null>(null)
@@ -35,19 +34,11 @@ export function ShopDashboardPage() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    api
-      .listShops()
-      .then((res) => {
-        setShop(res.shops[0] ?? null)
-        // A vendor with no shop has nothing to see here — send them through
-        // onboarding instead of a bare empty dashboard. Derived from data
-        // (no shop), not a stored flag.
-        if (!res.shops[0]) {
-          navigate('/onboarding', { replace: true })
-        }
-      })
-      .finally(() => setLoading(false))
-  }, [navigate])
+    // A vendor with no shop has nothing to see here — send them through
+    // onboarding instead of a bare empty dashboard. Derived from data (no
+    // shop), not a stored flag.
+    if (!loading && !shop) navigate('/onboarding', { replace: true })
+  }, [loading, shop, navigate])
 
   function openTour() {
     setTourOpen(true)
@@ -85,9 +76,9 @@ export function ShopDashboardPage() {
     }
   }
 
-  // The toggle now sits at the very top of the page, right where a stray tap
-  // is most likely (e.g. reaching for something else while the page is still
-  // loading) — both directions go through a confirmation, not just closing.
+  // Sits below the shop banner/identity now, above Orders — both directions
+  // still go through a confirmation, not just closing, regardless of where
+  // the toggle lives on the page.
   function onStatusClick() {
     if (!shop) return
     setStatusError(null)
@@ -110,35 +101,6 @@ export function ShopDashboardPage() {
           onSkip={skipTour}
         />
       )}
-      <div className="tour-anchor">
-        <button
-          type="button"
-          className={`shop-status-bar ${shop.open ? 'is-open' : 'is-closed'}`}
-          onClick={onStatusClick}
-          disabled={busy}
-        >
-          <span className="shop-status-state">
-            <span className="shop-status-dot" aria-hidden="true" />
-            Shop is {shop.open ? 'OPEN' : 'CLOSED'}
-          </span>
-          <span className="shop-status-action">
-            {shop.open ? 'Tap to close' : 'Tap to open'}
-          </span>
-        </button>
-        <p className="muted shop-status-hint">
-          {shop.open
-            ? 'Customers can find your shop and place orders right now.'
-            : 'Customers cannot find your shop while it is closed.'}
-        </p>
-        {showTour && tourStep === 1 && (
-          <TourCallout
-            message="Toggle your shop open or closed anytime — customers only see it in their shop list while it's open."
-            onNext={advanceTour}
-            onSkip={skipTour}
-          />
-        )}
-      </div>
-
       <div className="tour-anchor">
         <div className="shop-hero">
           {shop.cover_photo ? (
@@ -171,10 +133,25 @@ export function ShopDashboardPage() {
               </p>
             </div>
             <div className="shop-identity-actions tour-anchor">
-              <DashboardActionsMenu shopId={shop.id} />
+              {/* Kebab menu retired — Inventory and Reviews moved to the
+                  bottom TabBar, leaving just these two, so a menu was more
+                  ceremony than the destinations warranted. Plain colored
+                  text links instead, same spot. */}
+              <div className="shop-quick-links">
+                <Link to={`/shops/${shop.id}/edit`} className="shop-quick-link is-edit">
+                  Edit
+                </Link>
+                <Link
+                  to={`/shops/${shop.id}/preview`}
+                  state={{ from: 'dashboard' }}
+                  className="shop-quick-link is-preview"
+                >
+                  Shop Preview
+                </Link>
+              </div>
               {showTour && tourStep === 3 && (
                 <TourCallout
-                  message="Edit your shop details, manage inventory, and see reviews from this menu."
+                  message="Edit your shop details or preview it here — inventory and reviews live in the bottom tabs."
                   onNext={advanceTour}
                   onSkip={skipTour}
                 />
@@ -184,9 +161,38 @@ export function ShopDashboardPage() {
         </div>
       </div>
 
+      <div className="tour-anchor shop-status-block">
+        <button
+          type="button"
+          className={`shop-status-bar ${shop.open ? 'is-open' : 'is-closed'}`}
+          onClick={onStatusClick}
+          disabled={busy}
+        >
+          <span className="shop-status-state">
+            <span className="shop-status-dot" aria-hidden="true" />
+            Shop is {shop.open ? 'OPEN' : 'CLOSED'}
+          </span>
+          <span className="shop-status-action">
+            {shop.open ? 'Tap to close' : 'Tap to open'}
+          </span>
+        </button>
+        <p className="muted shop-status-hint">
+          {shop.open
+            ? 'Customers can find your shop and place orders right now.'
+            : 'Customers cannot find your shop while it is closed.'}
+        </p>
+        {showTour && tourStep === 1 && (
+          <TourCallout
+            message="Toggle your shop open or closed anytime — customers only see it in their shop list while it's open."
+            onNext={advanceTour}
+            onSkip={skipTour}
+          />
+        )}
+      </div>
+
       <div className="tour-anchor">
         <h2 className="section">Orders</h2>
-        <OrderList shopId={shop.id} />
+        <OrderList />
         {showTour && tourStep === 2 && (
           <TourCallout
             message="Incoming orders land here. You move each one forward yourself — accepted, preparing, ready — nothing changes automatically."

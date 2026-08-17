@@ -11,10 +11,18 @@ module Api
           shops = current_vendor_profile.shops
           shops = shops.where(id: params[:shop_id]) if params[:shop_id].present?
           orders = Order.where(shop: shops)
-                        .includes(:order_items, :shop, :conversation, customer_profile: %i[user default_address])
+                        .includes(:order_items, :shop, { ratings: { reviewer_user: :customer_profile } }, :conversation,
+                                  customer_profile: %i[user default_address])
                         .order(placed_at: :desc)
           unread = Messaging::UnreadOrders.for(orders: orders, user: current_user)
-          render json: { orders: orders.map { |order| OrderSerializer.call(order, unread: unread.include?(order.id)) } }
+          # Every order here belongs to the vendor's one shop (Shop enforces
+          # vendor_profile_id uniqueness) — compute its aggregate/photo data
+          # once instead of once per order via OrderSerializer's default.
+          shop = shops.first
+          shop_context = shop && OrderSerializer.build_shop_context(shop)
+          render json: {
+            orders: orders.map { |order| OrderSerializer.call(order, unread: unread.include?(order.id), shop_context: shop_context) }
+          }
         end
       end
     end

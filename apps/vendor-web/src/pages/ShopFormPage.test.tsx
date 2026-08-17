@@ -3,8 +3,12 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ShopFormPage } from './ShopFormPage'
-import { api } from '../api/client'
-import type { Shop } from '../api/types'
+import { ShopDashboardPage } from './ShopDashboardPage'
+import { AuthProvider } from '../auth'
+import { MyShopProvider } from '../useMyShop'
+import { VendorOrdersPollProvider } from '../useVendorOrdersPoll'
+import { api, setToken } from '../api/client'
+import type { Shop, User } from '../api/types'
 
 // react-easy-crop is a real drag/zoom canvas widget: jsdom never loads the
 // image behind it, so its onCropComplete would never fire and there'd be
@@ -37,14 +41,26 @@ vi.mock('../api/client', async (importOriginal) => {
     ...actual,
     api: {
       ...actual.api,
+      me: vi.fn(),
       listShops: vi.fn(),
       getShop: vi.fn(),
       createShop: vi.fn(),
       updateShop: vi.fn(),
       listShopRatings: vi.fn(),
+      listVendorOrders: vi.fn(),
     },
   }
 })
+
+function baseUser(overrides: Partial<User> = {}): User {
+  return {
+    id: 9,
+    email: 'vendor@example.com',
+    vendor_profile: { id: 1, display_name: "Lola's Kitchen", verification_status: 'verified' },
+    sms_notify_order_placed: true,
+    ...overrides,
+  }
+}
 
 const existingShop: Shop = {
   id: 5,
@@ -99,10 +115,14 @@ beforeAll(() => {
 function renderAt(path: string, routePath: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path={routePath} element={<ShopFormPage />} />
-        <Route path="/shops" element={<p>Dashboard</p>} />
-      </Routes>
+      <AuthProvider>
+        <MyShopProvider>
+          <Routes>
+            <Route path={routePath} element={<ShopFormPage />} />
+            <Route path="/shops" element={<p>Dashboard</p>} />
+          </Routes>
+        </MyShopProvider>
+      </AuthProvider>
     </MemoryRouter>,
   )
 }
@@ -124,6 +144,8 @@ function readText(blob: Blob): Promise<string> {
 describe('ShopFormPage photo cropping', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
     vi.mocked(api.listShops).mockResolvedValue({ shops: [] })
     vi.mocked(api.getShop).mockResolvedValue({ shop: existingShop })
     vi.mocked(api.createShop).mockResolvedValue({ shop: existingShop })
@@ -225,6 +247,8 @@ describe('ShopFormPage photo cropping', () => {
 describe('ShopFormPage back navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
     vi.mocked(api.listShops).mockResolvedValue({ shops: [] })
     vi.mocked(api.getShop).mockResolvedValue({ shop: existingShop })
     vi.mocked(api.listShopRatings).mockResolvedValue({ ratings: [] })
@@ -262,6 +286,8 @@ describe('ShopFormPage back navigation', () => {
 describe('ShopFormPage onboarding tour', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
     vi.mocked(api.listShops).mockResolvedValue({ shops: [] })
     vi.mocked(api.createShop).mockResolvedValue({ shop: existingShop })
   })
@@ -269,7 +295,11 @@ describe('ShopFormPage onboarding tour', () => {
   function renderForm() {
     render(
       <MemoryRouter>
-        <ShopFormPage />
+        <AuthProvider>
+          <MyShopProvider>
+            <ShopFormPage />
+          </MyShopProvider>
+        </AuthProvider>
       </MemoryRouter>,
     )
   }
@@ -327,5 +357,112 @@ describe('ShopFormPage onboarding tour', () => {
     await openTour(user)
 
     expect(screen.getByText(/start with your shop's name and a short description/i)).toBeInTheDocument()
+  })
+})
+
+// Integration coverage for the exact regression architect review found live:
+// ShopFormPage's submit handler pushes the new shop into the shared
+// MyShopProvider context via setShop, then navigates to /shops — this
+// mounts the *real* ShopDashboardPage (not a stub route) to prove that
+// hand-off actually lands, with no bounce back to onboarding and no stuck
+// "Loading your shop…" (both were real failure modes of the underlying
+// race, now covered directly by useMyShop.test.tsx too).
+describe('ShopFormPage -> ShopDashboardPage hand-off', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
+    vi.mocked(api.listShops).mockResolvedValue({ shops: [] })
+    vi.mocked(api.createShop).mockResolvedValue({ shop: existingShop })
+    vi.mocked(api.listShopRatings).mockResolvedValue({ ratings: [] })
+    vi.mocked(api.listVendorOrders).mockResolvedValue({ orders: [] })
+  })
+
+  it('creating a shop lands directly on the real dashboard showing that shop, never onboarding, never stuck loading', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/shops/new']}>
+        <AuthProvider>
+          <MyShopProvider>
+            <VendorOrdersPollProvider>
+              <Routes>
+                <Route path="/shops/new" element={<ShopFormPage />} />
+                <Route path="/shops" element={<ShopDashboardPage />} />
+                <Route path="/onboarding" element={<p>Onboarding page</p>} />
+              </Routes>
+            </VendorOrdersPollProvider>
+          </MyShopProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    )
+
+    await user.type(await screen.findByLabelText('Name'), existingShop.name)
+    await user.type(screen.getByLabelText(/building/i), 'Astra')
+    // ShopFormPage's own "am I allowed to create a second shop" guard fires
+    // one listShops() call independent of MyShopProvider's — capture the
+    // count here so the assertion below isolates the dashboard's own
+    // behavior rather than that unrelated call.
+    const callsBeforeSubmit = vi.mocked(api.listShops).mock.calls.length
+    await user.click(screen.getByRole('button', { name: /save shop/i }))
+
+    expect(await screen.findByRole('heading', { name: existingShop.name })).toBeInTheDocument()
+    expect(screen.queryByText('Onboarding page')).not.toBeInTheDocument()
+    expect(screen.queryByText('Loading your shop…')).not.toBeInTheDocument()
+    // The dashboard never re-fetched to discover the shop it was just handed.
+    expect(api.listShops).toHaveBeenCalledTimes(callsBeforeSubmit)
+  })
+
+  // The test above doesn't actually open the race window useMyShop.tsx's
+  // shopRef guards against — its mocked listShops() resolves immediately,
+  // and several `await user.type(...)` calls elapse before submit, so by
+  // the time setShop() fires there's nothing left in flight to race. This
+  // one deliberately keeps MyShopProvider's own initial fetch pending
+  // through the whole create-shop flow, resolving it (with a stale, empty
+  // result) only after setShop() has already run — proving the hand-off
+  // survives the actual race, through the real ShopDashboardPage, not just
+  // through useMyShop.tsx in isolation (QA review: found live via commit
+  // 54ece39, which claimed to verify this scenario but hadn't).
+  it('survives the initial-fetch race through a real dashboard render, not just in useMyShop.tsx isolation', async () => {
+    const user = userEvent.setup()
+    // First call: ShopFormPage's own "already have a shop?" guard — resolve
+    // it immediately, same as every other test here.
+    vi.mocked(api.listShops).mockResolvedValueOnce({ shops: [] })
+    // Second call: MyShopProvider's own initial fetch — held open under our
+    // control, standing in for a slow first request after login/onboarding.
+    let resolveProviderFetch!: (res: { shops: typeof existingShop[] }) => void
+    vi.mocked(api.listShops).mockImplementationOnce(
+      () => new Promise((resolve) => { resolveProviderFetch = resolve }),
+    )
+
+    render(
+      <MemoryRouter initialEntries={['/shops/new']}>
+        <AuthProvider>
+          <MyShopProvider>
+            <VendorOrdersPollProvider>
+              <Routes>
+                <Route path="/shops/new" element={<ShopFormPage />} />
+                <Route path="/shops" element={<ShopDashboardPage />} />
+                <Route path="/onboarding" element={<p>Onboarding page</p>} />
+              </Routes>
+            </VendorOrdersPollProvider>
+          </MyShopProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    )
+
+    await user.type(await screen.findByLabelText('Name'), existingShop.name)
+    await user.type(screen.getByLabelText(/building/i), 'Astra')
+    await user.click(screen.getByRole('button', { name: /save shop/i }))
+
+    // The dashboard renders off setShop's result while the provider's own
+    // fetch is still pending — this is the actual race window.
+    expect(await screen.findByRole('heading', { name: existingShop.name })).toBeInTheDocument()
+
+    // Now the stale fetch resolves with an empty result — it must not
+    // clobber the shop back to null or land back on onboarding.
+    resolveProviderFetch({ shops: [] })
+    await screen.findByRole('heading', { name: existingShop.name })
+    expect(screen.queryByText('Onboarding page')).not.toBeInTheDocument()
+    expect(screen.queryByText('Loading your shop…')).not.toBeInTheDocument()
   })
 })

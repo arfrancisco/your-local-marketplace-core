@@ -7,7 +7,7 @@ import { api, ApiError } from '../api/client'
 // enough surface for the one SMS notification preference. Shop-level settings
 // stay on ShopFormPage; this is account-level (the User, not the Shop).
 export function AccountPage() {
-  const { user, loading } = useAuth()
+  const { user, loading, logout } = useAuth()
   const [checked, setChecked] = useState(false)
   // Guards the one-time sync from the fetched user into local editable state
   // below, the same "derive once, then let the field own it" shape
@@ -63,6 +63,17 @@ export function AccountPage() {
         </button>
         {saved && !error && <span className="muted small" style={{ marginLeft: '0.5rem' }}>Saved.</span>}
         {error && <p role="alert" className="error">{error}</p>}
+      </div>
+
+      <div className="card">
+        <h2>Session</h2>
+        {/* No explicit navigate() — the page's own `if (!user) return
+            <Navigate to="/login" replace />` guard above already lands
+            here once logout() clears the user, and /login is the right
+            destination (matches the old hamburger's onSignOut), so
+            there's no race to guard against like customer-web's
+            AccountPage has for its own (different) /shops destination. */}
+        <button onClick={logout}>Sign out</button>
       </div>
     </div>
   )
