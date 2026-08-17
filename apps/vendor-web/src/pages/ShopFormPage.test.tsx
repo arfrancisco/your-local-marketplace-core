@@ -411,4 +411,58 @@ describe('ShopFormPage -> ShopDashboardPage hand-off', () => {
     // The dashboard never re-fetched to discover the shop it was just handed.
     expect(api.listShops).toHaveBeenCalledTimes(callsBeforeSubmit)
   })
+
+  // The test above doesn't actually open the race window useMyShop.tsx's
+  // shopRef guards against — its mocked listShops() resolves immediately,
+  // and several `await user.type(...)` calls elapse before submit, so by
+  // the time setShop() fires there's nothing left in flight to race. This
+  // one deliberately keeps MyShopProvider's own initial fetch pending
+  // through the whole create-shop flow, resolving it (with a stale, empty
+  // result) only after setShop() has already run — proving the hand-off
+  // survives the actual race, through the real ShopDashboardPage, not just
+  // through useMyShop.tsx in isolation (QA review: found live via commit
+  // 54ece39, which claimed to verify this scenario but hadn't).
+  it('survives the initial-fetch race through a real dashboard render, not just in useMyShop.tsx isolation', async () => {
+    const user = userEvent.setup()
+    // First call: ShopFormPage's own "already have a shop?" guard — resolve
+    // it immediately, same as every other test here.
+    vi.mocked(api.listShops).mockResolvedValueOnce({ shops: [] })
+    // Second call: MyShopProvider's own initial fetch — held open under our
+    // control, standing in for a slow first request after login/onboarding.
+    let resolveProviderFetch!: (res: { shops: typeof existingShop[] }) => void
+    vi.mocked(api.listShops).mockImplementationOnce(
+      () => new Promise((resolve) => { resolveProviderFetch = resolve }),
+    )
+
+    render(
+      <MemoryRouter initialEntries={['/shops/new']}>
+        <AuthProvider>
+          <MyShopProvider>
+            <VendorOrdersPollProvider>
+              <Routes>
+                <Route path="/shops/new" element={<ShopFormPage />} />
+                <Route path="/shops" element={<ShopDashboardPage />} />
+                <Route path="/onboarding" element={<p>Onboarding page</p>} />
+              </Routes>
+            </VendorOrdersPollProvider>
+          </MyShopProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    )
+
+    await user.type(await screen.findByLabelText('Name'), existingShop.name)
+    await user.type(screen.getByLabelText(/building/i), 'Astra')
+    await user.click(screen.getByRole('button', { name: /save shop/i }))
+
+    // The dashboard renders off setShop's result while the provider's own
+    // fetch is still pending — this is the actual race window.
+    expect(await screen.findByRole('heading', { name: existingShop.name })).toBeInTheDocument()
+
+    // Now the stale fetch resolves with an empty result — it must not
+    // clobber the shop back to null or land back on onboarding.
+    resolveProviderFetch({ shops: [] })
+    await screen.findByRole('heading', { name: existingShop.name })
+    expect(screen.queryByText('Onboarding page')).not.toBeInTheDocument()
+    expect(screen.queryByText('Loading your shop…')).not.toBeInTheDocument()
+  })
 })
