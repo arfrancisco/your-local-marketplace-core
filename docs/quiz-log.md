@@ -28,7 +28,7 @@ Nothing here needs hand-editing, but feel free.
 | 3 | Identity and authentication | 2026-08-10 | 2026-08-13 | 4/6 | ok |
 | 4 | Authorization | 2026-08-13 | pending | pending | pending |
 | 5 | Data model and the snapshot rule | 2026-08-14 | - | - | - |
-| 6 | Discovery | - | - | - | - |
+| 6 | Discovery | 2026-08-17 | - | - | - |
 | 7 | Cart and checkout | - | - | - | - |
 | 8 | Order lifecycle | - | - | - | - |
 | 9 | Chat, payment, ratings | - | - | - | - |
@@ -38,6 +38,38 @@ Nothing here needs hand-editing, but feel free.
 ## Session log
 
 Newest first.
+
+### 2026-08-17 — Quiz: lesson 4 (reposted, still awaiting answers) · Taught: lesson 6
+
+Automated/scheduled session again, no live user present at run time, and
+this environment has no interactive question tool available at all — not
+just unused, genuinely absent from the toolset. So the lesson-4 quiz from
+2026-08-14 was still never graded (that session's exact questions aren't
+visible from here either, since sessions don't share transcripts). Wrote a
+fresh set of 6 questions straight from `04-authorization.md` — not from
+memory of the prompt — mixing recall, reasoning, and scenario, including one
+that required opening `apps/api/app/models/order.rb` live (the
+`Order::TRANSITIONS` hash) rather than the lesson text alone: a customer
+trying to cancel an order in `preparing` clears both the policy and the
+controller's "customers may only request cancelled" check, but the service
+layer still 422s the request, because `preparing` only transitions to
+`ready_for_pickup`/`out_for_delivery` — cancellation is not a legal move
+once a vendor has started preparing. Posted all 6 as text and asked Alain to
+reply with his answers; grade whenever that reply lands, and backfill the
+lesson 4 mastery row then.
+
+Delivered lesson 6 in full: discovery is public and rate-limited at
+120/min/IP, the `Shop.listed` both-conditions scope and the deliberate
+`open!`/`close!` asymmetry (opening sets both status and accepting_orders,
+closing only clears the switch), the `(shop_id + day_of_year) % open_count`
+rotation with a worked example and why "never alphabetical" (ADR 0007)
+actually matters at neighbor scale, tokenized search (AND across words, OR
+within a word, across shop/item/tag fields), the three independent item
+availability signals (`enabled`, `archived_at`, `stock_count`) and the trap
+that the `enabled` *scope* excludes archived items while the `enabled?`
+*attribute* does not, and the serializer's public/gated/withheld field
+split (ratings public, payment info gated, exact address withheld in favor
+of building only).
 
 ### 2026-08-14 — Quiz: lesson 4 (posted, awaiting answers) · Taught: lesson 5
 
@@ -147,6 +179,8 @@ the three misconceptions.
 
 ## Next up
 
-**Answer the lesson 4 quiz** posted in the 2026-08-14 session (6 questions,
-still open — grade it there when Alain replies, and backfill this file).
-Then **lesson 6 — discovery: how a customer finds a shop.**
+**Grade the lesson 4 quiz** posted in the 2026-08-17 session (6 questions,
+still open — grade it here when Alain replies, and backfill the mastery
+row). Lesson 5 was taught 2026-08-14 but has never been quizzed on its own —
+fold it into the next quiz round (either a dedicated lesson-5 quiz, or a
+combined 4+5 review) before teaching **lesson 7 — cart and checkout.**
