@@ -3,8 +3,10 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ShopFormPage } from './ShopFormPage'
+import { ShopDashboardPage } from './ShopDashboardPage'
 import { AuthProvider } from '../auth'
 import { MyShopProvider } from '../useMyShop'
+import { VendorOrdersPollProvider } from '../useVendorOrdersPoll'
 import { api, setToken } from '../api/client'
 import type { Shop, User } from '../api/types'
 
@@ -45,6 +47,7 @@ vi.mock('../api/client', async (importOriginal) => {
       createShop: vi.fn(),
       updateShop: vi.fn(),
       listShopRatings: vi.fn(),
+      listVendorOrders: vi.fn(),
     },
   }
 })
@@ -354,5 +357,58 @@ describe('ShopFormPage onboarding tour', () => {
     await openTour(user)
 
     expect(screen.getByText(/start with your shop's name and a short description/i)).toBeInTheDocument()
+  })
+})
+
+// Integration coverage for the exact regression architect review found live:
+// ShopFormPage's submit handler pushes the new shop into the shared
+// MyShopProvider context via setShop, then navigates to /shops — this
+// mounts the *real* ShopDashboardPage (not a stub route) to prove that
+// hand-off actually lands, with no bounce back to onboarding and no stuck
+// "Loading your shop…" (both were real failure modes of the underlying
+// race, now covered directly by useMyShop.test.tsx too).
+describe('ShopFormPage -> ShopDashboardPage hand-off', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
+    vi.mocked(api.listShops).mockResolvedValue({ shops: [] })
+    vi.mocked(api.createShop).mockResolvedValue({ shop: existingShop })
+    vi.mocked(api.listShopRatings).mockResolvedValue({ ratings: [] })
+    vi.mocked(api.listVendorOrders).mockResolvedValue({ orders: [] })
+  })
+
+  it('creating a shop lands directly on the real dashboard showing that shop, never onboarding, never stuck loading', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/shops/new']}>
+        <AuthProvider>
+          <MyShopProvider>
+            <VendorOrdersPollProvider>
+              <Routes>
+                <Route path="/shops/new" element={<ShopFormPage />} />
+                <Route path="/shops" element={<ShopDashboardPage />} />
+                <Route path="/onboarding" element={<p>Onboarding page</p>} />
+              </Routes>
+            </VendorOrdersPollProvider>
+          </MyShopProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    )
+
+    await user.type(await screen.findByLabelText('Name'), existingShop.name)
+    await user.type(screen.getByLabelText(/building/i), 'Astra')
+    // ShopFormPage's own "am I allowed to create a second shop" guard fires
+    // one listShops() call independent of MyShopProvider's — capture the
+    // count here so the assertion below isolates the dashboard's own
+    // behavior rather than that unrelated call.
+    const callsBeforeSubmit = vi.mocked(api.listShops).mock.calls.length
+    await user.click(screen.getByRole('button', { name: /save shop/i }))
+
+    expect(await screen.findByRole('heading', { name: existingShop.name })).toBeInTheDocument()
+    expect(screen.queryByText('Onboarding page')).not.toBeInTheDocument()
+    expect(screen.queryByText('Loading your shop…')).not.toBeInTheDocument()
+    // The dashboard never re-fetched to discover the shop it was just handed.
+    expect(api.listShops).toHaveBeenCalledTimes(callsBeforeSubmit)
   })
 })

@@ -11,7 +11,8 @@ module Api
           shops = current_vendor_profile.shops
           shops = shops.where(id: params[:shop_id]) if params[:shop_id].present?
           orders = Order.where(shop: shops)
-                        .includes(:order_items, :shop, :ratings, :conversation, customer_profile: %i[user default_address])
+                        .includes(:order_items, :shop, { ratings: { reviewer_user: :customer_profile } }, :conversation,
+                                  customer_profile: %i[user default_address])
                         .order(placed_at: :desc)
           unread = Messaging::UnreadOrders.for(orders: orders, user: current_user)
           # Every order here belongs to the vendor's one shop (Shop enforces

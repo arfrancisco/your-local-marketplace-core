@@ -116,5 +116,66 @@ RSpec.describe "Api::V1::Vendor Orders", type: :request do
       expect(returned[order_a.id]["rating"]["score"]).to eq(5)
       expect(returned[order_b.id]["rating"]["score"]).to eq(2)
     end
+
+    # QA review flagged that the two specs above only prove the *output* is
+    # correct, which held true even under the old per-order computation (same
+    # shop, same aggregate, either way) — so neither would fail if the
+    # hoisting were silently reverted. These count actual SQL queries against
+    # the tables involved, which would fail under the old code.
+    it "queries the shop's rating aggregate/count exactly once per request, not once per order" do
+      5.times { create(:order, shop: shop_a, customer_profile: customer.customer_profile) }
+      create(:rating, order: Order.where(shop: shop_a).first, reviewer_user: customer, reviewee: shop_a, score: 4)
+
+      average_queries = 0
+      count_queries = 0
+      callback = lambda do |*, payload|
+        sql = payload[:sql]
+        next unless sql.include?('"ratings"') && sql.exclude?("order_id")
+        average_queries += 1 if sql.match?(/\ASELECT AVG/i)
+        count_queries += 1 if sql.match?(/\ASELECT COUNT/i)
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        get "/api/v1/vendor/orders", headers: auth_headers(vendor_user)
+      end
+
+      expect(response).to have_http_status(:ok)
+      expect(average_queries).to eq(1)
+      expect(count_queries).to eq(1)
+    end
+
+    it "batches each rated order's reviewer_user/customer_profile lookup, not one pair of queries per rated order" do
+      users_and_customer_profiles_query_count = lambda do |&block|
+        counts = { users: 0, customer_profiles: 0 }
+        callback = lambda do |*, payload|
+          sql = payload[:sql]
+          counts[:users] += 1 if sql.match?(/\ASELECT.*FROM "users"/i)
+          counts[:customer_profiles] += 1 if sql.match?(/\ASELECT.*FROM "customer_profiles"/i)
+        end
+        ActiveSupport::Notifications.subscribed(callback, "sql.active_record", &block)
+        counts
+      end
+
+      order_one = create(:order, shop: shop_a, customer_profile: customer.customer_profile)
+      create(:rating, order: order_one, reviewer_user: customer, reviewee: shop_a, score: 5)
+      counts_with_one_rated_order = users_and_customer_profiles_query_count.call do
+        get "/api/v1/vendor/orders", headers: auth_headers(vendor_user)
+      end
+      expect(response).to have_http_status(:ok)
+
+      # 4 more rated orders, each by a distinct reviewer — if reviewer_user/
+      # customer_profile weren't batched, this would fire 4 more query pairs.
+      4.times do
+        reviewer = create(:user, :customer)
+        order = create(:order, shop: shop_a, customer_profile: reviewer.customer_profile)
+        create(:rating, order: order, reviewer_user: reviewer, reviewee: shop_a, score: 3)
+      end
+      counts_with_five_rated_orders = users_and_customer_profiles_query_count.call do
+        get "/api/v1/vendor/orders", headers: auth_headers(vendor_user)
+      end
+      expect(response).to have_http_status(:ok)
+
+      expect(counts_with_five_rated_orders).to eq(counts_with_one_rated_order)
+    end
   end
 end

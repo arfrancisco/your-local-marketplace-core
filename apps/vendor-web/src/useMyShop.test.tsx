@@ -161,6 +161,62 @@ describe('useMyShop', () => {
     expect(api.listShops).toHaveBeenCalledTimes(1)
   })
 
+  it('does not let the provider\'s own in-flight initial fetch clobber a shop set via setShop before that fetch resolves', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
+    // A deferred promise we resolve ourselves, so the test controls exactly
+    // when the provider's own listShops() call settles relative to setShop.
+    let resolveListShops!: (res: { shops: Shop[] }) => void
+    vi.mocked(api.listShops).mockReturnValue(
+      new Promise((resolve) => {
+        resolveListShops = resolve
+      }),
+    )
+
+    function ShopIdDisplay() {
+      const { shop, loading } = useMyShopState()
+      return (
+        <>
+          <div data-testid="shop-id">{shop?.id ?? 'null'}</div>
+          <div data-testid="loading">{String(loading)}</div>
+        </>
+      )
+    }
+    function CreateShopButton() {
+      const { setShop } = useMyShopState()
+      return <button onClick={() => setShop(baseShop({ id: 99 }))}>create</button>
+    }
+
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <MyShopProvider>
+            <ShopIdDisplay />
+            <CreateShopButton />
+          </MyShopProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => expect(api.listShops).toHaveBeenCalledTimes(1))
+    expect(screen.getByTestId('loading')).toHaveTextContent('true')
+
+    // setShop fires while the initial fetch above is still pending.
+    await userEvent.click(screen.getByRole('button', { name: 'create' }))
+    expect(screen.getByTestId('shop-id')).toHaveTextContent('99')
+    expect(screen.getByTestId('loading')).toHaveTextContent('false')
+
+    // The stale fetch now resolves with a *different* shop — it must not
+    // overwrite the one already set via setShop, and must not leave
+    // `loading` stuck (both were real bugs found by architect review).
+    await act(async () => {
+      resolveListShops({ shops: [baseShop({ id: 1 })] })
+    })
+
+    expect(screen.getByTestId('shop-id')).toHaveTextContent('99')
+    expect(screen.getByTestId('loading')).toHaveTextContent('false')
+  })
+
   it('exposes shop/loading/setShop via useMyShopState, and loading turns false once the shop resolves', async () => {
     setToken('tok123')
     vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
