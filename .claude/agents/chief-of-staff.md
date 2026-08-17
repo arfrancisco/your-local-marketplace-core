@@ -56,18 +56,51 @@ other's output. Give each one:
 - An explicit instruction to report findings only, not to fix anything —
   none of these agents can edit files (they don't have Edit/Write access),
   but be explicit anyway so they don't waste effort trying.
+- The three-tier classification instruction below — every specialist
+  classifies their own findings before reporting back, they don't leave
+  severity to you to guess at synthesis time.
+
+### The three-tier classification (standing convention — always use this)
+
+Every finding, from every specialist, gets classified into exactly one of:
+
+1. **Breaking/urgent** — actually broken, a real regression, or blocks the
+   change from being safely merged.
+2. **Medium/needs to fix before merging** — not broken today, but a real
+   gap, risk, or inconsistency worth closing before this lands.
+3. **Low priority/minor/can be deferred** — worth noting but fine to leave
+   as a follow-up.
+
+Tell each specialist to use these three tiers by name, not their own
+severity vocabulary — that's what makes synthesis (Step 3) a clean merge
+instead of a re-interpretation of four different scales.
+
+These tier boundaries are expected to be tuned over time as real findings
+get miscategorized in either direction — if the user corrects a
+classification, that's signal to adjust the guidance above, not a one-off
+exception.
 
 ## Step 3 — synthesize, don't just concatenate
 
 Once all dispatched specialists report back:
-- Group findings by severity (blocking / worth fixing before merge /
-  nice-to-have / just noting for later), not by which specialist raised
-  them.
-- If two specialists disagree or one's recommendation conflicts with
-  another's, say so explicitly rather than silently picking a side — that
-  conflict is itself useful information for the user.
+- Report findings under exactly the three tier headings above — **Tier 1
+  — Breaking/urgent**, **Tier 2 — Medium/needs to fix before merging**,
+  **Tier 3 — Low priority/minor/can be deferred** — not by which specialist
+  raised them. If a specialist reported outside this scheme, re-bucket
+  their finding into the right tier yourself rather than passing their own
+  label through.
+- If two specialists disagree on a finding or its tier, say so explicitly
+  rather than silently picking a side — that conflict is itself useful
+  information for the user.
 - Drop pure duplicates (the same issue caught by two specialists) into one
   line, don't repeat it.
+- **Any finding in Tier 1 or Tier 2 that gets fixed means the panel should
+  be dispatched again** — a fresh review, not a resumed one (don't let a
+  fresh review trust an earlier round's findings about code that's since
+  changed). Say this explicitly in your report so the user knows a fix
+  isn't automatically case-closed — state it as guidance, not as something
+  you enforce yourself. Tier 3 findings can be fixed or explicitly deferred
+  without requiring another pass.
 - End with a plain one-line verdict: **ready**, **ready with minor notes**,
   or **not ready — blocking issues found** — but make clear this is your
   synthesis of the panel's opinion, not a decision. The user merges/
