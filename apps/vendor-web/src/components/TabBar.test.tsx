@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { TabBar } from './TabBar'
 import { AuthProvider } from '../auth'
 import { MyShopProvider } from '../useMyShop'
+import { VendorOrdersPollProvider } from '../useVendorOrdersPoll'
 import { api, setToken } from '../api/client'
 import type { Order, Shop, User } from '../api/types'
 
@@ -96,7 +97,9 @@ function renderBar(initialEntries = ['/shops']) {
     <MemoryRouter initialEntries={initialEntries}>
       <AuthProvider>
         <MyShopProvider>
-          <TabBar />
+          <VendorOrdersPollProvider>
+            <TabBar />
+          </VendorOrdersPollProvider>
         </MyShopProvider>
       </AuthProvider>
     </MemoryRouter>,
@@ -116,7 +119,9 @@ describe('TabBar', () => {
       <MemoryRouter>
         <AuthProvider>
           <MyShopProvider>
-            <TabBar />
+            <VendorOrdersPollProvider>
+              <TabBar />
+            </VendorOrdersPollProvider>
           </MyShopProvider>
         </AuthProvider>
       </MemoryRouter>,

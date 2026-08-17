@@ -6,6 +6,7 @@ import { TourCallout } from '../components/TourCallout'
 import { HelpTourButton } from '../components/HelpTourButton'
 import { RatingSummary } from '../components/Ratings'
 import { OrderList } from '../components/OrderList'
+import { useMyShopState } from '../useMyShop'
 import { colorFor, emojiFor } from '../visuals'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
@@ -24,8 +25,7 @@ const TOUR_STOPS = 4
 // details, inventory, reviews) live behind the kebab menu instead of as
 // primary buttons.
 export function ShopDashboardPage() {
-  const [shop, setShop] = useState<Shop | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { shop, loading, setShop } = useMyShopState()
   const [busy, setBusy] = useState(false)
   const [pendingStatusChange, setPendingStatusChange] = useState<'open' | 'close' | null>(null)
   const [statusError, setStatusError] = useState<string | null>(null)
@@ -34,19 +34,11 @@ export function ShopDashboardPage() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    api
-      .listShops()
-      .then((res) => {
-        setShop(res.shops[0] ?? null)
-        // A vendor with no shop has nothing to see here — send them through
-        // onboarding instead of a bare empty dashboard. Derived from data
-        // (no shop), not a stored flag.
-        if (!res.shops[0]) {
-          navigate('/onboarding', { replace: true })
-        }
-      })
-      .finally(() => setLoading(false))
-  }, [navigate])
+    // A vendor with no shop has nothing to see here — send them through
+    // onboarding instead of a bare empty dashboard. Derived from data (no
+    // shop), not a stored flag.
+    if (!loading && !shop) navigate('/onboarding', { replace: true })
+  }, [loading, shop, navigate])
 
   function openTour() {
     setTourOpen(true)
@@ -200,7 +192,7 @@ export function ShopDashboardPage() {
 
       <div className="tour-anchor">
         <h2 className="section">Orders</h2>
-        <OrderList shopId={shop.id} />
+        <OrderList />
         {showTour && tourStep === 2 && (
           <TourCallout
             message="Incoming orders land here. You move each one forward yourself — accepted, preparing, ready — nothing changes automatically."

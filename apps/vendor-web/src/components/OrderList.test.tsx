@@ -3,8 +3,11 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { OrderList } from './OrderList'
-import { api } from '../api/client'
-import type { Order } from '../api/types'
+import { AuthProvider } from '../auth'
+import { MyShopProvider } from '../useMyShop'
+import { VendorOrdersPollProvider } from '../useVendorOrdersPoll'
+import { api, setToken } from '../api/client'
+import type { Order, Shop, User } from '../api/types'
 
 vi.mock('../api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/client')>()
@@ -12,10 +15,45 @@ vi.mock('../api/client', async (importOriginal) => {
     ...actual,
     api: {
       ...actual.api,
+      me: vi.fn(),
+      listShops: vi.fn(),
       listVendorOrders: vi.fn(),
     },
   }
 })
+
+function baseUser(overrides: Partial<User> = {}): User {
+  return {
+    id: 9,
+    email: 'vendor@example.com',
+    vendor_profile: { id: 1, display_name: "Lola's Kitchen", verification_status: 'verified' },
+    sms_notify_order_placed: true,
+    ...overrides,
+  }
+}
+
+function baseShop(overrides: Partial<Shop> = {}): Shop {
+  return {
+    id: 1,
+    name: "Lola's Kitchen",
+    slug: 'lolas-kitchen',
+    description: null,
+    building: 'Astra',
+    fulfillment_methods: ['pickup'],
+    status: 'active',
+    accepting_orders: true,
+    open: true,
+    profile_photo: null,
+    cover_photo: null,
+    average_rating: null,
+    ratings_count: 0,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+    demo: false,
+    verified: true,
+    ...overrides,
+  }
+}
 
 function makeOrder(overrides: Partial<Order>): Order {
   return {
@@ -58,7 +96,13 @@ function makeOrder(overrides: Partial<Order>): Order {
 function renderList() {
   return render(
     <MemoryRouter>
-      <OrderList shopId={1} />
+      <AuthProvider>
+        <MyShopProvider>
+          <VendorOrdersPollProvider>
+            <OrderList />
+          </VendorOrdersPollProvider>
+        </MyShopProvider>
+      </AuthProvider>
     </MemoryRouter>,
   )
 }
@@ -66,6 +110,9 @@ function renderList() {
 describe('OrderList', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
+    vi.mocked(api.listShops).mockResolvedValue({ shops: [baseShop()] })
   })
 
   it('renders exactly "No orders yet." when there are none, for ShopDashboardPage compatibility', async () => {

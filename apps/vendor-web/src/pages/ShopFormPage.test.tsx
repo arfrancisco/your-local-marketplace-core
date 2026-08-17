@@ -3,8 +3,10 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ShopFormPage } from './ShopFormPage'
-import { api } from '../api/client'
-import type { Shop } from '../api/types'
+import { AuthProvider } from '../auth'
+import { MyShopProvider } from '../useMyShop'
+import { api, setToken } from '../api/client'
+import type { Shop, User } from '../api/types'
 
 // react-easy-crop is a real drag/zoom canvas widget: jsdom never loads the
 // image behind it, so its onCropComplete would never fire and there'd be
@@ -37,6 +39,7 @@ vi.mock('../api/client', async (importOriginal) => {
     ...actual,
     api: {
       ...actual.api,
+      me: vi.fn(),
       listShops: vi.fn(),
       getShop: vi.fn(),
       createShop: vi.fn(),
@@ -45,6 +48,16 @@ vi.mock('../api/client', async (importOriginal) => {
     },
   }
 })
+
+function baseUser(overrides: Partial<User> = {}): User {
+  return {
+    id: 9,
+    email: 'vendor@example.com',
+    vendor_profile: { id: 1, display_name: "Lola's Kitchen", verification_status: 'verified' },
+    sms_notify_order_placed: true,
+    ...overrides,
+  }
+}
 
 const existingShop: Shop = {
   id: 5,
@@ -99,10 +112,14 @@ beforeAll(() => {
 function renderAt(path: string, routePath: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path={routePath} element={<ShopFormPage />} />
-        <Route path="/shops" element={<p>Dashboard</p>} />
-      </Routes>
+      <AuthProvider>
+        <MyShopProvider>
+          <Routes>
+            <Route path={routePath} element={<ShopFormPage />} />
+            <Route path="/shops" element={<p>Dashboard</p>} />
+          </Routes>
+        </MyShopProvider>
+      </AuthProvider>
     </MemoryRouter>,
   )
 }
@@ -124,6 +141,8 @@ function readText(blob: Blob): Promise<string> {
 describe('ShopFormPage photo cropping', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
     vi.mocked(api.listShops).mockResolvedValue({ shops: [] })
     vi.mocked(api.getShop).mockResolvedValue({ shop: existingShop })
     vi.mocked(api.createShop).mockResolvedValue({ shop: existingShop })
@@ -225,6 +244,8 @@ describe('ShopFormPage photo cropping', () => {
 describe('ShopFormPage back navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
     vi.mocked(api.listShops).mockResolvedValue({ shops: [] })
     vi.mocked(api.getShop).mockResolvedValue({ shop: existingShop })
     vi.mocked(api.listShopRatings).mockResolvedValue({ ratings: [] })
@@ -262,6 +283,8 @@ describe('ShopFormPage back navigation', () => {
 describe('ShopFormPage onboarding tour', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
     vi.mocked(api.listShops).mockResolvedValue({ shops: [] })
     vi.mocked(api.createShop).mockResolvedValue({ shop: existingShop })
   })
@@ -269,7 +292,11 @@ describe('ShopFormPage onboarding tour', () => {
   function renderForm() {
     render(
       <MemoryRouter>
-        <ShopFormPage />
+        <AuthProvider>
+          <MyShopProvider>
+            <ShopFormPage />
+          </MyShopProvider>
+        </AuthProvider>
       </MemoryRouter>,
     )
   }

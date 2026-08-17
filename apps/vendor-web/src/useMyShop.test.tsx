@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, useNavigate } from 'react-router-dom'
-import { useMyShop, MyShopProvider } from './useMyShop'
+import { MemoryRouter } from 'react-router-dom'
+import { useMyShop, useMyShopState, MyShopProvider } from './useMyShop'
 import { AuthProvider } from './auth'
 import { api, setToken } from './api/client'
 import type { Shop, User } from './api/types'
@@ -119,19 +119,22 @@ describe('useMyShop', () => {
     vi.useRealTimers()
   })
 
-  it('resolves the shop once it exists, after a later navigation (e.g. finishing onboarding) — found live via become-a-vendor.spec.ts, where the Inventory tab never appeared without this', async () => {
+  it('picks up a shop created via setShop immediately, with no refetch needed — found live via become-a-vendor.spec.ts, where the dashboard bounced back to onboarding right after shop creation without this', async () => {
     setToken('tok123')
     vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
     // No shop yet — the real onboarding flow's state at first mount.
-    vi.mocked(api.listShops).mockResolvedValueOnce({ shops: [] })
+    vi.mocked(api.listShops).mockResolvedValue({ shops: [] })
 
     function ShopIdDisplay() {
       const shopId = useMyShop()
       return <div data-testid="shop-id">{shopId ?? 'null'}</div>
     }
-    function NavigateButton() {
-      const navigate = useNavigate()
-      return <button onClick={() => navigate('/shops')}>go</button>
+    // Stands in for ShopFormPage's submit handler, which calls setShop
+    // directly with the API response — not a refetch — right after creating
+    // a shop, before navigating to the dashboard.
+    function CreateShopButton() {
+      const { setShop } = useMyShopState()
+      return <button onClick={() => setShop(baseShop({ id: 99 }))}>create</button>
     }
 
     render(
@@ -139,7 +142,7 @@ describe('useMyShop', () => {
         <AuthProvider>
           <MyShopProvider>
             <ShopIdDisplay />
-            <NavigateButton />
+            <CreateShopButton />
           </MyShopProvider>
         </AuthProvider>
       </MemoryRouter>,
@@ -151,11 +154,48 @@ describe('useMyShop', () => {
     await waitFor(() => expect(api.listShops).toHaveBeenCalledTimes(1))
     expect(screen.getByTestId('shop-id')).toHaveTextContent('null')
 
-    // The shop now exists (just created) — a later navigation should pick
-    // it up without needing a full page reload.
-    vi.mocked(api.listShops).mockResolvedValueOnce({ shops: [baseShop({ id: 99 })] })
-    await userEvent.click(screen.getByRole('button', { name: 'go' }))
+    await userEvent.click(screen.getByRole('button', { name: 'create' }))
 
-    await waitFor(() => expect(screen.getByTestId('shop-id')).toHaveTextContent('99'))
+    expect(screen.getByTestId('shop-id')).toHaveTextContent('99')
+    // No second fetch — the context was updated directly, not rediscovered.
+    expect(api.listShops).toHaveBeenCalledTimes(1)
+  })
+
+  it('exposes shop/loading/setShop via useMyShopState, and loading turns false once the shop resolves', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
+    vi.mocked(api.listShops).mockResolvedValue({ shops: [baseShop({ id: 42 })] })
+
+    const { result } = renderHook(() => useMyShopState(), {
+      wrapper: ({ children }) => (
+        <MemoryRouter>
+          <AuthProvider>
+            <MyShopProvider>{children}</MyShopProvider>
+          </AuthProvider>
+        </MemoryRouter>
+      ),
+    })
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.shop?.id).toBe(42)
+  })
+
+  it('stops loading (self-heals) instead of hanging forever when listShops rejects', async () => {
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
+    vi.mocked(api.listShops).mockRejectedValue(new Error('network error'))
+
+    const { result } = renderHook(() => useMyShopState(), {
+      wrapper: ({ children }) => (
+        <MemoryRouter>
+          <AuthProvider>
+            <MyShopProvider>{children}</MyShopProvider>
+          </AuthProvider>
+        </MemoryRouter>
+      ),
+    })
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.shop).toBeNull()
   })
 })

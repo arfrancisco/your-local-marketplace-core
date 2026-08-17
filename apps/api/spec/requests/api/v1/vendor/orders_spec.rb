@@ -87,5 +87,34 @@ RSpec.describe "Api::V1::Vendor Orders", type: :request do
       json_order = json["orders"].find { |o| o["id"] == order_a.id }
       expect(json_order["has_unread_messages"]).to eq(false)
     end
+
+    it "reports the same shop-level rating aggregate on every order, precomputed once for the vendor's one shop" do
+      other_customer = create(:user, :customer)
+      order_a = create(:order, shop: shop_a, customer_profile: customer.customer_profile)
+      order_b = create(:order, shop: shop_a, customer_profile: other_customer.customer_profile)
+      create(:rating, order: order_a, reviewer_user: customer, reviewee: shop_a, score: 4)
+
+      get "/api/v1/vendor/orders", headers: auth_headers(vendor_user)
+      returned = json["orders"].index_by { |o| o["id"] }
+
+      expect(returned[order_a.id]["shop_average_rating"]).to eq(4.0)
+      expect(returned[order_a.id]["shop_ratings_count"]).to eq(1)
+      expect(returned[order_b.id]["shop_average_rating"]).to eq(4.0)
+      expect(returned[order_b.id]["shop_ratings_count"]).to eq(1)
+    end
+
+    it "reports each order's own rating, not another order's, once shop-level aggregates are precomputed" do
+      other_customer = create(:user, :customer)
+      order_a = create(:order, shop: shop_a, customer_profile: customer.customer_profile)
+      order_b = create(:order, shop: shop_a, customer_profile: other_customer.customer_profile)
+      create(:rating, order: order_a, reviewer_user: customer, reviewee: shop_a, score: 5, comment: "Loved it")
+      create(:rating, order: order_b, reviewer_user: other_customer, reviewee: shop_a, score: 2, comment: "Meh")
+
+      get "/api/v1/vendor/orders", headers: auth_headers(vendor_user)
+      returned = json["orders"].index_by { |o| o["id"] }
+
+      expect(returned[order_a.id]["rating"]["score"]).to eq(5)
+      expect(returned[order_b.id]["rating"]["score"]).to eq(2)
+    end
   end
 end

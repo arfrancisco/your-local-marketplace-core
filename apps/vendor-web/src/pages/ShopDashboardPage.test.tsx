@@ -3,8 +3,11 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ShopDashboardPage } from './ShopDashboardPage'
-import { api } from '../api/client'
-import type { Shop } from '../api/types'
+import { AuthProvider } from '../auth'
+import { MyShopProvider } from '../useMyShop'
+import { VendorOrdersPollProvider } from '../useVendorOrdersPoll'
+import { api, setToken } from '../api/client'
+import type { Shop, User } from '../api/types'
 
 vi.mock('../api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/client')>()
@@ -12,6 +15,7 @@ vi.mock('../api/client', async (importOriginal) => {
     ...actual,
     api: {
       ...actual.api,
+      me: vi.fn(),
       listShops: vi.fn(),
       openShop: vi.fn(),
       closeShop: vi.fn(),
@@ -19,6 +23,16 @@ vi.mock('../api/client', async (importOriginal) => {
     },
   }
 })
+
+function baseUser(overrides: Partial<User> = {}): User {
+  return {
+    id: 9,
+    email: 'vendor@example.com',
+    vendor_profile: { id: 1, display_name: "Lola's Kitchen", verification_status: 'verified' },
+    sms_notify_order_placed: true,
+    ...overrides,
+  }
+}
 
 const shopOpen: Shop = {
   id: 1,
@@ -45,10 +59,16 @@ const shopClosed: Shop = { ...shopOpen, accepting_orders: false, open: false }
 function renderAt(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path="/shops" element={<ShopDashboardPage />} />
-        <Route path="/onboarding" element={<p>Onboarding page</p>} />
-      </Routes>
+      <AuthProvider>
+        <MyShopProvider>
+          <VendorOrdersPollProvider>
+            <Routes>
+              <Route path="/shops" element={<ShopDashboardPage />} />
+              <Route path="/onboarding" element={<p>Onboarding page</p>} />
+            </Routes>
+          </VendorOrdersPollProvider>
+        </MyShopProvider>
+      </AuthProvider>
     </MemoryRouter>,
   )
 }
@@ -56,6 +76,8 @@ function renderAt(path: string) {
 describe('ShopDashboardPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
     // Order management is now the dashboard's main content, so it always
     // fetches orders on render — default to an empty list unless a test
     // cares about the actual contents.
@@ -150,6 +172,8 @@ describe('ShopDashboardPage', () => {
 describe('ShopDashboardPage onboarding tour', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
     vi.mocked(api.listVendorOrders).mockResolvedValue({ orders: [] })
     vi.mocked(api.listShops).mockResolvedValue({ shops: [shopOpen] })
   })
@@ -157,7 +181,13 @@ describe('ShopDashboardPage onboarding tour', () => {
   function renderDashboard() {
     render(
       <MemoryRouter>
-        <ShopDashboardPage />
+        <AuthProvider>
+          <MyShopProvider>
+            <VendorOrdersPollProvider>
+              <ShopDashboardPage />
+            </VendorOrdersPollProvider>
+          </MyShopProvider>
+        </AuthProvider>
       </MemoryRouter>,
     )
   }

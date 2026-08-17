@@ -5,6 +5,7 @@ import type { FulfillmentMethod, Shop } from '../api/types'
 import { TourCallout } from '../components/TourCallout'
 import { HelpTourButton } from '../components/HelpTourButton'
 import { ImageCropModal } from '../components/ImageCropModal'
+import { useMyShopState } from '../useMyShop'
 
 const METHODS: FulfillmentMethod[] = ['pickup', 'delivery']
 
@@ -32,6 +33,7 @@ export function ShopFormPage() {
   const { id } = useParams()
   const editing = Boolean(id)
   const navigate = useNavigate()
+  const { setShop: setMyShop } = useMyShopState()
   // Numbered top-to-bottom, matching the form's own field order: 0 = name/
   // description, 1 = building/tower, 2 = fulfillment, 3 = shop photos,
   // 4 = opening message/QR — an optional, on-demand tour behind the "?"
@@ -143,8 +145,12 @@ export function ShopFormPage() {
     if (openingMessagePhotos) Array.from(openingMessagePhotos).forEach((f) => fd.append('shop[opening_message_photos][]', f))
 
     try {
-      if (editing) await api.updateShop(Number(id), fd)
-      else await api.createShop(fd)
+      // Push the result into the shared MyShopProvider context directly,
+      // rather than letting ShopDashboardPage/TabBar rediscover it via a
+      // fetch after navigating — a fetch here would race the new route's
+      // own mount (see useMyShop.tsx).
+      const res = editing ? await api.updateShop(Number(id), fd) : await api.createShop(fd)
+      setMyShop(res.shop)
       navigate('/shops')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save shop')

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, Link } from 'react-router-dom'
 import { type ReactNode } from 'react'
 import { useAuth } from './auth'
 import { MyShopProvider } from './useMyShop'
+import { VendorOrdersPollProvider } from './useVendorOrdersPoll'
 import { Footer } from './components/Footer'
 import { TabBar } from './components/TabBar'
 import { LoginPage } from './pages/LoginPage'
@@ -60,31 +61,33 @@ function BetaBanner() {
 export default function App() {
   return (
     <MyShopProvider>
-      <BetaBanner />
-      <Header />
-      <main className="container">
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/onboarding" element={<RequireAuth><OnboardingPage /></RequireAuth>} />
-          <Route path="/account" element={<RequireAuth><AccountPage /></RequireAuth>} />
-          <Route path="/shops" element={<RequireAuth><ShopDashboardPage /></RequireAuth>} />
-          <Route path="/shops/new" element={<RequireAuth><ShopFormPage /></RequireAuth>} />
-          <Route path="/shops/:id/edit" element={<RequireAuth><ShopFormPage /></RequireAuth>} />
-          <Route path="/shops/:id/preview" element={<RequireAuth><ShopPreviewPage /></RequireAuth>} />
-          <Route path="/shops/:id/reviews" element={<RequireAuth><ShopReviewsPage /></RequireAuth>} />
-          <Route path="/shops/:id/items" element={<RequireAuth><ItemsPage /></RequireAuth>} />
-          <Route path="/orders/:id" element={<RequireAuth><OrderDetailPage /></RequireAuth>} />
-          <Route path="*" element={<Navigate to="/shops" replace />} />
-        </Routes>
+      <VendorOrdersPollProvider>
+        <BetaBanner />
+        <Header />
+        <main className="container">
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/onboarding" element={<RequireAuth><OnboardingPage /></RequireAuth>} />
+            <Route path="/account" element={<RequireAuth><AccountPage /></RequireAuth>} />
+            <Route path="/shops" element={<RequireAuth><ShopDashboardPage /></RequireAuth>} />
+            <Route path="/shops/new" element={<RequireAuth><ShopFormPage /></RequireAuth>} />
+            <Route path="/shops/:id/edit" element={<RequireAuth><ShopFormPage /></RequireAuth>} />
+            <Route path="/shops/:id/preview" element={<RequireAuth><ShopPreviewPage /></RequireAuth>} />
+            <Route path="/shops/:id/reviews" element={<RequireAuth><ShopReviewsPage /></RequireAuth>} />
+            <Route path="/shops/:id/items" element={<RequireAuth><ItemsPage /></RequireAuth>} />
+            <Route path="/orders/:id" element={<RequireAuth><OrderDetailPage /></RequireAuth>} />
+            <Route path="*" element={<Navigate to="/shops" replace />} />
+          </Routes>
 
-        {/* Inside .container, not a sibling after it — .container now
-            reserves bottom padding for the fixed TabBar below every page
-            (see index.css), so content here, footer included, never ends
-            up hidden behind it. Matches customer-web's App.tsx. */}
-        <Footer />
-      </main>
+          {/* Inside .container, not a sibling after it — .container now
+              reserves bottom padding for the fixed TabBar below every page
+              (see index.css), so content here, footer included, never ends
+              up hidden behind it. Matches customer-web's App.tsx. */}
+          <Footer />
+        </main>
 
-      <TabBar />
+        <TabBar />
+      </VendorOrdersPollProvider>
     </MyShopProvider>
   )
 }

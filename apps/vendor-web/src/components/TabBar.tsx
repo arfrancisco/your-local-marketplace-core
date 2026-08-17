@@ -1,8 +1,7 @@
 import { NavLink, type NavLinkRenderProps } from 'react-router-dom'
-import { useEffect, useState } from 'react'
 import { useAuth } from '../auth'
 import { useMyShop } from '../useMyShop'
-import { api } from '../api/client'
+import { useVendorOrdersPoll } from '../useVendorOrdersPoll'
 import { customerWebUrl } from '../customerWeb'
 import { PILL_GROUPS, STATUS_GROUPS } from '../orderStatus'
 import type { OrderStatus } from '../api/types'
@@ -12,38 +11,12 @@ import type { OrderStatus } from '../api/types'
 // customer-web's ACTIVE_ORDER_STATUSES, reused rather than duplicated.
 const ATTENTION_STATUSES: OrderStatus[] = PILL_GROUPS.flatMap((key) => STATUS_GROUPS[key].statuses)
 
-const POLL_MS = 45_000
-
-// Single consumer (this tab bar) — a plain hook, not a shared context.
-// customer-web's useOrdersPoll started this way too and only needed
-// extracting into a context once a second consumer (RatingNudgeModal)
-// showed up; no second consumer here yet, so a context would be
-// premature. Revisit if one appears.
+// A pure derivation over the shared VendorOrdersPollProvider snapshot
+// (App.tsx) — OrderList reads the same snapshot, so this and the order
+// list no longer run two independent 45s polls against the same endpoint.
 function useHomeAttentionDot(): boolean {
-  const shopId = useMyShop()
-  const [hasAttention, setHasAttention] = useState(false)
-
-  useEffect(() => {
-    if (!shopId) {
-      setHasAttention(false)
-      return
-    }
-    let cancelled = false
-    function poll() {
-      api.listVendorOrders(shopId!).then((res) => {
-        if (cancelled) return
-        setHasAttention(res.orders.some((o) => ATTENTION_STATUSES.includes(o.status) && o.has_unread_messages))
-      })
-    }
-    poll()
-    const interval = setInterval(poll, POLL_MS)
-    return () => {
-      cancelled = true
-      clearInterval(interval)
-    }
-  }, [shopId])
-
-  return hasAttention
+  const orders = useVendorOrdersPoll()
+  return orders.some((o) => ATTENTION_STATUSES.includes(o.status) && o.has_unread_messages)
 }
 
 // Plain stroked outline icons, matching this app's (and customer-web's)
