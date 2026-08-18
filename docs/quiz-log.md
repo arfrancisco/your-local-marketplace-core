@@ -27,9 +27,9 @@ Nothing here needs hand-editing, but feel free.
 | 2 | Shape and shipping | 2026-08-07 | 2026-08-10 | 4/6 | ok |
 | 3 | Identity and authentication | 2026-08-10 | 2026-08-13 | 4/6 | ok |
 | 4 | Authorization | 2026-08-13 | pending | pending | pending |
-| 5 | Data model and the snapshot rule | 2026-08-14 | - | - | - |
-| 6 | Discovery | 2026-08-17 | - | - | - |
-| 7 | Cart and checkout | - | - | - | - |
+| 5 | Data model and the snapshot rule | 2026-08-14 | pending | pending | pending |
+| 6 | Discovery | 2026-08-17 | pending | pending | pending |
+| 7 | Cart and checkout | 2026-08-18 | - | - | - |
 | 8 | Order lifecycle | - | - | - | - |
 | 9 | Chat, payment, ratings | - | - | - | - |
 | 10 | Operations surface | - | - | - | - |
@@ -38,6 +38,56 @@ Nothing here needs hand-editing, but feel free.
 ## Session log
 
 Newest first.
+
+### 2026-08-18 — Quiz: lessons 4+5+6 combined review (posted, awaiting answers) · Taught: lesson 7
+
+Third consecutive automated session with no live user present and no
+interactive question tool in the toolset (confirmed again via a tool
+search this session — not just unused). The lesson-4 quiz posted 2026-08-14
+and reposted 2026-08-17 is still ungraded; separately, lesson 5 (taught
+2026-08-14) and lesson 6 (taught 2026-08-17) have never been quizzed at
+all. Rather than posting a fourth isolated, still-unanswerable set, this
+session wrote one combined 6-question review spanning all three backlogged
+lessons — recall (three authorization layers), reasoning (why
+`ShopRotation`'s modulo uses the current result set's count, not the
+platform-wide open-shop count), and scenario (a vendor requesting another
+vendor's private note → 404 not 403; a vendor completing an order they
+don't own → caught by `OrderPolicy#transition?`, not the controller's
+customer-only-cancel rule) questions, plus one requiring the live code:
+opened `apps/api/app/models/item.rb` to confirm `Item.enabled` the *scope*
+excludes `archived_at` rows even when the `enabled` column is `true`,
+which the `enabled?` *attribute* reader does not. All six were written
+straight from `04-authorization.md`, `05-data-model.md`, and
+`06-discovery.md`, not from memory of this prompt. Posted as text in the
+session for whenever Alain next answers live — nothing here can grade
+itself.
+
+**Worth surfacing plainly:** three sessions running, Part 1 of this daily
+routine has been unable to complete, because AskUserQuestion (or any
+turn-blocking interactive tool) is absent from scheduled/automated runs,
+and because separate scheduled sessions don't share transcripts, so even
+posting questions as text and hoping for a reply next time doesn't work —
+there is no "next time" continuity. Flagged to Alain via notification.
+Recommend one of: (a) only run the quiz portion when he triggers this
+skill live and can answer in real time, letting the automated schedule
+handle lesson delivery only, or (b) accept that quizzing just won't happen
+automatically and drop Part 1 from the scheduled version of this routine.
+
+Delivered lesson 7 in full: ADR 0004's deferral and ADR 0008's reversal of
+it (`POST /orders` from ADR 0003 is dead, its state machine is not), one
+cart per shop on the backend vs. customer-web's stricter
+one-shop-at-a-time policy, the guest cart's per-shop localStorage shape
+and its line-by-line replay into the real cart on login (so a
+now-unavailable item fails on its own terms instead of a bulk path needing
+its own validation), the `CartController` thin-controller shape, the four
+checkout gates in order (email verified → 403; cart non-empty → 422;
+fulfillment method valid globally *and* for this shop → 422; every item
+still enabled/in-stock/unarchived → 422 with `unavailable_items`, and why
+that's all-or-nothing rather than dropping lines), the five-step
+transaction and why cart-to-`converted` must be inside it, and the two
+deliberate omissions (no address collected, no payment message
+auto-posted) with the ADR 0009 revision that moved the payment panel to a
+live-read pinned view instead of a chat message.
 
 ### 2026-08-17 — Quiz: lesson 4 (reposted, still awaiting answers) · Taught: lesson 6
 
@@ -179,8 +229,16 @@ the three misconceptions.
 
 ## Next up
 
-**Grade the lesson 4 quiz** posted in the 2026-08-17 session (6 questions,
-still open — grade it here when Alain replies, and backfill the mastery
-row). Lesson 5 was taught 2026-08-14 but has never been quizzed on its own —
-fold it into the next quiz round (either a dedicated lesson-5 quiz, or a
-combined 4+5 review) before teaching **lesson 7 — cart and checkout.**
+**Structural blocker, not just a scheduling gap:** three scheduled sessions
+in a row (2026-08-14, -17, -18) have been unable to grade a quiz, because
+there is no interactive tool in automated runs and separate scheduled
+sessions don't share transcripts with each other. **Grade the combined
+lessons 4+5+6 review** posted in the 2026-08-18 session (6 questions,
+still open) the next time this runs as a *live* session with Alain
+actually present to answer — and backfill all three mastery rows then.
+Until that happens, do not keep appending new unanswerable question sets;
+re-post the same 2026-08-18 six or ask live instead.
+
+Lesson 7 was taught 2026-08-18. **Lesson 8 — the order lifecycle** is next
+in the teaching sequence regardless of quiz status, per this log's own
+cadence rule (teach happens every session; quiz grading is what's stuck).
