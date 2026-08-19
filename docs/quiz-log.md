@@ -30,7 +30,7 @@ Nothing here needs hand-editing, but feel free.
 | 5 | Data model and the snapshot rule | 2026-08-14 | pending | pending | pending |
 | 6 | Discovery | 2026-08-17 | pending | pending | pending |
 | 7 | Cart and checkout | 2026-08-18 | - | - | - |
-| 8 | Order lifecycle | - | - | - | - |
+| 8 | Order lifecycle | 2026-08-19 | - | - | - |
 | 9 | Chat, payment, ratings | - | - | - | - |
 | 10 | Operations surface | - | - | - | - |
 | 11 | Pre-beta review | - | - | - | - |
@@ -38,6 +38,45 @@ Nothing here needs hand-editing, but feel free.
 ## Session log
 
 Newest first.
+
+### 2026-08-19 — No quiz (blocked, unchanged) · Taught: lesson 8
+
+Fourth consecutive automated session with no live user present and no
+interactive question tool in the toolset — checked again this session via
+both a direct `select:AskUserQuestion` lookup and a broader keyword search,
+neither found one. Per the instruction this log itself left in "Next up"
+after the 2026-08-18 session, did not write a fifth unanswerable question
+set. The combined lessons 4+5+6 review posted 2026-08-18 is still the one
+to grade, the next time this runs live with Alain present. Nothing new to
+add to that diagnosis beyond confirming it again; see the 2026-08-18 entry
+below for the full explanation and the two proposed fixes, still both on
+the table and still unactioned.
+
+Delivered lesson 8 in full: the eight-state machine and its picture,
+the four structural properties (cancellation closes early and is a default
+nobody has ratified — open decision #3; `rejected` vs. `cancelled` are
+different terminal states with different reason lists; `preparing` is the
+one fork, rejoining at `completed`; three terminal states), the
+timestamp-column table and why the columns are a denormalized convenience
+over the real record (`order_status_events`), `Orders::TransitionStatus`
+as the only door and the two claims in its header comment (never inferred
+from chat; enforces legality not eligibility — lesson 4's three-layer
+split again), the transaction boundary (status change + audit event atomic,
+system chat message posted after, so a broadcast failure can't roll back
+real state), the two separate cancellation-reason lists and why `other`
+requires free text, why `"cancelled"` is absent from the static
+`SYSTEM_MESSAGE_TEXT` table in favor of a composed message, the
+controller-level customers-may-only-cancel rule and the resulting
+permission table (vendor does every move except cancel, including
+`completed`), what actually shipped in place of ADR 0005's deferred formal
+edits (`EditItems`: vendor-only, `placed/accepted/preparing` only,
+whole-batch validation with a cross-shop guard, quantity-0-removes/
+unknown-id-adds, and the one deliberate snapshot-rule exception —
+edited/added lines reprice at the current `item.price_cents`), and
+`payment_status` as a fully independent, vendor-set, idempotent axis with
+nothing in the state machine consulting it. Walked the full cradle-to-grave
+example including the `preparing`-stage cancel attempt (422, the open
+decision made concrete) and the mid-prep item swap.
 
 ### 2026-08-18 — Quiz: lessons 4+5+6 combined review (posted, awaiting answers) · Taught: lesson 7
 
@@ -229,16 +268,25 @@ the three misconceptions.
 
 ## Next up
 
-**Structural blocker, not just a scheduling gap:** three scheduled sessions
-in a row (2026-08-14, -17, -18) have been unable to grade a quiz, because
-there is no interactive tool in automated runs and separate scheduled
-sessions don't share transcripts with each other. **Grade the combined
-lessons 4+5+6 review** posted in the 2026-08-18 session (6 questions,
-still open) the next time this runs as a *live* session with Alain
-actually present to answer — and backfill all three mastery rows then.
-Until that happens, do not keep appending new unanswerable question sets;
-re-post the same 2026-08-18 six or ask live instead.
+**Structural blocker, not just a scheduling gap:** four scheduled sessions
+in a row now (2026-08-14, -17, -18, -19) have been unable to grade a quiz,
+because there is no interactive tool in automated runs and separate
+scheduled sessions don't share transcripts with each other. **Grade the
+combined lessons 4+5+6 review** posted in the 2026-08-18 session (6
+questions, still open) the next time this runs as a *live* session with
+Alain actually present to answer — and backfill all three mastery rows
+then. Do not keep appending new unanswerable question sets; re-post the
+same 2026-08-18 six or ask live instead.
 
-Lesson 7 was taught 2026-08-18. **Lesson 8 — the order lifecycle** is next
-in the teaching sequence regardless of quiz status, per this log's own
-cadence rule (teach happens every session; quiz grading is what's stuck).
+This has now recurred enough times that the two options from the
+2026-08-18 entry are worth actually deciding between rather than
+re-flagging indefinitely: (a) only run Part 1 (the quiz) when this skill
+is triggered live and Alain can answer in real time, letting the
+schedule handle lesson delivery only; or (b) drop Part 1 from the
+scheduled version of this routine entirely and quiz only on request.
+Flagged again via notification.
+
+Lesson 8 was taught 2026-08-19. **Lesson 9 — chat, payment, and ratings**
+is next in the teaching sequence regardless of quiz status, per this log's
+own cadence rule (teach happens every session; quiz grading is what's
+stuck).
