@@ -31,13 +31,47 @@ Nothing here needs hand-editing, but feel free.
 | 6 | Discovery | 2026-08-17 | pending | pending | pending |
 | 7 | Cart and checkout | 2026-08-18 | - | - | - |
 | 8 | Order lifecycle | 2026-08-19 | - | - | - |
-| 9 | Chat, payment, ratings | - | - | - | - |
+| 9 | Chat, payment, ratings | 2026-08-20 | - | - | - |
 | 10 | Operations surface | - | - | - | - |
 | 11 | Pre-beta review | - | - | - | - |
 
 ## Session log
 
 Newest first.
+
+### 2026-08-20 — No quiz (blocked, unchanged) · Taught: lesson 9
+
+Fifth consecutive automated session with no live user and no interactive
+question tool (`select:AskUserQuestion` and a broader keyword search both
+came back empty again). Per this log's own "Next up" instruction from the
+2026-08-19 session, did not write a sixth unanswerable question set. The
+combined lessons 4+5+6 review posted 2026-08-18 remains the one to grade
+the next time Alain is live in this routine. Not re-flagging via
+notification this time — the structural blocker is unchanged from what was
+already pushed to him after the 08-18 and 08-19 sessions, and a third
+identical ping would be noise, not new information. See those two entries
+for the full diagnosis and the still-open (a)/(b) decision.
+
+Delivered lesson 9 in full: one conversation per order (created empty by
+`Carts::Checkout`, looked up by `order_id` not conversation id, separate
+`show?`/`post_message?` permissions), `PostMessage`'s save-then-broadcast
+order and its three message types (`text`/`image`/`system`, both `body`
+and `sender_user` nullable), `OrderChatChannel` re-implementing the
+ownership check instead of calling `ConversationPolicy` because Pundit is
+controller-shaped, the two-query `UnreadOrders` cursor design (ids not
+timestamps, the NULL-sender `IS NULL OR` defense against SQL three-valued
+logic, and attribution alone producing the badge asymmetry on status-change
+system messages), the payment panel as ADR 0009's revised live-read design
+(gated on `ShopSerializer`, safe on `OrderSerializer` because orders are
+already participant-scoped) versus the ADR text's stale
+auto-posted-first-message description, the sharpest rule (chat narrates,
+never drives — state changes produce messages, messages never produce
+state changes) with the argument against message-parsed auto-payment
+detection, and `Ratings::Create`'s two service-layer gates
+(`completed` status, customer-only) plus the DB uniqueness constraint as
+the actual guarantee against double-rating. Spot-checked
+`post_message.rb`, `unread_orders.rb`, and `ratings/create.rb` against the
+lesson text before teaching — all three matched exactly, no drift.
 
 ### 2026-08-19 — No quiz (blocked, unchanged) · Taught: lesson 8
 
@@ -268,9 +302,9 @@ the three misconceptions.
 
 ## Next up
 
-**Structural blocker, not just a scheduling gap:** four scheduled sessions
-in a row now (2026-08-14, -17, -18, -19) have been unable to grade a quiz,
-because there is no interactive tool in automated runs and separate
+**Structural blocker, not just a scheduling gap:** five scheduled sessions
+in a row now (2026-08-14, -17, -18, -19, -20) have been unable to grade a
+quiz, because there is no interactive tool in automated runs and separate
 scheduled sessions don't share transcripts with each other. **Grade the
 combined lessons 4+5+6 review** posted in the 2026-08-18 session (6
 questions, still open) the next time this runs as a *live* session with
@@ -278,15 +312,16 @@ Alain actually present to answer — and backfill all three mastery rows
 then. Do not keep appending new unanswerable question sets; re-post the
 same 2026-08-18 six or ask live instead.
 
-This has now recurred enough times that the two options from the
-2026-08-18 entry are worth actually deciding between rather than
-re-flagging indefinitely: (a) only run Part 1 (the quiz) when this skill
-is triggered live and Alain can answer in real time, letting the
-schedule handle lesson delivery only; or (b) drop Part 1 from the
-scheduled version of this routine entirely and quiz only on request.
-Flagged again via notification.
+The two options from the 2026-08-18 entry — (a) only run Part 1 when this
+skill is triggered live, letting the schedule handle lesson delivery only,
+or (b) drop Part 1 from the scheduled version entirely — are still both on
+the table. This was flagged via notification after the 08-18 and 08-19
+sessions; not re-flagged this session since nothing about the blocker has
+changed and a third identical ping would just be noise. Still worth Alain
+actually deciding between (a)/(b) next time he's here live, so this stops
+needing a fresh diagnosis every session.
 
-Lesson 8 was taught 2026-08-19. **Lesson 9 — chat, payment, and ratings**
+Lesson 9 was taught 2026-08-20. **Lesson 10 — the operations surface**
 is next in the teaching sequence regardless of quiz status, per this log's
 own cadence rule (teach happens every session; quiz grading is what's
 stuck).
