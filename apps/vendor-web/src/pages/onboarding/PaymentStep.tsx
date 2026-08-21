@@ -54,6 +54,11 @@ export function PaymentStep() {
           <button type="button" disabled={busy} onClick={() => finish({ save: true, open: true })}>
             {busy ? 'Working…' : 'Open my shop'}
           </button>
+          {/* No "Skip for now" here, unlike the earlier steps. Both actions
+              on the last step save what was typed: a button that looks like
+              "later" but silently discards the payment message AND marks
+              setup finished for good would leave the vendor with a shop that
+              cannot open and no nudge left to tell them why. */}
           <button
             type="button"
             className="button"
@@ -61,14 +66,6 @@ export function PaymentStep() {
             onClick={() => finish({ save: true, open: false })}
           >
             Finish, keep it closed
-          </button>
-          <button
-            type="button"
-            className="button"
-            disabled={busy}
-            onClick={() => finish({ save: false, open: false })}
-          >
-            Skip for now
           </button>
         </>
       }

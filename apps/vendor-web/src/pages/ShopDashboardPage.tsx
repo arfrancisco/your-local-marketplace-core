@@ -102,6 +102,15 @@ export function ShopDashboardPage() {
   // nothing about setup, and shouldn't nag.
   const setupUnfinished = shop.onboarding_completed_at === null
   const resumeStep = toOnboardingStep(shop.onboarding_step)
+  // Finishing the wizard is not the same as being able to open. A shop can
+  // be onboarding-complete and still blocked: every pre-wizard shop was
+  // backfilled as complete (including abandoned signups with no items), and
+  // a live vendor can empty their catalogue at any time. Without this the
+  // resume banner is the only nudge, and it is already gone by then — so the
+  // vendor closes for a night, cannot reopen, and is told why only by an
+  // error inside a modal they have to go looking for.
+  const openBlockers = shop.open_blockers ?? []
+  const showReadiness = !setupUnfinished && openBlockers.length > 0
 
   return (
     <div>
@@ -122,6 +131,31 @@ export function ShopDashboardPage() {
           </p>
           <SetupProgress step={stepNumber(resumeStep)} total={ONBOARDING_STEPS.length} showLabel={false} />
           <Link className="button" to={stepPath(resumeStep)}>Continue setup</Link>
+        </div>
+      )}
+
+      {showReadiness && (
+        <div className="card shop-readiness">
+          <h2>{shop.open ? 'Your shop needs attention' : "Your shop can't open yet"}</h2>
+          <p className="muted">
+            {shop.open
+              ? 'Neighbors can find your shop right now, but it will not be able to reopen once you close it until these are sorted:'
+              : 'Before you can open, please sort these out:'}
+          </p>
+          <ul className="list readiness-list">
+            {openBlockers.map((blocker) => (
+              <li key={blocker.code}>
+                {blocker.message}{' '}
+                {/* A reason with no way to act on it just reads as a dead
+                    end, so each one carries the link that fixes it. */}
+                {blocker.code === 'no_enabled_items' ? (
+                  <Link to={`/shops/${shop.id}/items`}>Go to Inventory</Link>
+                ) : (
+                  <Link to={`/shops/${shop.id}/edit`}>Edit your shop</Link>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
       {showTour && tourStep === 0 && (

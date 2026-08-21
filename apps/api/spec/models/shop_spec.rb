@@ -156,6 +156,56 @@ RSpec.describe Shop, type: :model do
       expect(shop.accepting_orders).to be(false)
     end
 
+    # The dashboard shows these to explain why a shop cannot open, so they
+    # have to stay in lockstep with what open! actually refuses on. Same
+    # source, checked from both directions.
+    describe "#open_blockers" do
+      it "reports both reasons for a bare shop, in the order to fix them" do
+        shop = create(:shop)
+        expect(shop.open_blockers).to eq(%w[opening_message_required no_enabled_items])
+        expect(shop).not_to be_ready_to_open
+      end
+
+      it "drops a reason once it is satisfied" do
+        shop = create(:shop, opening_message: "GCash to 0917-000-0000.")
+        expect(shop.open_blockers).to eq(%w[no_enabled_items])
+      end
+
+      it "is empty for a shop that can actually open, and open! then succeeds" do
+        shop = create(:shop, :ready_to_open)
+        expect(shop.open_blockers).to be_empty
+        expect(shop).to be_ready_to_open
+        expect { shop.open! }.not_to raise_error
+      end
+
+      it "refuses open! with the same message it reports as a blocker" do
+        shop = create(:shop)
+        expect { shop.open! }.to raise_error(ApiError) { |e|
+          expect(e.message).to eq(Shop::OPEN_BLOCKERS.fetch(shop.open_blockers.first))
+        }
+      end
+
+      it "does not count a disabled or archived item toward readiness" do
+        shop = create(:shop, opening_message: "GCash to 0917-000-0000.")
+        create(:item, shop: shop, enabled: false)
+        create(:item, shop: shop, archived_at: Time.current)
+        expect(shop.open_blockers).to eq(%w[no_enabled_items])
+      end
+    end
+
+    # The migration backfills every pre-wizard shop as complete, including
+    # abandoned signups that never got an item or an opening message. Those
+    # shops are done with the wizard but still cannot open, which is exactly
+    # the state the dashboard's readiness card exists to explain.
+    it "can be onboarding-complete and still blocked from opening" do
+      shop = create(:shop)
+      shop.update!(onboarding_completed_at: shop.created_at)
+
+      expect(shop).to be_onboarding_complete
+      expect(shop).not_to be_ready_to_open
+      expect { shop.open! }.to raise_error(ApiError)
+    end
+
     it "lists only active, accepting shops" do
       open_shop = create(:shop, :open)
       create(:shop) # draft

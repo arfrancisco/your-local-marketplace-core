@@ -358,6 +358,15 @@ button:disabled { opacity: 0.6; cursor: default; }
 
 /* Dashboard nudge while setup is unfinished. Blue-edged rather than a
    warning colour — nothing is wrong, there's just more to do. */
+/* Readiness card — a shop that finished setup but still cannot open (see
+   ShopDashboardPage). Amber rather than the resume card's blue: this is
+   something blocking the shop, not a step still in progress. */
+.shop-readiness { border-color: #f59e0b; background: #fffbeb; }
+.shop-readiness h2 { margin: 0 0 0.15rem; font-size: 1.1rem; }
+.readiness-list { margin: 0.6rem 0 0; padding-left: 1.2rem; list-style: disc; }
+.readiness-list li { margin-bottom: 0.4rem; line-height: 1.45; font-size: 0.95rem; }
+.readiness-list li:last-child { margin-bottom: 0; }
+
 .onboarding-resume { border-color: #1e40af; }
 .onboarding-resume h2 { margin: 0 0 0.15rem; font-size: 1.1rem; }
 .onboarding-resume .setup-progress { margin: 0.6rem 0 0; }

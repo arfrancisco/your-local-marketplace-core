@@ -313,11 +313,29 @@ describe('onboarding wizard: step 3, items', () => {
     expect(await screen.findByRole('heading', { name: 'Adobo Rice Bowl' })).toBeInTheDocument()
   })
 
+  // Items are saved one at a time by "Add item", so advancing does the same
+  // thing whether any were added or not. One button, labelled for what the
+  // vendor actually did, rather than two that behave identically.
+  it('offers "Skip for now" while the shop has no items yet', async () => {
+    renderWizard('/onboarding/items')
+
+    expect(await screen.findByRole('button', { name: 'Skip for now' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument()
+  })
+
+  it('offers "Continue" instead once an item exists', async () => {
+    vi.mocked(api.listItems).mockResolvedValue({ items: [item] })
+    renderWizard('/onboarding/items')
+
+    expect(await screen.findByRole('button', { name: 'Continue' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Skip for now' })).not.toBeInTheDocument()
+  })
+
   it('continues to the payment step, recording it as reached', async () => {
     const user = userEvent.setup()
     renderWizard('/onboarding/items')
 
-    await user.click(await screen.findByRole('button', { name: 'Continue' }))
+    await user.click(await screen.findByRole('button', { name: 'Skip for now' }))
 
     await waitFor(() => expect(api.updateShop).toHaveBeenCalled())
     expect(vi.mocked(api.updateShop).mock.calls[0][1].get('shop[onboarding_step]')).toBe('payment')
@@ -338,6 +356,24 @@ describe('onboarding wizard: step 4, payment and finishing', () => {
     expect(screen.getByText('Step 4 of 4')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Open my shop' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Finish, keep it closed' })).toBeInTheDocument()
+  })
+
+  // Both terminal actions save. A "Skip for now" here would read as "later"
+  // while actually discarding the payment message AND marking setup finished
+  // for good, leaving a shop that cannot open and no banner left to say why.
+  it('offers no way to finish that throws away what was typed', async () => {
+    const user = userEvent.setup()
+    renderWizard('/onboarding/payment')
+
+    await screen.findByRole('heading', { name: 'How do customers pay you?' })
+    expect(screen.queryByRole('button', { name: 'Skip for now' })).not.toBeInTheDocument()
+
+    await user.type(await screen.findByPlaceholderText(/GCash to 0917/i), 'GCash to 0917-555-0000.')
+    await user.click(screen.getByRole('button', { name: 'Finish, keep it closed' }))
+
+    // Even the do-not-open path persists the message first.
+    await waitFor(() => expect(api.updateShop).toHaveBeenCalled())
+    expect(vi.mocked(api.updateShop).mock.calls[0][1].get('shop[opening_message]')).toBe('GCash to 0917-555-0000.')
   })
 
   it('saves the opening message, opens the shop, and lands on the dashboard', async () => {

@@ -24,6 +24,7 @@ class Shop < ApplicationRecord
   ONBOARDING_STEPS = %w[shop photos items payment].freeze
 
   before_validation :generate_slug, on: :create
+  before_save :keep_onboarding_step_moving_forward
 
   validates :name, presence: true
   validates :slug, presence: true, uniqueness: true
@@ -79,6 +80,33 @@ class Shop < ApplicationRecord
   # including the dashboard's existing open toggle, not just the end of the
   # setup wizard. A shop that is discoverable but unbuyable is worse for a
   # customer than a shop that is simply closed.
+  # Why this shop cannot open yet, in the order a vendor should fix them.
+  # One list, used both to refuse #open! and to tell the dashboard what to
+  # ask for, so the vendor-facing explanation can never drift from the rule
+  # actually being enforced.
+  OPEN_BLOCKERS = {
+    # There is no payment gateway (ADR 0009) — the opening message IS the
+    # payment mechanism, auto-posted into each order's chat. Without one a
+    # customer who orders has no way to find out how to pay.
+    "opening_message_required" =>
+      "Add an opening message before opening your shop. It is how customers find out how to pay you.",
+    # An open shop takes a slot in the daily rotating shop list (ADR 0007).
+    # Spending one on an empty catalog wastes a customer's tap.
+    "no_enabled_items" =>
+      "Add at least one available item before opening your shop."
+  }.freeze
+
+  def open_blockers
+    blockers = []
+    blockers << "opening_message_required" if opening_message.blank?
+    blockers << "no_enabled_items" unless items.enabled.exists?
+    blockers
+  end
+
+  def ready_to_open?
+    open_blockers.empty?
+  end
+
   def open!
     if vendor_profile.restricted?
       raise ApiError.new(
@@ -88,23 +116,8 @@ class Shop < ApplicationRecord
       )
     end
 
-    # There is no payment gateway (ADR 0009) — the opening message IS the
-    # payment mechanism, auto-posted into each order's chat. Without one a
-    # customer who orders has no way to find out how to pay.
-    if opening_message.blank?
-      raise ApiError.new(
-        "Add an opening message before opening your shop. It is how customers find out how to pay you.",
-        code: "opening_message_required", status: :unprocessable_entity
-      )
-    end
-
-    # An open shop takes a slot in the daily rotating shop list (ADR 0007).
-    # Spending one on an empty catalog wastes a customer's tap.
-    unless items.enabled.exists?
-      raise ApiError.new(
-        "Add at least one available item before opening your shop.",
-        code: "no_enabled_items", status: :unprocessable_entity
-      )
+    if (blocker = open_blockers.first)
+      raise ApiError.new(OPEN_BLOCKERS.fetch(blocker), code: blocker, status: :unprocessable_entity)
     end
 
     update!(status: "active", accepting_orders: true)
@@ -127,6 +140,25 @@ class Shop < ApplicationRecord
   end
 
   private
+
+  # onboarding_step means "furthest step reached", so it only ever moves
+  # forward. The wizard already avoids sending a lower value, but that check
+  # runs against whatever shop snapshot one browser tab happens to hold — two
+  # tabs, or responses landing out of order, and a stale client would walk it
+  # backwards. The rule belongs here either way: it is a property of the
+  # column, not of one screen (ADR 0011).
+  def keep_onboarding_step_moving_forward
+    return if new_record? || !onboarding_step_changed?
+
+    reached = ONBOARDING_STEPS.index(onboarding_step_was)
+    target = ONBOARDING_STEPS.index(onboarding_step)
+    # An unrecognised incoming value is left alone for the inclusion
+    # validation to reject with a useful message, rather than silently
+    # rewritten here.
+    return if reached.nil? || target.nil?
+
+    self.onboarding_step = onboarding_step_was if target < reached
+  end
 
   # Slug is derived from the name once, at creation, and then stable (it is part
   # of the shop's public URL, /shops/:slug). Collisions get a numeric suffix.

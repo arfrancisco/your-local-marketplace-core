@@ -299,3 +299,72 @@ describe('ShopDashboardPage setup resume banner', () => {
     expect(screen.queryByRole('link', { name: 'Continue setup' })).not.toBeInTheDocument()
   })
 })
+
+// Finishing setup and being able to open are different things, and the gap
+// between them is where vendors get stranded: every pre-wizard shop was
+// backfilled as onboarding-complete (abandoned signups with no items
+// included), and a live vendor can empty their catalogue at any time. The
+// resume banner is gone by then, so this card is the only thing left that
+// explains why the shop will not open.
+describe('ShopDashboardPage readiness card', () => {
+  const finished = { onboarding_step: 'payment', onboarding_completed_at: '2026-08-21T00:00:00Z' }
+  const noItems = [{ code: 'no_enabled_items', message: 'Add at least one available item before opening your shop.' }]
+  const noMessage = [
+    { code: 'opening_message_required', message: 'Add an opening message before opening your shop.' },
+  ]
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
+    vi.mocked(api.listVendorOrders).mockResolvedValue({ orders: [] })
+  })
+
+  it('explains why a finished-but-closed shop cannot open, with a way to fix each reason', async () => {
+    vi.mocked(api.listShops).mockResolvedValue({
+      shops: [{ ...shopClosed, ...finished, open_blockers: [...noMessage, ...noItems] }],
+    })
+
+    renderAt('/shops')
+
+    expect(await screen.findByRole('heading', { name: "Your shop can't open yet" })).toBeInTheDocument()
+    expect(screen.getByText(/Add an opening message before opening your shop\./)).toBeInTheDocument()
+    expect(screen.getByText(/Add at least one available item before opening your shop\./)).toBeInTheDocument()
+    // A reason with no way to act on it is a dead end.
+    expect(screen.getByRole('link', { name: 'Edit your shop' })).toHaveAttribute('href', '/shops/1/edit')
+    expect(screen.getByRole('link', { name: 'Go to Inventory' })).toHaveAttribute('href', '/shops/1/items')
+  })
+
+  it('warns an already-open shop that it will not be able to reopen', async () => {
+    vi.mocked(api.listShops).mockResolvedValue({
+      shops: [{ ...shopOpen, ...finished, open_blockers: noItems }],
+    })
+
+    renderAt('/shops')
+
+    expect(await screen.findByRole('heading', { name: 'Your shop needs attention' })).toBeInTheDocument()
+    expect(screen.getByText(/will not be able to reopen once you close it/i)).toBeInTheDocument()
+  })
+
+  it('stays hidden for a shop that can actually open', async () => {
+    vi.mocked(api.listShops).mockResolvedValue({ shops: [{ ...shopOpen, ...finished, open_blockers: [] }] })
+
+    renderAt('/shops')
+
+    await screen.findByRole('heading', { name: "Lola's Kitchen" })
+    expect(screen.queryByRole('heading', { name: /can't open yet|needs attention/ })).not.toBeInTheDocument()
+  })
+
+  // Mid-wizard the resume banner already covers this, and it links to the
+  // steps that fix it — two competing cards would just be noise.
+  it('defers to the resume banner while setup is still unfinished', async () => {
+    vi.mocked(api.listShops).mockResolvedValue({
+      shops: [{ ...shopClosed, onboarding_step: 'items', onboarding_completed_at: null, open_blockers: noItems }],
+    })
+
+    renderAt('/shops')
+
+    expect(await screen.findByRole('heading', { name: 'Finish setting up your shop' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /can't open yet|needs attention/ })).not.toBeInTheDocument()
+  })
+})

@@ -8,8 +8,8 @@ import type { ShopBasics } from '../../components/ShopBasicsFields'
 import { useMyShopState } from '../../useMyShop'
 import {
   ONBOARDING_STEPS,
+  isFurtherThan,
   previousStep,
-  stepIndex,
   stepNumber,
   stepPath,
   toOnboardingStep,
@@ -262,7 +262,7 @@ export function OnboardingLayout() {
     // The furthest step reached, never where the vendor currently is: a
     // target behind what's already recorded is left alone, so walking Back
     // and forward again can't yank a resuming vendor backward.
-    const records = stepIndex(target) > stepIndex(toOnboardingStep(shop?.onboarding_step))
+    const records = isFurtherThan(target, toOnboardingStep(shop?.onboarding_step))
     if (records) fd.append('shop[onboarding_step]', target)
 
     if (!shop) {

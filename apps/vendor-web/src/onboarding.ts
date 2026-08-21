@@ -53,7 +53,11 @@ export function nextStep(step: OnboardingStep): OnboardingStep | null {
  * `onboarding_step` records the *furthest* step reached, not where the
  * vendor currently is — walking Back must never regress it, or resuming
  * later would yank them backward through steps they already passed.
+ *
+ * The API enforces this too (Shop#keep_onboarding_step_moving_forward), and
+ * that is the authority. This only spares us sending a value the server
+ * would just clamp anyway.
  */
-export function furthestStep(a: OnboardingStep, b: OnboardingStep): OnboardingStep {
-  return stepIndex(a) >= stepIndex(b) ? a : b
+export function isFurtherThan(candidate: OnboardingStep, reached: OnboardingStep): boolean {
+  return stepIndex(candidate) > stepIndex(reached)
 }

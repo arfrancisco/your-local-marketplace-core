@@ -52,6 +52,11 @@ export interface Shop {
   // open with setup still unfinished.
   onboarding_step?: string
   onboarding_completed_at?: string | null
+  // Why this shop cannot open yet, straight from the rule Shop#open!
+  // enforces (Shop::OPEN_BLOCKERS). Empty means it can open. The client
+  // never decides this for itself — a second copy of the rule would drift
+  // from the one actually being enforced.
+  open_blockers?: { code: string; message: string }[]
   created_at: string
   updated_at: string
   // Seed/demo data, not a real neighbor's shop — see ShopSerializer. An

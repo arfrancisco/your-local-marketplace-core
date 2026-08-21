@@ -113,6 +113,24 @@ the wizard owns the first-run path.
   path now raises until both are in place. Existing open shops that already
   violate this (opened before the check existed) are not retroactively
   closed; the check only applies going forward, at the next `open!` call.
+  This is not hypothetical: at the time of writing, all three real shops on
+  production would fail the gate (two of them currently open with zero
+  items). So the reasons are exposed as `Shop#open_blockers` and rendered as
+  a readiness card on the dashboard, with a link to the page that fixes
+  each. Without it, a vendor who closes for a night and cannot reopen would
+  meet the rule for the first time as an error inside a modal.
+- Finishing onboarding and being able to open are deliberately separate
+  states, so a shop can be onboarding-complete and still blocked. That is
+  reachable two ways: the migration backfills every pre-wizard shop as
+  complete, abandoned signups with no items included; and a live vendor can
+  disable or archive their whole catalogue at any time. The readiness card
+  above is what covers both, since the setup banner is keyed to onboarding
+  and is long gone by then.
+- `onboarding_step`'s forward-only rule is enforced in the model
+  (`Shop#keep_onboarding_step_moving_forward`), not just by the wizard. The
+  client's own check runs against whatever shop snapshot one browser tab
+  holds, so two tabs or out-of-order responses could otherwise walk it
+  backwards. It is a property of the column, not of one screen.
 - The per-page "?" tours (`HelpTourButton`) are unchanged in code and intent
   — they remain the on-demand path for a vendor who already has a shop and
   wants a refresher on one specific page, not the first-run path.

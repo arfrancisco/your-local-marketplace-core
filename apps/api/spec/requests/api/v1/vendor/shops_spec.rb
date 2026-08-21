@@ -108,6 +108,33 @@ RSpec.describe "Api::V1::Vendor Shops", type: :request do
       expect(shop.reload.onboarding_step).to eq("items")
     end
 
+    # onboarding_step is "furthest reached", so a stale client (a second tab,
+    # or responses landing out of order) must not be able to walk it
+    # backwards. The wizard already avoids sending a lower value, but the rule
+    # belongs to the column, not to one screen.
+    it "refuses to move the wizard step backwards, keeping the furthest one reached" do
+      shop.update!(onboarding_step: "payment")
+
+      patch "/api/v1/vendor/shops/#{shop.id}",
+            params: { shop: { onboarding_step: "photos" } }, headers: auth_headers(vendor_user)
+
+      expect(response).to have_http_status(:ok)
+      expect(json.dig("shop", "onboarding_step")).to eq("payment")
+      expect(shop.reload.onboarding_step).to eq("payment")
+    end
+
+    it "still lets an unrelated field change while the step is held at its furthest" do
+      shop.update!(onboarding_step: "payment")
+
+      patch "/api/v1/vendor/shops/#{shop.id}",
+            params: { shop: { name: "Renamed Mid Wizard", onboarding_step: "shop" } },
+            headers: auth_headers(vendor_user)
+
+      expect(response).to have_http_status(:ok)
+      expect(shop.reload.name).to eq("Renamed Mid Wizard")
+      expect(shop.onboarding_step).to eq("payment")
+    end
+
     it "rejects a step that is not in ONBOARDING_STEPS" do
       patch "/api/v1/vendor/shops/#{shop.id}",
             params: { shop: { onboarding_step: "banking" } }, headers: auth_headers(vendor_user)

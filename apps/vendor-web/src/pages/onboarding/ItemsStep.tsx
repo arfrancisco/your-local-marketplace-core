@@ -82,14 +82,13 @@ export function ItemsStep() {
       intro="One is enough to open. You can add the rest from Inventory whenever you're ready."
       error={error}
       actions={
-        <>
-          <button type="button" disabled={saving} onClick={advance}>
-            {saving ? 'Saving…' : 'Continue'}
-          </button>
-          <button type="button" className="button" disabled={saving} onClick={advance}>
-            Skip for now
-          </button>
-        </>
+        // One action, not two: items are saved individually by "Add item"
+        // above, so Continue and Skip would do the identical thing here and
+        // differ only in label. The label follows what the vendor has
+        // actually done instead.
+        <button type="button" disabled={saving} onClick={advance}>
+          {saving ? 'Saving…' : hasItems ? 'Continue' : 'Skip for now'}
+        </button>
       }
     >
       {itemsLoading && <p className="muted">Loading your items…</p>}

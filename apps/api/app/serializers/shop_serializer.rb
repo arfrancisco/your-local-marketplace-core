@@ -88,7 +88,12 @@ module ShopSerializer
   def onboarding_info(shop)
     {
       onboarding_step: shop.onboarding_step,
-      onboarding_completed_at: shop.onboarding_completed_at
+      onboarding_completed_at: shop.onboarding_completed_at,
+      # What still stands between this shop and opening, straight from the
+      # rule Shop#open! enforces. The dashboard renders these rather than
+      # deciding for itself what "ready" means, so there is only ever one
+      # definition to keep true.
+      open_blockers: shop.open_blockers.map { |code| { code: code, message: Shop::OPEN_BLOCKERS.fetch(code) } }
     }
   end
 
