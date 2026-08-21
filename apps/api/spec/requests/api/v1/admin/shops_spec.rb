@@ -41,11 +41,19 @@ RSpec.describe "Api::V1::Admin::Shops", type: :request do
     # endpoint still cost a query per row, and none belong to this change:
     # completed_orders_count (orders), vendor_verification_status/demo?
     # (vendor_profiles, users) and the shop photos (active_storage_
-    # attachments). The vendor_profile one especially wants its own change:
-    # filter_by_demo already joins that same association, so preloading it
-    # risks being promoted to an eager-load join and inflating
-    # pagination_meta's count. Asserting a flat TOTAL here would either fail
-    # on that pre-existing cost or, once loosened, quietly bless it.
+    # attachments).
+    #
+    # The vendor_profile one wants its own change rather than a one-line
+    # addition here. filter_by_demo already joins that same association, so
+    # preloading it gets promoted into a single eager-load JOIN. Rails keeps
+    # that correct on its own (count switches to COUNT(DISTINCT), and LIMIT
+    # falls back to a two-query strategy), so the hazard is not wrong data
+    # but shape: folding three has_many associations into one JOIN fans the
+    # result set out to items x ratings rows per shop, each repeating the
+    # shop and vendor columns.
+    #
+    # Asserting a flat TOTAL here would either fail on those pre-existing
+    # costs or, once loosened enough to pass, quietly bless them.
     it "does not read items or ratings more often as more shops land on the page" do
       customer = create(:user, :customer)
       seed_shop = lambda do

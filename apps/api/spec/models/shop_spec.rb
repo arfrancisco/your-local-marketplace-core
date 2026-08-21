@@ -231,9 +231,10 @@ RSpec.describe Shop, type: :model do
         }
       end
 
-      # Both facts in one place: the setup work is still reported, and the
-      # restriction still wins, so the precedence is readable without
-      # inferring it from two tests that each show half.
+      # Thin on its own, deliberately: open! checks the restriction before it
+      # ever computes blockers, so the test above already proves precedence.
+      # This is a tripwire for the refactor that reorders those checks and
+      # lets a setup blocker short-circuit ahead of the restriction.
       it "reports setup work while a restriction takes precedence in open!" do
         restricted = create(:vendor_profile, cancellation_restricted_at: Time.current)
         shop = create(:shop, vendor_profile: restricted)
