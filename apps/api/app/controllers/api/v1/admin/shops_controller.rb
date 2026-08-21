@@ -6,11 +6,12 @@ module Api
 
         # GET /api/v1/admin/shops?status=suspended&q=pizza&demo=true
         def index
-          # :items is preloaded because every serialized row reads it twice —
-          # once for price_range_cents and once for open_blockers. Without
-          # this that is two extra queries per row, on a page that can hold
-          # 200 of them.
-          scope = filter_by_demo(Shop.includes(:items).order(created_at: :desc))
+          # Every serialized row reads :items twice (price_range_cents and
+          # open_blockers) and :ratings twice (average_rating and
+          # ratings_count). Unpreloaded that is four extra queries per row on
+          # a page that can hold 200 of them. The query-count spec on this
+          # action is the tripwire if a future scope change undoes it.
+          scope = filter_by_demo(Shop.includes(:items, :ratings).order(created_at: :desc))
           scope = scope.where(status: params[:status]) if params[:status].present?
           scope = scope.where("name ILIKE :q", q: "%#{params[:q]}%") if params[:q].present?
           render json: {

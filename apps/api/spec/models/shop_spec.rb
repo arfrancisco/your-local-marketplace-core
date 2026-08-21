@@ -230,6 +230,19 @@ RSpec.describe Shop, type: :model do
           expect(e.code).to eq("cancellation_restricted")
         }
       end
+
+      # Both facts in one place: the setup work is still reported, and the
+      # restriction still wins, so the precedence is readable without
+      # inferring it from two tests that each show half.
+      it "reports setup work while a restriction takes precedence in open!" do
+        restricted = create(:vendor_profile, cancellation_restricted_at: Time.current)
+        shop = create(:shop, vendor_profile: restricted)
+
+        expect(shop.open_blockers).to eq(%w[opening_message_required no_enabled_items])
+        expect { shop.open! }.to raise_error(ApiError) { |e|
+          expect(e.code).to eq("cancellation_restricted")
+        }
+      end
     end
 
     # The migration backfills every pre-wizard shop as complete, including

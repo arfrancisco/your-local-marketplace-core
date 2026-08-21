@@ -114,6 +114,13 @@ class Shop < ApplicationRecord
   # own SQL even when the association is preloaded, and open_blockers now runs
   # on every serialized vendor/admin shop payload — on the admin shop list
   # that is one extra query per row, up to a 200-row page.
+  #
+  # The two branches agree only while the loaded array is a faithful read.
+  # Every caller today loads it fresh per request and does not touch it
+  # before asking, so this holds. It would stop holding on a shop instance
+  # that builds or mutates items in memory and then re-reads readiness off
+  # the same object (a background job walking a shop through several item
+  # changes, say) — call #reload, or this reports the pre-mutation answer.
   def any_enabled_item?
     return items.any? { |item| item.enabled? && item.archived_at.nil? } if items.loaded?
 
