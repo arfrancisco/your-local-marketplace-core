@@ -7,7 +7,12 @@ module Api
 
         # GET /api/v1/vendor/shops
         def index
-          shops = current_vendor_profile.shops.order(created_at: :desc)
+          # One shop per vendor today, so this preload buys nothing yet — but
+          # the uniqueness behind that is app-level only (see Shop), and the
+          # serializer reads :items per row. Without it, allowing multi-shop
+          # vendors would silently turn this into an N+1 on every dashboard
+          # load, with no code change to trigger it.
+          shops = current_vendor_profile.shops.includes(:items).order(created_at: :desc)
           render json: { shops: shops.map { |shop| ShopSerializer.call(shop, include_payment_info: true) } }
         end
 

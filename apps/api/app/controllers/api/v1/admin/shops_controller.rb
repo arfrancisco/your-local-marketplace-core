@@ -6,7 +6,11 @@ module Api
 
         # GET /api/v1/admin/shops?status=suspended&q=pizza&demo=true
         def index
-          scope = filter_by_demo(Shop.order(created_at: :desc))
+          # :items is preloaded because every serialized row reads it twice —
+          # once for price_range_cents and once for open_blockers. Without
+          # this that is two extra queries per row, on a page that can hold
+          # 200 of them.
+          scope = filter_by_demo(Shop.includes(:items).order(created_at: :desc))
           scope = scope.where(status: params[:status]) if params[:status].present?
           scope = scope.where("name ILIKE :q", q: "%#{params[:q]}%") if params[:q].present?
           render json: {

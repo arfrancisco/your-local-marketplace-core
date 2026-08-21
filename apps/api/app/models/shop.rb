@@ -80,10 +80,16 @@ class Shop < ApplicationRecord
   # including the dashboard's existing open toggle, not just the end of the
   # setup wizard. A shop that is discoverable but unbuyable is worse for a
   # customer than a shop that is simply closed.
-  # Why this shop cannot open yet, in the order a vendor should fix them.
-  # One list, used both to refuse #open! and to tell the dashboard what to
-  # ask for, so the vendor-facing explanation can never drift from the rule
-  # actually being enforced.
+  # The setup work a shop still owes before it can open, in the order a
+  # vendor should tackle it. One list, used both to refuse #open! and to tell
+  # the dashboard what to ask for, so those two can never disagree.
+  #
+  # Deliberately NOT everything #open! can refuse on: a cancellation-abuse
+  # restriction is checked separately, and first, because it is an
+  # admin-imposed penalty rather than setup the vendor can act on. Listing it
+  # here would pin a permanent card to their dashboard whose only remedy is
+  # emailing support, so it stays a reactive error on the open attempt
+  # instead. See #open!.
   OPEN_BLOCKERS = {
     # There is no payment gateway (ADR 0009) — the opening message IS the
     # payment mechanism, auto-posted into each order's chat. Without one a
@@ -99,8 +105,19 @@ class Shop < ApplicationRecord
   def open_blockers
     blockers = []
     blockers << "opening_message_required" if opening_message.blank?
-    blockers << "no_enabled_items" unless items.enabled.exists?
+    blockers << "no_enabled_items" unless any_enabled_item?
     blockers
+  end
+
+  # Mirrors Item.enabled (enabled, not archived), but reads an already-loaded
+  # :items association instead of querying again. `.exists?` always issues its
+  # own SQL even when the association is preloaded, and open_blockers now runs
+  # on every serialized vendor/admin shop payload — on the admin shop list
+  # that is one extra query per row, up to a 200-row page.
+  def any_enabled_item?
+    return items.any? { |item| item.enabled? && item.archived_at.nil? } if items.loaded?
+
+    items.enabled.exists?
   end
 
   def ready_to_open?

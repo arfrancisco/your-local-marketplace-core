@@ -191,6 +191,45 @@ RSpec.describe Shop, type: :model do
         create(:item, shop: shop, archived_at: Time.current)
         expect(shop.open_blockers).to eq(%w[no_enabled_items])
       end
+
+      it "reads a preloaded :items association instead of querying again" do
+        shop = create(:shop, :ready_to_open)
+        preloaded = Shop.includes(:items).find(shop.id)
+        expect(preloaded.items).to be_loaded
+
+        queries = 0
+        counter = ->(*, payload) { queries += 1 unless payload[:name] == "SCHEMA" || payload[:cached] }
+        # .exists? would issue SQL here even though the rows are already in
+        # memory, which is one extra query per row on the admin shop list.
+        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+          preloaded.open_blockers
+        end
+
+        expect(queries).to eq(0)
+      end
+
+      it "still sees a disabled item correctly when :items is preloaded" do
+        shop = create(:shop, opening_message: "GCash to 0917-000-0000.")
+        create(:item, shop: shop, enabled: false)
+        preloaded = Shop.includes(:items).find(shop.id)
+
+        expect(preloaded.open_blockers).to eq(%w[no_enabled_items])
+      end
+
+      # A cancellation-abuse restriction is checked by open! separately and
+      # first, and deliberately does NOT appear here: it is an admin penalty
+      # the vendor cannot act on, so it stays a reactive error rather than a
+      # permanent dashboard card. Pinning the boundary so it stays a decision.
+      it "omits a cancellation restriction, which open! still refuses on" do
+        restricted = create(:vendor_profile, cancellation_restricted_at: Time.current)
+        shop = create(:shop, :ready_to_open, vendor_profile: restricted)
+
+        expect(shop.open_blockers).to be_empty
+        expect(shop).to be_ready_to_open
+        expect { shop.open! }.to raise_error(ApiError) { |e|
+          expect(e.code).to eq("cancellation_restricted")
+        }
+      end
     end
 
     # The migration backfills every pre-wizard shop as complete, including
