@@ -6,8 +6,16 @@ import { TourCallout } from '../components/TourCallout'
 import { HelpTourButton } from '../components/HelpTourButton'
 import { RatingSummary } from '../components/Ratings'
 import { OrderList } from '../components/OrderList'
+import { SetupProgress } from '../components/SetupProgress'
 import { useMyShopState } from '../useMyShop'
 import { colorFor, emojiFor } from '../visuals'
+import {
+  ONBOARDING_STEPS,
+  ONBOARDING_STEP_LABELS,
+  stepNumber,
+  stepPath,
+  toOnboardingStep,
+} from '../onboarding'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
 
@@ -89,10 +97,33 @@ export function ShopDashboardPage() {
   if (!shop) return <p>No shop yet. Create your first one.</p>
 
   const fallbackKey = `${shop.name} ${shop.description ?? ''}`
+  // Strictly null, not just falsy: a payload without the field at all (an
+  // older API, or a shop serialized without the vendor-only fields) says
+  // nothing about setup, and shouldn't nag.
+  const setupUnfinished = shop.onboarding_completed_at === null
+  const resumeStep = toOnboardingStep(shop.onboarding_step)
 
   return (
     <div>
       <HelpTourButton onClick={openTour} label="Tour your dashboard" />
+
+      {setupUnfinished && (
+        <div className="card onboarding-resume">
+          <h2>Finish setting up your shop</h2>
+          <p className="muted">
+            You're on step {stepNumber(resumeStep)} of {ONBOARDING_STEPS.length} —{' '}
+            {ONBOARDING_STEP_LABELS[resumeStep]}.{' '}
+            {/* The open/closed toggle below is deliberately independent of
+                setup, so an open shop really is visible to customers even
+                with steps left — saying otherwise here would be a lie. */}
+            {shop.open
+              ? 'Your shop is already open, so neighbors can find it while you finish.'
+              : 'Nobody can see your shop until you finish.'}
+          </p>
+          <SetupProgress step={stepNumber(resumeStep)} total={ONBOARDING_STEPS.length} showLabel={false} />
+          <Link className="button" to={stepPath(resumeStep)}>Continue setup</Link>
+        </div>
+      )}
       {showTour && tourStep === 0 && (
         <TourCallout
           message="This is your dashboard from here on — come back anytime to manage your shop, items, and orders."

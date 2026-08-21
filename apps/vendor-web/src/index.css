@@ -292,11 +292,85 @@ button:disabled { opacity: 0.6; cursor: default; }
 .opening-message { background: #fef3c7; border: 1px solid #fde68a; }
 .opening-message-text { white-space: pre-wrap; margin: 0 0 0.5rem; }
 
-/* Vendor onboarding: static welcome splash + each page's own opt-in "?"
-   tour (HelpTourButton, TourCallout). */
+/* Vendor onboarding: the welcome splash, the 4-step setup wizard, and each
+   page's own opt-in "?" tour (HelpTourButton, TourCallout). */
 .onboarding-welcome { max-width: 480px; margin: 1.5rem auto; }
 .onboarding-welcome ul { padding-left: 1.2rem; margin: 0.75rem 0 1.25rem; }
 .onboarding-welcome li { margin-bottom: 0.65rem; line-height: 1.4; }
+.onboarding-welcome .small { margin-top: 0.75rem; }
+
+/* Ported from customer-web's own signup progress bar, in this app's blue
+   rather than that app's green (see components/SetupProgress.tsx). */
+.setup-progress { margin-bottom: 0.5rem; }
+.progress-bar { display: flex; gap: 0.35rem; margin: 0.35rem 0 1rem; }
+.progress-segment { flex: 1; height: 6px; border-radius: 3px; background: #e5e7eb; }
+.progress-segment.filled { background: #1e40af; }
+
+.onboarding-wizard { max-width: 480px; margin: 0 auto; }
+.onboarding-step { display: flex; flex-direction: column; }
+.onboarding-step-head h1 { font-size: 1.4rem; margin: 0 0 0.25rem; }
+.onboarding-step-head .muted { margin: 0 0 1rem; }
+.onboarding-step-fields { margin-bottom: 1rem; }
+.onboarding-items-so-far { margin-bottom: 1rem; }
+.onboarding-items-so-far .list { margin: 0.35rem 0 0; }
+.onboarding-items-so-far h3 { margin: 0; font-size: 1rem; }
+
+/* One column of full-width buttons: the primary action first, then any
+   escape hatches ("Skip for now", "Finish, keep it closed"). */
+.onboarding-actions { display: flex; flex-direction: column; gap: 0.5rem; }
+.onboarding-actions > button,
+.onboarding-actions > .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  font-size: 1rem;
+}
+.onboarding-footnote { text-align: center; margin: 0.5rem 0 0; }
+.onboarding-back { margin: 1rem 0 0; text-align: center; }
+.onboarding-back a { color: #1e40af; }
+
+/* Live shop preview, collapsed by default at every width — no separate
+   desktop layout opens it. */
+.onboarding-preview { padding: 0; }
+.onboarding-preview-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.85rem 1.25rem;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  color: #1e40af;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+}
+.onboarding-preview-body {
+  border-top: 1px solid #e5e7eb;
+  padding: 1rem 1.25rem;
+}
+.onboarding-preview-body .shop-hero { margin-top: 0.35rem; }
+.onboarding-preview-body h2.section { font-size: 1rem; }
+
+/* Dashboard nudge while setup is unfinished. Blue-edged rather than a
+   warning colour — nothing is wrong, there's just more to do. */
+.onboarding-resume { border-color: #1e40af; }
+.onboarding-resume h2 { margin: 0 0 0.15rem; font-size: 1.1rem; }
+.onboarding-resume .setup-progress { margin: 0.6rem 0 0; }
+.onboarding-resume .progress-bar { margin: 0 0 0.85rem; }
+.onboarding-resume .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+}
 
 /* Wraps whatever field/element a callout points at; the callout itself is
    absolutely positioned against it. */

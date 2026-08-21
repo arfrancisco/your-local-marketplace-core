@@ -137,6 +137,17 @@ export const api = {
   getShop: (id: number) => request<{ shop: Shop }>(`/vendor/shops/${id}`),
   createShop: (form: FormData) => request<{ shop: Shop }>('/vendor/shops', 'POST', form),
   updateShop: (id: number, form: FormData) => request<{ shop: Shop }>(`/vendor/shops/${id}`, 'PATCH', form),
+  // Ends the setup wizard: stamps onboarding_completed_at, and with
+  // `open` opens the shop in the same request. The API rejects the open
+  // when the shop has no opening message or no enabled item, and that
+  // arrives as a normal ApiError — the caller surfaces its message rather
+  // than trying to predict the gates client-side.
+  completeOnboarding: (id: number, open?: boolean) =>
+    request<{ shop: Shop }>(
+      `/vendor/shops/${id}/complete_onboarding`,
+      'POST',
+      open ? { open: true } : undefined,
+    ),
   openShop: (id: number) => request<{ shop: Shop }>(`/vendor/shops/${id}/open`, 'POST'),
   closeShop: (id: number) => request<{ shop: Shop }>(`/vendor/shops/${id}/close`, 'POST'),
 

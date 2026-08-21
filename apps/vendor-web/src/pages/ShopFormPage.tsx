@@ -1,34 +1,26 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
-import type { FulfillmentMethod, Shop } from '../api/types'
+import type { Shop } from '../api/types'
 import { TourCallout } from '../components/TourCallout'
 import { HelpTourButton } from '../components/HelpTourButton'
-import { ImageCropModal } from '../components/ImageCropModal'
+import { appendShopBasics, ShopBasicsFields, type ShopBasics } from '../components/ShopBasicsFields'
+import { OpeningMessageFields } from '../components/OpeningMessageFields'
+import { ShopPhotoFields, type PhotoField } from '../components/ShopPhotoFields'
 import { useMyShopState } from '../useMyShop'
 
-const METHODS: FulfillmentMethod[] = ['pickup', 'delivery']
-
-// Facebook's own conventions: a square identity thumbnail and a wide banner.
-// Both are cropped client-side to these exact ratios before upload, so the
-// customer-side list card and shop-detail hero never have to letterbox.
-type PhotoField = 'profile_photo' | 'cover_photo'
-
-const PHOTO_FIELDS: Record<PhotoField, { aspect: number; title: string; hint: string; maxWidth: number }> = {
-  profile_photo: {
-    aspect: 1,
-    title: 'Crop your profile picture',
-    hint: 'Square. This is the thumbnail customers see next to your shop name.',
-    maxWidth: 1024,
-  },
-  cover_photo: {
-    aspect: 3,
-    title: 'Crop your cover photo',
-    hint: 'Wide banner. This runs across the top of your shop page.',
-    maxWidth: 1920,
-  },
+const EMPTY_BASICS: ShopBasics = {
+  name: '',
+  description: '',
+  building: '',
+  address: '',
+  methods: ['pickup'],
 }
 
+// The single-page shop editor. Deliberately *not* a wizard: onboarding owns
+// the step-by-step flow (see pages/onboarding/), and a vendor coming back to
+// change one field should see every field at once. The field groups
+// themselves are shared with that wizard so the two can never drift.
 export function ShopFormPage() {
   const { id } = useParams()
   const editing = Boolean(id)
@@ -53,20 +45,11 @@ export function ShopFormPage() {
   }
 
   const [shop, setShop] = useState<Shop | null>(null)
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [building, setBuilding] = useState('')
-  const [address, setAddress] = useState('')
-  const [methods, setMethods] = useState<FulfillmentMethod[]>(['pickup'])
+  const [basics, setBasics] = useState<ShopBasics>(EMPTY_BASICS)
   // Cropped output, not the file the vendor picked — the raw file only ever
-  // lives inside the crop dialog.
+  // lives inside the crop dialog (ShopPhotoFields).
   const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null)
   const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null)
-  const [profilePreview, setProfilePreview] = useState<string | null>(null)
-  const [coverPreview, setCoverPreview] = useState<string | null>(null)
-  // The file waiting to be cropped, and which field it belongs to. Non-null
-  // means the crop dialog is open.
-  const [cropping, setCropping] = useState<{ field: PhotoField; file: File } | null>(null)
   const [openingMessage, setOpeningMessage] = useState('')
   const [openingMessagePhotos, setOpeningMessagePhotos] = useState<FileList | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -88,45 +71,20 @@ export function ShopFormPage() {
     api.getShop(Number(id)).then((res) => {
       const s = res.shop
       setShop(s)
-      setName(s.name)
-      setDescription(s.description ?? '')
-      setBuilding(s.building ?? '')
-      setAddress(s.address ?? '')
-      setMethods(s.fulfillment_methods)
+      setBasics({
+        name: s.name,
+        description: s.description ?? '',
+        building: s.building ?? '',
+        address: s.address ?? '',
+        methods: s.fulfillment_methods,
+      })
       setOpeningMessage(s.opening_message ?? '')
     })
   }, [id, editing])
 
-  // Object URLs for the cropped previews, revoked when replaced or on unmount.
-  useEffect(() => () => {
-    if (profilePreview) URL.revokeObjectURL(profilePreview)
-  }, [profilePreview])
-  useEffect(() => () => {
-    if (coverPreview) URL.revokeObjectURL(coverPreview)
-  }, [coverPreview])
-
-  function toggleMethod(method: FulfillmentMethod) {
-    setMethods((prev) => (prev.includes(method) ? prev.filter((m) => m !== method) : [...prev, method]))
-  }
-
-  function pickPhoto(field: PhotoField, e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null
-    // Clear the input so cancelling the crop and re-picking the same file
-    // still fires a change event.
-    e.target.value = ''
-    if (file) setCropping({ field, file })
-  }
-
-  function onCropConfirmed(cropped: File) {
-    if (!cropping) return
-    if (cropping.field === 'profile_photo') {
-      setProfilePhotoFile(cropped)
-      setProfilePreview(URL.createObjectURL(cropped))
-    } else {
-      setCoverPhotoFile(cropped)
-      setCoverPreview(URL.createObjectURL(cropped))
-    }
-    setCropping(null)
+  function onPhotoChange(field: PhotoField, file: File) {
+    if (field === 'profile_photo') setProfilePhotoFile(file)
+    else setCoverPhotoFile(file)
   }
 
   async function onSubmit(e: FormEvent) {
@@ -134,11 +92,7 @@ export function ShopFormPage() {
     setError(null)
     setSaving(true)
     const fd = new FormData()
-    fd.append('shop[name]', name)
-    fd.append('shop[description]', description)
-    fd.append('shop[building]', building)
-    fd.append('shop[address]', address)
-    methods.forEach((m) => fd.append('shop[fulfillment_methods][]', m))
+    appendShopBasics(fd, basics)
     if (profilePhotoFile) fd.append('shop[profile_photo]', profilePhotoFile)
     if (coverPhotoFile) fd.append('shop[cover_photo]', coverPhotoFile)
     fd.append('shop[opening_message]', openingMessage)
@@ -178,207 +132,86 @@ export function ShopFormPage() {
       </div>
       <HelpTourButton onClick={openTour} label="Tour this form" />
       <form onSubmit={onSubmit}>
-        <div className="tour-anchor">
-          <label>
-            Name
-            <input value={name} onChange={(e) => setName(e.target.value)} required />
-          </label>
-          {showTour && tourStep === 0 && (
-            <TourCallout
-              message="Start with your shop's name and a short description — this is the first thing customers see when they find you."
-              nextLabel="Got it"
-              placement="bottom"
-              onNext={() => setTourStep(1)}
-              onSkip={closeTour}
-            />
-          )}
-        </div>
-        <label>
-          Description
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
-        </label>
+        <ShopBasicsFields
+          values={basics}
+          onChange={(patch) => setBasics((prev) => ({ ...prev, ...patch }))}
+          nameAddon={
+            showTour && tourStep === 0 && (
+              <TourCallout
+                message="Start with your shop's name and a short description — this is the first thing customers see when they find you."
+                nextLabel="Got it"
+                placement="bottom"
+                onNext={() => setTourStep(1)}
+                onSkip={closeTour}
+              />
+            )
+          }
+          buildingAddon={
+            showTour && tourStep === 1 && (
+              <TourCallout
+                message="This is the public location shown to customers browsing the community — pick the tower/building they'll actually see."
+                nextLabel="Got it"
+                placement="bottom"
+                onNext={() => setTourStep(2)}
+                onSkip={closeTour}
+              />
+            )
+          }
+          fulfillmentAddon={
+            showTour && tourStep === 2 && (
+              <TourCallout
+                message="Pickup or delivery changes how the order flows after it's placed — pick what you actually offer."
+                nextLabel="Got it"
+                onNext={() => setTourStep(3)}
+                onSkip={closeTour}
+              />
+            )
+          }
+        />
 
         <div className="tour-anchor">
-          <label>
-            Building / Tower
-            <input value={building} onChange={(e) => setBuilding(e.target.value)} required />
-            <p className="muted small">
-              Shown publicly on your shop page — customers see this, but never your exact unit.
-            </p>
-          </label>
-          {showTour && tourStep === 1 && (
-            <TourCallout
-              message="This is the public location shown to customers browsing the community — pick the tower/building they'll actually see."
-              nextLabel="Got it"
-              placement="bottom"
-              onNext={() => setTourStep(2)}
-              onSkip={closeTour}
-            />
-          )}
-        </div>
-        <label>
-          Unit number (private)
-          <input
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="e.g. Unit 7A"
+          <ShopPhotoFields
+            profilePhoto={shop?.profile_photo}
+            coverPhoto={shop?.cover_photo}
+            onPhotoChange={onPhotoChange}
+            addon={
+              showTour && tourStep === 3 && (
+                <TourCallout
+                  message="Add a profile picture and cover photo so your shop stands out. Skip it for now if you want — we'll show a placeholder tile until you do."
+                  nextLabel="Got it"
+                  placement="bottom"
+                  onNext={() => setTourStep(4)}
+                  onSkip={closeTour}
+                />
+              )
+            }
           />
-          <p className="muted small">
-            Never shown to customers browsing your shop. Share it privately in your opening
-            message if a customer needs it to pick up or receive a delivery.
-          </p>
-        </label>
-
-        <div className="tour-anchor">
-          <fieldset>
-            <legend>Fulfillment</legend>
-            {METHODS.map((m) => (
-              <label key={m} className="inline">
-                <input type="checkbox" checked={methods.includes(m)} onChange={() => toggleMethod(m)} />
-                {m}
-              </label>
-            ))}
-          </fieldset>
-          {showTour && tourStep === 2 && (
-            <TourCallout
-              message="Pickup or delivery changes how the order flows after it's placed — pick what you actually offer."
-              nextLabel="Got it"
-              onNext={() => setTourStep(3)}
-              onSkip={closeTour}
-            />
-          )}
         </div>
 
         <div className="tour-anchor">
-          <fieldset className="photo-field">
-            <legend>Shop photos</legend>
-
-            <label>
-              Profile picture (square, JPEG/PNG/WebP)
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={(e) => pickPhoto('profile_photo', e)}
-              />
-            </label>
-            {profilePreview ? (
-              <div className="photo-preview-row">
-                <img className="photo-preview square" src={profilePreview} alt="Cropped profile picture preview" />
-                <p className="muted">Cropped. Save the shop to upload it.</p>
-              </div>
-            ) : (
-              shop?.profile_photo && (
-                <div className="photo-preview-row">
-                  <img
-                    className="photo-preview square"
-                    src={`http://localhost:3000${shop.profile_photo.url}`}
-                    alt={shop.profile_photo.filename}
-                  />
-                  <p className="muted">Current profile picture.</p>
-                </div>
+          <OpeningMessageFields
+            message={openingMessage}
+            onMessageChange={setOpeningMessage}
+            onPhotosChange={setOpeningMessagePhotos}
+            existingPhotos={shop?.opening_message_photos}
+            addon={
+              showTour && tourStep === 4 && (
+                <TourCallout
+                  message="This is how you get paid. There's no payment processing in this app — write how customers should pay you (GCash number, bank details, etc.) and add a QR code if you have one. It's pinned above every order's chat."
+                  nextLabel="Got it"
+                  strong
+                  placement="top"
+                  onNext={closeTour}
+                  onSkip={closeTour}
+                />
               )
-            )}
-
-            <label>
-              Cover photo (wide banner, JPEG/PNG/WebP)
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={(e) => pickPhoto('cover_photo', e)}
-              />
-            </label>
-            {coverPreview ? (
-              <div className="photo-preview-row">
-                <img className="photo-preview wide" src={coverPreview} alt="Cropped cover photo preview" />
-                <p className="muted">Cropped. Save the shop to upload it.</p>
-              </div>
-            ) : (
-              shop?.cover_photo && (
-                <div className="photo-preview-row">
-                  <img
-                    className="photo-preview wide"
-                    src={`http://localhost:3000${shop.cover_photo.url}`}
-                    alt={shop.cover_photo.filename}
-                  />
-                  <p className="muted">Current cover photo.</p>
-                </div>
-              )
-            )}
-          </fieldset>
-          {showTour && tourStep === 3 && (
-            <TourCallout
-              message="Add a profile picture and cover photo so your shop stands out. Skip it for now if you want — we'll show a placeholder tile until you do."
-              nextLabel="Got it"
-              placement="bottom"
-              onNext={() => setTourStep(4)}
-              onSkip={closeTour}
-            />
-          )}
-        </div>
-
-        <div className="tour-anchor">
-          <fieldset>
-            <legend>Opening message</legend>
-            <p className="muted">
-              Pinned at the top of every order's chat with this shop, so customers always see it —
-              how to pay you (GCash, bank transfer, etc.), hours, or anything else worth repeating.
-              The app never processes payment itself. Add one QR code per payment option you accept.
-            </p>
-            <label>
-              Message
-              <textarea
-                value={openingMessage}
-                onChange={(e) => setOpeningMessage(e.target.value)}
-                placeholder="e.g. GCash to 0917-xxx-xxxx. Please send proof of payment here."
-              />
-            </label>
-            <label>
-              QR codes (JPEG/PNG/WebP, up to 5)
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                onChange={(e) => setOpeningMessagePhotos(e.target.files)}
-              />
-            </label>
-            {shop && shop.opening_message_photos && shop.opening_message_photos.length > 0 && (
-              <div className="thumbs">
-                {shop.opening_message_photos.map((p) => (
-                  <img key={p.id} src={`http://localhost:3000${p.url}`} alt={p.filename} />
-                ))}
-              </div>
-            )}
-          </fieldset>
-          {showTour && tourStep === 4 && (
-            <TourCallout
-              message="This is how you get paid. There's no payment processing in this app — write how customers should pay you (GCash number, bank details, etc.) and add a QR code if you have one. It's pinned above every order's chat."
-              nextLabel="Got it"
-              strong
-              placement="top"
-              onNext={closeTour}
-              onSkip={closeTour}
-            />
-          )}
+            }
+          />
         </div>
 
         {error && <p role="alert" className="error">{error}</p>}
         <button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save shop'}</button>
       </form>
-
-      {/* Outside the <form> on purpose: a fixed-position overlay renders the
-          same anywhere, and nothing inside it can accidentally submit. */}
-      {cropping && (
-        <ImageCropModal
-          key={cropping.field}
-          file={cropping.file}
-          aspect={PHOTO_FIELDS[cropping.field].aspect}
-          title={PHOTO_FIELDS[cropping.field].title}
-          hint={PHOTO_FIELDS[cropping.field].hint}
-          maxWidth={PHOTO_FIELDS[cropping.field].maxWidth}
-          onCancel={() => setCropping(null)}
-          onConfirm={onCropConfirmed}
-        />
-      )}
     </div>
   )
 }
