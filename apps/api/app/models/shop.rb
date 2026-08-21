@@ -17,11 +17,18 @@ class Shop < ApplicationRecord
   FULFILLMENT_METHODS = %w[pickup delivery].freeze
   STATUSES = %w[draft active suspended].freeze
 
+  # Canonical ordered list of vendor-web's shop-setup wizard steps. This is the
+  # source of truth — the frontend mirrors it, so add/rename/reorder here first.
+  # A shop's `onboarding_step` is the step to RESUME at, not the last one
+  # finished: a brand-new shop sits at "shop" having completed nothing.
+  ONBOARDING_STEPS = %w[shop photos items payment].freeze
+
   before_validation :generate_slug, on: :create
 
   validates :name, presence: true
   validates :slug, presence: true, uniqueness: true
   validates :status, inclusion: { in: STATUSES }
+  validates :onboarding_step, inclusion: { in: ONBOARDING_STEPS }
   # One shop per vendor for now. Not a DB constraint (no concurrent-write
   # pressure yet at this scale) — lift this if multi-shop vendors are ever
   # supported.
@@ -67,12 +74,36 @@ class Shop < ApplicationRecord
   # vendor under a tier-1 cancellation-abuse restriction (Orders::
   # CancellationAbuseCheck) can't just reopen to bypass it — the restriction
   # has to be cleared by an admin first.
+  #
+  # The two readiness guards below apply to EVERY open path on purpose,
+  # including the dashboard's existing open toggle, not just the end of the
+  # setup wizard. A shop that is discoverable but unbuyable is worse for a
+  # customer than a shop that is simply closed.
   def open!
     if vendor_profile.restricted?
       raise ApiError.new(
         "This shop is temporarily restricted from reopening due to repeated order cancellations. " \
         "Contact team.kapitmarket@gmail.com to request a review.",
         code: "cancellation_restricted", status: :forbidden
+      )
+    end
+
+    # There is no payment gateway (ADR 0009) — the opening message IS the
+    # payment mechanism, auto-posted into each order's chat. Without one a
+    # customer who orders has no way to find out how to pay.
+    if opening_message.blank?
+      raise ApiError.new(
+        "Add an opening message before opening your shop. It is how customers find out how to pay you.",
+        code: "opening_message_required", status: :forbidden
+      )
+    end
+
+    # An open shop takes a slot in the daily rotating shop list (ADR 0007).
+    # Spending one on an empty catalog wastes a customer's tap.
+    unless items.enabled.exists?
+      raise ApiError.new(
+        "Add at least one available item before opening your shop.",
+        code: "no_enabled_items", status: :forbidden
       )
     end
 
@@ -85,6 +116,10 @@ class Shop < ApplicationRecord
 
   def open?
     status == "active" && accepting_orders?
+  end
+
+  def onboarding_complete?
+    onboarding_completed_at.present?
   end
 
   def demo?

@@ -2,8 +2,8 @@ module Api
   module V1
     module Vendor
       class ShopsController < BaseController
-        before_action :set_shop, only: %i[show update open close destroy_profile_photo destroy_cover_photo
-                                           destroy_opening_message_photo]
+        before_action :set_shop, only: %i[show update open close complete_onboarding destroy_profile_photo
+                                           destroy_cover_photo destroy_opening_message_photo]
 
         # GET /api/v1/vendor/shops
         def index
@@ -45,6 +45,25 @@ module Api
           render json: { shop: ShopSerializer.call(@shop, include_payment_info: true) }
         end
 
+        # POST /api/v1/vendor/shops/:id/complete_onboarding
+        #
+        # Marks the setup wizard finished. `open: true` finishes and opens in the
+        # same call — the readiness guards in Shop#open! still apply, and their
+        # ApiError is left to propagate so the vendor is told exactly what is
+        # missing. Wrapped in a transaction so a refused open leaves the shop
+        # still in the wizard rather than stranding it "onboarded but closed"
+        # with no obvious way back to the step that needs fixing.
+        def complete_onboarding
+          open_after = ActiveModel::Type::Boolean.new.cast(params[:open])
+
+          @shop.transaction do
+            @shop.update!(onboarding_completed_at: Time.current)
+            @shop.open! if open_after
+          end
+
+          render json: { shop: ShopSerializer.call(@shop, include_payment_info: true) }
+        end
+
         # DELETE /api/v1/vendor/shops/:id/profile_photo
         def destroy_profile_photo
           @shop.profile_photo.purge
@@ -75,7 +94,7 @@ module Api
 
         def shop_params
           params.require(:shop).permit(:name, :description, :building, :address,
-                                        :opening_message, fulfillment_methods: [])
+                                        :opening_message, :onboarding_step, fulfillment_methods: [])
         end
 
         def attach_photos(shop)

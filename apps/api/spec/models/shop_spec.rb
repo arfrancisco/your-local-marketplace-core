@@ -70,12 +70,83 @@ RSpec.describe Shop, type: :model do
     end
   end
 
+  describe "onboarding" do
+    it "starts a brand-new shop at the first step, not complete" do
+      shop = create(:shop)
+
+      expect(shop.onboarding_step).to eq(Shop::ONBOARDING_STEPS.first)
+      expect(shop.onboarding_step).to eq("shop")
+      expect(shop).not_to be_onboarding_complete
+    end
+
+    it "treats a shop with a completion timestamp as complete" do
+      expect(build(:shop, onboarding_completed_at: Time.current)).to be_onboarding_complete
+    end
+
+    it "accepts every canonical step" do
+      Shop::ONBOARDING_STEPS.each do |step|
+        expect(build(:shop, onboarding_step: step)).to be_valid
+      end
+    end
+
+    it "rejects a step outside the canonical list" do
+      shop = build(:shop, onboarding_step: "banking")
+
+      expect(shop).not_to be_valid
+      expect(shop.errors[:onboarding_step]).to be_present
+    end
+
+    # The AddOnboardingToShops backfill exists so shops that predate the wizard
+    # are never sent back into it. Asserting the resulting state rather than
+    # re-running the migration: what matters is that an already-backfilled row
+    # reads as complete and parked on the last step.
+    it "reads a backfilled pre-wizard shop as complete and parked on the last step" do
+      shop = create(:shop)
+      shop.update_columns(onboarding_completed_at: shop.created_at,
+                          onboarding_step: Shop::ONBOARDING_STEPS.last)
+
+      expect(shop.reload).to be_onboarding_complete
+      expect(shop.onboarding_completed_at).to be_within(1.second).of(shop.created_at)
+      expect(shop.onboarding_step).to eq("payment")
+    end
+  end
+
   describe "open/close" do
     it "opening activates the shop and accepts orders" do
-      shop = create(:shop)
+      shop = create(:shop, :ready_to_open)
       shop.open!
       expect(shop).to be_open
       expect(shop.status).to eq("active")
+    end
+
+    it "refuses to open without an opening message — it is how customers pay (ADR 0009)" do
+      shop = create(:shop, :with_item, opening_message: nil)
+
+      expect { shop.open! }
+        .to raise_error(ApiError) { |e| expect(e.code).to eq("opening_message_required") }
+      expect(shop.reload.status).to eq("draft")
+    end
+
+    it "refuses to open with no enabled item — an empty shop wastes a rotation slot" do
+      shop = create(:shop, opening_message: "GCash to 0917 123 4567.")
+
+      expect { shop.open! }
+        .to raise_error(ApiError) { |e| expect(e.code).to eq("no_enabled_items") }
+      expect(shop.reload.status).to eq("draft")
+    end
+
+    it "does not count a disabled item toward the catalog requirement" do
+      shop = create(:shop, opening_message: "GCash to 0917 123 4567.")
+      create(:item, shop: shop, enabled: false)
+
+      expect { shop.open! }.to raise_error(ApiError) { |e| expect(e.code).to eq("no_enabled_items") }
+    end
+
+    it "does not count an archived item toward the catalog requirement" do
+      shop = create(:shop, opening_message: "GCash to 0917 123 4567.")
+      create(:item, shop: shop, enabled: true, archived_at: Time.current)
+
+      expect { shop.open! }.to raise_error(ApiError) { |e| expect(e.code).to eq("no_enabled_items") }
     end
 
     it "closing stops accepting orders" do

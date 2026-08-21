@@ -56,7 +56,7 @@ module ShopSerializer
       verified: shop.vendor_profile.verification_status == "verified",
       created_at: shop.created_at,
       updated_at: shop.updated_at
-    }.merge(include_payment_info ? payment_info(shop) : {})
+    }.merge(include_payment_info ? payment_info(shop).merge(onboarding_info(shop)) : {})
   end
 
   def shop_ratings(shop)
@@ -79,6 +79,17 @@ module ShopSerializer
 
     prices = enabled.map(&:price_cents)
     { min: prices.min, max: prices.max }
+  end
+
+  # Setup-wizard progress, gated behind the same include_payment_info flag as
+  # the fields below: it is for the vendor themselves and for admins only. A
+  # browsing customer has no business seeing how far another vendor got
+  # through their own shop setup.
+  def onboarding_info(shop)
+    {
+      onboarding_step: shop.onboarding_step,
+      onboarding_completed_at: shop.onboarding_completed_at
+    }
   end
 
   def payment_info(shop)

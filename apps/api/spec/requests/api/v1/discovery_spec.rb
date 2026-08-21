@@ -27,6 +27,17 @@ RSpec.describe "Api::V1 Discovery", type: :request do
       expect(shop.address).to eq("Unit 12F") # sanity: the private detail still exists on the record
     end
 
+    it "never exposes another vendor's setup-wizard progress to a customer" do
+      shop = create(:shop, :open, onboarding_step: "items")
+
+      get "/api/v1/shops", headers: auth_headers(customer)
+
+      body = json["shops"].first
+      expect(body).not_to have_key("onboarding_step")
+      expect(body).not_to have_key("onboarding_completed_at")
+      expect(shop.onboarding_step).to eq("items") # sanity: it still exists on the record
+    end
+
     it "reports the enabled-item price range, and completed orders only in the order count" do
       shop = create(:shop, :open)
       create(:item, shop: shop, price_cents: 12_000)
