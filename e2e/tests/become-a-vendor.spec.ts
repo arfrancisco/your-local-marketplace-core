@@ -141,26 +141,77 @@ test('full upgrade flow: register, blocked on email verification, verify it, bec
     await crossIntoVendorWeb(page)
   })
 
-  await test.step('onboarding: static splash explains there is no in-app payment, links straight to shop creation', async () => {
+  await test.step('the splash explains there is no in-app payment, then hands off to the wizard', async () => {
     await expect(page.getByText(/no payment in this app/i)).toBeVisible()
+    // The splash carries no stepper on purpose (ADR 0011): it is read-only
+    // and cannot be failed, so counting it would only inflate the flow.
+    await expect(page.getByText(/step \d+ of \d+/i)).toBeHidden()
     await page.getByRole('link', { name: 'Get started' }).click()
+    await page.waitForURL('**/onboarding/shop')
   })
 
-  await test.step('create the first shop without touching any tour callout — tours are opt-in now, so none appear unprompted', async () => {
+  await test.step('step 1 of 4: shop basics, with an opt-in preview that reads off the unsaved form', async () => {
+    await expect(page.getByText('Step 1 of 4')).toBeVisible()
     await page.getByLabel('Name', { exact: true }).fill("Ana's Kitchen")
-    // Required field — a bare click on "Save shop" with this left blank
-    // just triggers native HTML validation and silently never submits.
+    // Required field — a bare Continue with this left blank just triggers
+    // native HTML validation and silently never submits.
     await page.getByLabel(/^Building/).fill('Kiran')
+
+    // Collapsed by default at every width, and it renders the in-progress
+    // form values rather than only what has been saved — nothing has been
+    // saved at all yet at this point, since the shop is created on Continue.
+    await page.getByRole('button', { name: 'Preview your shop' }).click()
+    await expect(page.getByRole('button', { name: 'Hide preview' })).toBeVisible()
+    await expect(page.getByText("Ana's Kitchen")).toBeVisible()
+    await page.getByRole('button', { name: 'Hide preview' }).click()
+
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await page.waitForURL('**/onboarding/photos')
+  })
+
+  await test.step('step 2 of 4: photos are skippable', async () => {
+    await expect(page.getByText('Step 2 of 4')).toBeVisible()
+    await page.getByRole('button', { name: 'Skip for now' }).click()
+    await page.waitForURL('**/onboarding/items')
+  })
+
+  await test.step('step 3 of 4: the first item is added inside the wizard', async () => {
+    await expect(page.getByText('Step 3 of 4')).toBeVisible()
+    await page.getByLabel(/^Name/).fill('Adobo Rice Bowl')
+    await page.getByLabel('Price').fill('180')
+    await page.getByRole('button', { name: 'Add item' }).click()
+
+    await expect(page.getByText('Adobo Rice Bowl')).toBeVisible()
+    // Once one item exists the affordance changes — more are optional.
+    await expect(page.getByRole('button', { name: 'Add another' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await page.waitForURL('**/onboarding/payment')
+  })
+
+  await test.step('step 4 of 4: the API owns the open gate, and the wizard surfaces its refusal', async () => {
+    await expect(page.getByText('Step 4 of 4')).toBeVisible()
+
+    // Deliberately try to open with the message still blank. The rule lives
+    // in Shop#open! (ADR 0009 — this message IS how a customer finds out how
+    // to pay), and the wizard has no second copy of it client-side, so the
+    // API's own refusal is what has to show up here.
+    await page.getByRole('button', { name: 'Open my shop' }).click()
+    await expect(page.getByRole('alert')).toContainText(/opening message/i)
+    await expect(page).toHaveURL(/\/onboarding\/payment$/)
+
     // Placeholder, not getByLabel('Message') — a label wrapping a text
     // control's accessible name includes that control's current value, so
     // this stops matching once the field is non-empty (see
     // order-and-chat-flow.spec.ts, which hits this for real on a reused shop).
     await page.getByPlaceholder('e.g. GCash to 0917-xxx-xxxx. Please send proof of payment here.').fill('GCash to 0917-555-0000. Please send proof of payment here.')
-    await page.getByRole('button', { name: 'Save shop' }).click()
-    // Straight to the real dashboard — no forced hand-off through preview or
-    // any tour stage.
+    await page.getByRole('button', { name: 'Open my shop' }).click()
+
     await page.waitForURL('**/shops')
     await expect(page.getByText("Ana's Kitchen")).toBeVisible()
+    // Finished, so the resume banner is gone and the shop is really open.
+    await expect(page.getByText('Finish setting up your shop')).toBeHidden()
+    await expect(page.getByRole('button', { name: /shop is open/i })).toBeVisible()
   })
 
   await test.step('the dashboard\'s "?" tour is opt-in: opens on click, closes on ×, never navigates', async () => {
@@ -171,17 +222,19 @@ test('full upgrade flow: register, blocked on email verification, verify it, bec
     await expect(page).toHaveURL(`${VENDOR_BASE}/shops`)
   })
 
-  await test.step('add the first item via the inventory tab, with no forced hand-off afterward', async () => {
+  await test.step('the inventory tab still adds items after onboarding, alongside the one the wizard created', async () => {
     // Inventory lives in the bottom TabBar now, not the kebab menu (which
-    // only keeps "Edit shop details" and "Preview shop").
+    // only keeps "Edit shop details" and "Preview shop"). The wizard created
+    // the first item; this is the ordinary path for every one after it.
     await page.getByRole('link', { name: /^inventory$/i }).click()
-
-    await page.getByRole('button', { name: 'Add item' }).click()
-    await page.getByLabel(/^Name/).fill('Adobo Rice Bowl')
-    await page.getByLabel('Price').fill('180')
-    await page.getByRole('button', { name: 'Add item' }).click()
-
     await expect(page.getByText('Adobo Rice Bowl')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Add item' }).click()
+    await page.getByLabel(/^Name/).fill('Pancit Bihon')
+    await page.getByLabel('Price').fill('150')
+    await page.getByRole('button', { name: 'Add item' }).click()
+
+    await expect(page.getByText('Pancit Bihon')).toBeVisible()
     await expect(page).toHaveURL(/\/items$/)
   })
 
@@ -211,7 +264,12 @@ test('full upgrade flow: register, blocked on email verification, verify it, bec
   })
 })
 
-test('/onboarding is a static splash, independent of whether the vendor already has a shop', async ({ page }) => {
+// Abandoning the wizard partway is the common case, not an edge case: a
+// vendor sets up on their phone between other things. What makes that safe is
+// that the shop row exists from step 1 onward but stays draft/not-accepting,
+// so a half-built shop is never visible to a customer, and shops.onboarding_step
+// remembers where to drop them back in (ADR 0011).
+test('leaving the wizard partway leaves the shop invisible, and the dashboard offers to resume it', async ({ page }) => {
   const email = uniqueEmail('returningvendor')
   await registerEligibleResident(page, email)
 
@@ -219,20 +277,46 @@ test('/onboarding is a static splash, independent of whether the vendor already 
   await verifyEmailFromAccountPage(page, email)
   await crossIntoVendorWeb(page)
 
-  // Before creating any shop, /onboarding is just the static splash.
-  await expect(page.getByText(/no payment in this app/i)).toBeVisible()
   await page.getByRole('link', { name: 'Get started' }).click()
-
+  await page.waitForURL('**/onboarding/shop')
   await page.getByLabel('Name', { exact: true }).fill('Returning Vendor Shop')
   await page.getByLabel(/^Building/).fill('Kiran')
-  await page.getByPlaceholder('e.g. GCash to 0917-xxx-xxxx. Please send proof of payment here.').fill('Bank transfer to 1234-5678.')
-  await page.getByRole('button', { name: 'Save shop' }).click()
-  await page.waitForURL('**/shops')
-  await expect(page.getByText('Returning Vendor Shop')).toBeVisible()
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.waitForURL('**/onboarding/photos')
 
-  // Visiting /onboarding again, now that a shop exists, shows the exact same
-  // splash — it never branched on shop count to begin with.
-  await page.goto(`${VENDOR_BASE}/onboarding`)
-  await expect(page.getByText(/no payment in this app/i)).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Get started' })).toBeVisible()
+  // Walk away mid-wizard, straight to the dashboard. The shop exists, so this
+  // no longer bounces back to the splash the way a shopless vendor would.
+  await page.goto(`${VENDOR_BASE}/shops`)
+  await expect(page.getByText('Returning Vendor Shop')).toBeVisible()
+  await expect(page.getByText('not published yet')).toBeVisible()
+  await expect(page.getByText('Finish setting up your shop')).toBeVisible()
+  await expect(page.getByText(/step 2 of 4/i)).toBeVisible()
+
+  // Resuming lands on the step they stopped at, not back at the beginning.
+  await page.getByRole('link', { name: 'Continue setup' }).click()
+  await page.waitForURL('**/onboarding/photos')
+  await expect(page.getByText('Step 2 of 4')).toBeVisible()
+
+  // Going Back is free: it saves nothing, so the furthest step reached does
+  // not regress and a later resume still points forward.
+  await page.getByRole('link', { name: /Back/ }).click()
+  await page.waitForURL('**/onboarding/shop')
+  await page.goto(`${VENDOR_BASE}/shops`)
+  await expect(page.getByText(/step 2 of 4/i)).toBeVisible()
+})
+
+// The wizard's later steps all assume a shop exists — reaching them without
+// one (a stale link, a bookmark, a hand-typed URL) has to land somewhere
+// sensible rather than rendering a form with nothing behind it.
+test('a wizard step deep-linked without a shop redirects back to the first step', async ({ page }) => {
+  const email = uniqueEmail('deeplinkvendor')
+  await registerEligibleResident(page, email)
+
+  await page.goto(`${CUSTOMER_BASE}/account`)
+  await verifyEmailFromAccountPage(page, email)
+  await crossIntoVendorWeb(page)
+
+  await page.goto(`${VENDOR_BASE}/onboarding/payment`)
+  await page.waitForURL('**/onboarding/shop')
+  await expect(page.getByText('Step 1 of 4')).toBeVisible()
 })

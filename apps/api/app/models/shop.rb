@@ -94,7 +94,7 @@ class Shop < ApplicationRecord
     if opening_message.blank?
       raise ApiError.new(
         "Add an opening message before opening your shop. It is how customers find out how to pay you.",
-        code: "opening_message_required", status: :forbidden
+        code: "opening_message_required", status: :unprocessable_entity
       )
     end
 
@@ -103,7 +103,7 @@ class Shop < ApplicationRecord
     unless items.enabled.exists?
       raise ApiError.new(
         "Add at least one available item before opening your shop.",
-        code: "no_enabled_items", status: :forbidden
+        code: "no_enabled_items", status: :unprocessable_entity
       )
     end
 

@@ -91,7 +91,7 @@ RSpec.describe "Api::V1::Vendor Shops", type: :request do
       bare = create(:shop) # its own vendor, with no opening message and no items
       post "/api/v1/vendor/shops/#{bare.id}/open", headers: auth_headers(bare.vendor_profile.user)
 
-      expect(response).to have_http_status(:forbidden)
+      expect(response).to have_http_status(:unprocessable_entity)
       expect(json.dig("error", "code")).to eq("opening_message_required")
     end
   end
@@ -142,7 +142,7 @@ RSpec.describe "Api::V1::Vendor Shops", type: :request do
         post "/api/v1/vendor/shops/#{shop.id}/complete_onboarding",
              params: { open: true }, headers: auth_headers(vendor_user)
 
-        expect(response).to have_http_status(:forbidden)
+        expect(response).to have_http_status(:unprocessable_entity)
         expect(json.dig("error", "code")).to eq("opening_message_required")
         expect(shop.reload).not_to be_onboarding_complete
       end
