@@ -6,8 +6,16 @@ import { TourCallout } from '../components/TourCallout'
 import { HelpTourButton } from '../components/HelpTourButton'
 import { RatingSummary } from '../components/Ratings'
 import { OrderList } from '../components/OrderList'
+import { SetupProgress } from '../components/SetupProgress'
 import { useMyShopState } from '../useMyShop'
 import { colorFor, emojiFor } from '../visuals'
+import {
+  ONBOARDING_STEPS,
+  ONBOARDING_STEP_LABELS,
+  stepNumber,
+  stepPath,
+  toOnboardingStep,
+} from '../onboarding'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '')
 
@@ -89,10 +97,67 @@ export function ShopDashboardPage() {
   if (!shop) return <p>No shop yet. Create your first one.</p>
 
   const fallbackKey = `${shop.name} ${shop.description ?? ''}`
+  // Strictly null, not just falsy: a payload without the field at all (an
+  // older API, or a shop serialized without the vendor-only fields) says
+  // nothing about setup, and shouldn't nag.
+  const setupUnfinished = shop.onboarding_completed_at === null
+  const resumeStep = toOnboardingStep(shop.onboarding_step)
+  // Finishing the wizard is not the same as being able to open. A shop can
+  // be onboarding-complete and still blocked: every pre-wizard shop was
+  // backfilled as complete (including abandoned signups with no items), and
+  // a live vendor can empty their catalogue at any time. Without this the
+  // resume banner is the only nudge, and it is already gone by then — so the
+  // vendor closes for a night, cannot reopen, and is told why only by an
+  // error inside a modal they have to go looking for.
+  const openBlockers = shop.open_blockers ?? []
+  const showReadiness = !setupUnfinished && openBlockers.length > 0
 
   return (
     <div>
       <HelpTourButton onClick={openTour} label="Tour your dashboard" />
+
+      {setupUnfinished && (
+        <div className="card onboarding-resume">
+          <h2>Finish setting up your shop</h2>
+          <p className="muted">
+            You're on step {stepNumber(resumeStep)} of {ONBOARDING_STEPS.length} —{' '}
+            {ONBOARDING_STEP_LABELS[resumeStep]}.{' '}
+            {/* The open/closed toggle below is deliberately independent of
+                setup, so an open shop really is visible to customers even
+                with steps left — saying otherwise here would be a lie. */}
+            {shop.open
+              ? 'Your shop is already open, so neighbors can find it while you finish.'
+              : 'Nobody can see your shop until you finish.'}
+          </p>
+          <SetupProgress step={stepNumber(resumeStep)} total={ONBOARDING_STEPS.length} showLabel={false} />
+          <Link className="button" to={stepPath(resumeStep)}>Continue setup</Link>
+        </div>
+      )}
+
+      {showReadiness && (
+        <div className="card shop-readiness">
+          <h2>{shop.open ? 'Your shop needs attention' : "Your shop can't open yet"}</h2>
+          <p className="muted">
+            {shop.open
+              ? 'Neighbors can find your shop right now, but it will not be able to reopen once you close it until these are sorted:'
+              : 'Before you can open, please sort these out:'}
+          </p>
+          <ul className="list readiness-list">
+            {openBlockers.map((blocker) => (
+              <li key={blocker.code}>
+                {blocker.message}{' '}
+                {/* A reason with no way to act on it just reads as a dead
+                    end, so each one carries the link that fixes it. */}
+                {blocker.code === 'no_enabled_items' ? (
+                  <Link to={`/shops/${shop.id}/items`}>Go to Inventory</Link>
+                ) : (
+                  <Link to={`/shops/${shop.id}/edit`}>Edit your shop</Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {showTour && tourStep === 0 && (
         <TourCallout
           message="This is your dashboard from here on — come back anytime to manage your shop, items, and orders."

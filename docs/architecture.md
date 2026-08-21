@@ -197,6 +197,30 @@ admin-web action.
    customer. The admin namespace is the one exception, with cross-vendor
    read access, for investigating disputes.
 
+## Vendor onboarding: a guided wizard, not a splash
+
+`ADR 0011` reverses an earlier "static informational splash" design:
+onboarding is now a real 4-step wizard (shop basics, photos, first item,
+payment message) that a vendor is guided through in order, rather than a
+one-time welcome page pointing at `/shops/new` and leaving the rest of setup
+to be discovered page by page. The per-page "?" tours (`HelpTourButton`,
+still present on `ShopFormPage`, `ShopDashboardPage`, `ShopPreviewPage`,
+`ItemsPage`, `OrderDetailPage`) are unchanged; they now serve a returning
+vendor revisiting a page on their own terms, not the first-run path.
+
+Progress is tracked on the shop row itself, not in the client: `shops.
+onboarding_step` (a string checked against `Shop::ONBOARDING_STEPS`) records
+the furthest step reached, and `shops.onboarding_completed_at` records
+whether the whole wizard was finished, as two independent fields rather than
+one derived from the other. The shop row is created at the end of step 1,
+not the end of the wizard — already safe with no new mechanism, since a
+draft/not-yet-`accepting_orders` shop is already invisible to `Shop.listed`
+discovery (`ADR 0007`). `Shop#open!` now also requires an opening message and
+at least one enabled item, tying shop-open directly to ADR 0009 (the opening
+message is the payment mechanism), but opening a shop from the dashboard and
+completing the wizard remain independent signals — a shop can be open while
+the wizard's setup banner is still showing.
+
 ## Error monitoring (Workstream C): internal only
 
 No Sentry, no Rollbar, no third-party SDK — a deliberate call to avoid

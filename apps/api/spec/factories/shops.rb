@@ -17,6 +17,13 @@ FactoryBot.define do
     trait :with_item do
       after(:create) { |shop| create(:item, shop: shop) }
     end
+
+    # Satisfies both of Shop#open!'s readiness guards: an opening message (the
+    # payment mechanism, ADR 0009) and at least one enabled item.
+    trait :ready_to_open do
+      opening_message { "GCash to 0917 123 4567, send proof of payment here." }
+      after(:create) { |shop| create(:item, shop: shop) }
+    end
   end
 
   factory :item do

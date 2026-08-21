@@ -4,6 +4,7 @@ class ShopPolicy < ApplicationPolicy
   def update?        = owner?
   def open?          = owner?
   def close?         = owner?
+  def complete_onboarding? = owner?
   def manage_items?  = owner?
 
   private

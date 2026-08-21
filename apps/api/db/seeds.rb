@@ -273,8 +273,16 @@ DEMO_SHOPS.each_with_index do |data, i|
   shop.building = building_part
   shop.address = unit_part.presence || building_part
   shop.fulfillment_methods = data[:fulfillment]
+  # Shop#open! now requires an opening message (it is the payment mechanism,
+  # ADR 0009) — give demo shops a plausible one so seeding still produces
+  # discoverable shops. Only fills a blank, never overwrites a real edit.
+  if shop.opening_message.blank?
+    shop.opening_message = "Thanks for ordering! GCash or cash on pickup both work — " \
+                           "message here once you have sent payment and I will get started."
+  end
+  shop.onboarding_step = "payment"
+  shop.onboarding_completed_at ||= Time.current
   shop.save!
-  shop.open! unless shop.open?
 
   unless shop.profile_photo.attached?
     if data[:cover_photo]
@@ -313,6 +321,10 @@ DEMO_SHOPS.each_with_index do |data, i|
 
     photo ? attach_seed_photo(item, photo) : attach_placeholder_photos(item)
   end
+
+  # Opened last, not right after save!: Shop#open! refuses a shop with no
+  # enabled item, so the catalog has to exist first.
+  shop.open! unless shop.open?
 end
 
 # --- Demo order history + ratings ---------------------------------------------

@@ -43,6 +43,20 @@ export interface Shop {
   // The exact unit, e.g. "Unit 7A" — vendor-only, same gate as above.
   // Never shown to a customer; share it via the opening message if needed.
   address?: string | null
+  // Setup-wizard bookkeeping, vendor-only (same gate as the fields above,
+  // so both are optional here — a customer-facing shop payload carries
+  // neither). `onboarding_step` is the step to resume at, i.e. the furthest
+  // step reached, and mirrors Shop::ONBOARDING_STEPS on the API; see
+  // ../onboarding.ts. `onboarding_completed_at` is null until the vendor
+  // finishes the wizard, and it is independent of `open` — a shop can be
+  // open with setup still unfinished.
+  onboarding_step?: string
+  onboarding_completed_at?: string | null
+  // Why this shop cannot open yet, straight from the rule Shop#open!
+  // enforces (Shop::OPEN_BLOCKERS). Empty means it can open. The client
+  // never decides this for itself — a second copy of the rule would drift
+  // from the one actually being enforced.
+  open_blockers?: { code: string; message: string }[]
   created_at: string
   updated_at: string
   // Seed/demo data, not a real neighbor's shop — see ShopSerializer. An

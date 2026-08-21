@@ -111,18 +111,21 @@ RSpec.describe "Api::V1::Vendor Items", type: :request do
   describe "end-to-end M1 acceptance" do
     it "a vendor creates an open shop with one orderable item" do
       post "/api/v1/vendor/shops",
-           params: { shop: { name: "Acceptance Shop", fulfillment_methods: %w[pickup] } },
+           params: { shop: { name: "Acceptance Shop", fulfillment_methods: %w[pickup],
+                             opening_message: "GCash to 0917 123 4567." } },
            headers: auth_headers(vendor_user)
       shop_id = json.dig("shop", "id")
 
-      post "/api/v1/vendor/shops/#{shop_id}/open", headers: auth_headers(vendor_user)
-      expect(json.dig("shop", "open")).to be(true)
-
+      # Stocked before opening, not after: Shop#open! refuses an empty catalog,
+      # so a shop cannot become discoverable with nothing to buy.
       post "/api/v1/vendor/shops/#{shop_id}/items",
            params: { item: { name: "Only Item", price_cents: 9_900 } },
            headers: auth_headers(vendor_user)
       expect(response).to have_http_status(:created)
       expect(json.dig("item", "enabled")).to be(true)
+
+      post "/api/v1/vendor/shops/#{shop_id}/open", headers: auth_headers(vendor_user)
+      expect(json.dig("shop", "open")).to be(true)
     end
   end
 end

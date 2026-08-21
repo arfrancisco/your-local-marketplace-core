@@ -28,6 +28,66 @@ RSpec.describe "Api::V1::Admin::Shops", type: :request do
       get "/api/v1/admin/shops", params: { demo: "true" }, headers: admin_auth_headers
       expect(json["shops"].map { |s| s["id"] }).to eq([demo_shop.id])
     end
+
+    # This endpoint is where the per-row query problem actually bites: it
+    # paginates up to 200 shops, and each serialized row reads :items twice
+    # (price_range_cents, open_blockers) and :ratings twice (average_rating,
+    # ratings_count). A model-level test cannot catch a regression here,
+    # because what breaks is the scope — swapping in Shop.search (whose raw
+    # SQL references items) would promote the preload to an eager-load join,
+    # and changing filter_by_demo could drop it entirely.
+    #
+    # Scoped to those two tables on purpose. Three other things on this
+    # endpoint still cost a query per row, and none belong to this change:
+    # completed_orders_count (orders), vendor_verification_status/demo?
+    # (vendor_profiles, users) and the shop photos (active_storage_
+    # attachments).
+    #
+    # The vendor_profile one wants its own change rather than a one-line
+    # addition here. filter_by_demo already joins that same association, so
+    # preloading it gets promoted into a single eager-load JOIN. Rails keeps
+    # that correct on its own (count switches to COUNT(DISTINCT), and LIMIT
+    # falls back to a two-query strategy), so the hazard is not wrong data
+    # but shape: folding three has_many associations into one JOIN fans the
+    # result set out to items x ratings rows per shop, each repeating the
+    # shop and vendor columns.
+    #
+    # Asserting a flat TOTAL here would either fail on those pre-existing
+    # costs or, once loosened enough to pass, quietly bless them.
+    it "does not read items or ratings more often as more shops land on the page" do
+      customer = create(:user, :customer)
+      seed_shop = lambda do
+        s = create(:shop, :open)
+        2.times { create(:item, shop: s) }
+        order = create(:order, shop: s, customer_profile: customer.customer_profile)
+        create(:rating, order: order, reviewer_user: customer, reviewee: s, score: 4)
+      end
+
+      count_preloaded_reads = lambda do |&block|
+        queries = 0
+        counter = lambda do |*, payload|
+          next if payload[:name] == "SCHEMA" || payload[:cached]
+
+          queries += 1 if payload[:sql].match?(/FROM "(items|ratings)"/)
+        end
+        ActiveSupport::Notifications.subscribed(counter, "sql.active_record", &block)
+        queries
+      end
+
+      2.times { seed_shop.call }
+      with_two = count_preloaded_reads.call { get "/api/v1/admin/shops", headers: admin_auth_headers }
+      expect(response).to have_http_status(:ok)
+      expect(json["shops"].size).to eq(2)
+
+      3.times { seed_shop.call }
+      with_five = count_preloaded_reads.call { get "/api/v1/admin/shops", headers: admin_auth_headers }
+      expect(response).to have_http_status(:ok)
+      expect(json["shops"].size).to eq(5)
+
+      # One preload each, however many shops are on the page.
+      expect(with_two).to eq(2)
+      expect(with_five).to eq(2)
+    end
   end
 
   describe "GET /api/v1/admin/shops/:id" do
