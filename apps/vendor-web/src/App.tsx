@@ -12,6 +12,11 @@ import { ShopFormPage } from './pages/ShopFormPage'
 import { ShopPreviewPage } from './pages/ShopPreviewPage'
 import { ShopReviewsPage } from './pages/ShopReviewsPage'
 import { OnboardingPage } from './pages/OnboardingPage'
+import { OnboardingLayout } from './pages/onboarding/OnboardingLayout'
+import { ShopStep } from './pages/onboarding/ShopStep'
+import { PhotosStep } from './pages/onboarding/PhotosStep'
+import { ItemsStep } from './pages/onboarding/ItemsStep'
+import { PaymentStep } from './pages/onboarding/PaymentStep'
 import { ItemsPage } from './pages/ItemsPage'
 import { OrderDetailPage } from './pages/OrderDetailPage'
 
@@ -67,10 +72,24 @@ export default function App() {
         <main className="container">
           <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/onboarding" element={<RequireAuth><OnboardingPage /></RequireAuth>} />
+            <Route path="/onboarding">
+              <Route index element={<RequireAuth><OnboardingPage /></RequireAuth>} />
+              {/* The 4-step setup wizard. The layout owns the progress bar,
+                  the shared draft state, and the guard that sends anyone
+                  landing past step 1 without a shop back to step 1. */}
+              <Route element={<RequireAuth><OnboardingLayout /></RequireAuth>}>
+                <Route path="shop" element={<ShopStep />} />
+                <Route path="photos" element={<PhotosStep />} />
+                <Route path="items" element={<ItemsStep />} />
+                <Route path="payment" element={<PaymentStep />} />
+              </Route>
+            </Route>
             <Route path="/account" element={<RequireAuth><AccountPage /></RequireAuth>} />
             <Route path="/shops" element={<RequireAuth><ShopDashboardPage /></RequireAuth>} />
-            <Route path="/shops/new" element={<RequireAuth><ShopFormPage /></RequireAuth>} />
+            {/* Onboarding owns shop creation now. The route stays so older
+                links (and anything bookmarked) land on the wizard's first
+                step instead of 404ing. */}
+            <Route path="/shops/new" element={<Navigate to="/onboarding/shop" replace />} />
             <Route path="/shops/:id/edit" element={<RequireAuth><ShopFormPage /></RequireAuth>} />
             <Route path="/shops/:id/preview" element={<RequireAuth><ShopPreviewPage /></RequireAuth>} />
             <Route path="/shops/:id/reviews" element={<RequireAuth><ShopReviewsPage /></RequireAuth>} />

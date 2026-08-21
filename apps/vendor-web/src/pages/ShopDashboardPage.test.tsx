@@ -240,3 +240,62 @@ describe('ShopDashboardPage onboarding tour', () => {
     expect(screen.getByText(/this is your dashboard from here on/i)).toBeInTheDocument()
   })
 })
+
+// The setup wizard (pages/onboarding/) records how far a vendor got in
+// shops.onboarding_step and stamps onboarding_completed_at at the end.
+// Until that stamp exists, the dashboard offers a way back in.
+describe('ShopDashboardPage setup resume banner', () => {
+  const midSetupClosed: Shop = {
+    ...shopClosed,
+    onboarding_step: 'items',
+    onboarding_completed_at: null,
+  }
+  const midSetupOpen: Shop = { ...midSetupClosed, accepting_orders: true, open: true }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    setToken('tok123')
+    vi.mocked(api.me).mockResolvedValue({ user: baseUser() })
+    vi.mocked(api.listVendorOrders).mockResolvedValue({ orders: [] })
+  })
+
+  it('points back at the step the vendor stopped on, counted out of the real step total', async () => {
+    vi.mocked(api.listShops).mockResolvedValue({ shops: [midSetupClosed] })
+
+    renderAt('/shops')
+
+    expect(await screen.findByRole('heading', { name: 'Finish setting up your shop' })).toBeInTheDocument()
+    expect(screen.getByText(/you're on step 3 of 4 — add your first item/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Continue setup' })).toHaveAttribute('href', '/onboarding/items')
+  })
+
+  it('says nobody can see the shop only while it is actually closed', async () => {
+    vi.mocked(api.listShops).mockResolvedValue({ shops: [midSetupClosed] })
+
+    renderAt('/shops')
+
+    expect(await screen.findByText(/nobody can see your shop until you finish/i)).toBeInTheDocument()
+  })
+
+  it('never claims the shop is invisible when it is open — the open toggle is independent of setup', async () => {
+    vi.mocked(api.listShops).mockResolvedValue({ shops: [midSetupOpen] })
+
+    renderAt('/shops')
+
+    expect(await screen.findByRole('heading', { name: 'Finish setting up your shop' })).toBeInTheDocument()
+    expect(screen.queryByText(/nobody can see your shop/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/already open, so neighbors can find it while you finish/i)).toBeInTheDocument()
+  })
+
+  it('disappears once onboarding is finished', async () => {
+    vi.mocked(api.listShops).mockResolvedValue({
+      shops: [{ ...shopOpen, onboarding_step: 'payment', onboarding_completed_at: '2026-08-21T00:00:00Z' }],
+    })
+
+    renderAt('/shops')
+
+    await screen.findByRole('heading', { name: "Lola's Kitchen" })
+    expect(screen.queryByRole('heading', { name: 'Finish setting up your shop' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Continue setup' })).not.toBeInTheDocument()
+  })
+})

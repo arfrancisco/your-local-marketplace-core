@@ -26,10 +26,11 @@ export function MyShopProvider({ children }: { children: ReactNode }) {
   // of how React schedules the effect's cleanup relative to the promise.
   const shopRef = useRef<Shop | null>(null)
 
-  // A one-time fetch, not re-run on navigation — ShopFormPage is the only
-  // place a shop is ever created or edited, and it pushes the result into
-  // this context directly via setShop (see its submit handler), so there's
-  // nothing else that would make an existing snapshot go stale.
+  // A one-time fetch, not re-run on navigation — the only places a shop is
+  // ever created or edited (ShopFormPage and the onboarding wizard, see
+  // pages/onboarding/OnboardingLayout.tsx) each push the result into this
+  // context directly via setShop, so there's nothing else that would make
+  // an existing snapshot go stale.
   useEffect(() => {
     // Wait for auth to settle first — otherwise the pre-`me()`-resolution
     // render (user still null) would look identical to "signed in, no

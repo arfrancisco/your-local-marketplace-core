@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom'
+import { ONBOARDING_STEPS, stepPath } from '../onboarding'
 
-// A static, informational splash — not a state machine. Reached from
-// customer-web's "become a vendor" redirect, or from ShopDashboardPage's
-// own no-shop redirect (a vendor with no shop has nothing useful to do on
-// /shops). It's not shop-count-aware: any vendor can revisit it any time,
-// same as any other page. Each real page (ShopFormPage, ShopDashboardPage,
-// ShopPreviewPage, ItemsPage, OrderDetailPage) owns its own optional,
-// on-demand tour behind a "?" button (HelpTourButton) instead of this page
-// forcing anyone through a guided sequence.
+// The wizard's front door: an informational splash, with no stepper of its
+// own, that hands off to the real 4-step setup flow (pages/onboarding/).
+// Setup used to stop here — a single "New shop" form did the whole job and
+// this page deliberately wasn't a state machine — but shop creation, photos,
+// items and payment are now four recorded steps a vendor can leave and
+// resume (shops.onboarding_step). Reached from customer-web's "become a
+// vendor" redirect, or from ShopDashboardPage's own no-shop redirect.
 export function OnboardingPage() {
   return (
     <div className="card onboarding-welcome">
@@ -19,7 +19,7 @@ export function OnboardingPage() {
         <li>
           <strong>There's no payment in this app.</strong> You get paid directly by whatever
           method you publish — GCash, bank transfer, cash on pickup, whatever you use. You'll
-          set that up as your shop's "opening message" in the next step, and customers see it
+          set that up as your shop's "opening message" in the last step, and customers see it
           pinned above every order's chat with you.
         </li>
         <li>
@@ -37,7 +37,11 @@ export function OnboardingPage() {
           selling, not a one-time declutter sale.
         </li>
       </ul>
-      <Link className="button" to="/shops/new">Get started</Link>
+      <Link className="button" to={stepPath(ONBOARDING_STEPS[0])}>Get started</Link>
+      <p className="muted small">
+        Setting up takes about {ONBOARDING_STEPS.length} short steps. You can stop anytime and
+        pick up where you left off.
+      </p>
     </div>
   )
 }
