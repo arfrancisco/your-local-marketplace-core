@@ -32,12 +32,67 @@ Nothing here needs hand-editing, but feel free.
 | 7 | Cart and checkout | 2026-08-18 | - | - | - |
 | 8 | Order lifecycle | 2026-08-19 | - | - | - |
 | 9 | Chat, payment, ratings | 2026-08-20 | - | - | - |
-| 10 | Operations surface | - | - | - | - |
+| 10 | Operations surface | 2026-08-21 | - | - | - |
 | 11 | Pre-beta review | - | - | - | - |
 
 ## Session log
 
 Newest first.
+
+### 2026-08-21 — No quiz (blocked, unchanged) · Taught: lesson 10
+
+Sixth consecutive automated session with no live user and no interactive
+question tool (`select:AskUserQuestion` came back with no match, a broader
+"ask user question interactive" keyword search also came back with no match
+among this session's toolset). Per this log's own "Next up" instruction
+carried from 2026-08-19/2026-08-20, did not write a seventh unanswerable
+question set — the combined lessons 4+5+6 review posted 2026-08-18 is still
+the one to grade whenever Alain is live in this routine. Not re-flagging via
+notification this time either, for the same reason 2026-08-20 gave: the
+structural blocker is unchanged from what was already pushed to him after
+the 08-18 and 08-19 sessions, and a fourth identical ping would be noise.
+The two options ((a) quiz-only-when-live, (b) drop Part 1 from the scheduled
+run) are still open and still his call.
+
+Delivered lesson 10 in full: the one error envelope
+(`{ error: { code, message, details } }`) and controllers/services never
+rendering errors by hand, the `rescue_from` bottom-to-top matching rule and
+why `StandardError` is declared *first* (later declarations win, so the
+catch-all has to be the earliest one or it swallows `RecordNotFound` /
+`Pundit::NotAuthorizedError` into 500s), the generic internal-error message
+plus `error_id` correlation token versus the real detail living in
+`error_logs`, `record_error_log` rescuing its own failure so a broken DB
+doesn't turn one exception into two, the in-house (no Sentry/Rollbar)
+monitoring design — one row per fingerprint (exception class + message + top
+backtrace line, SHA-256, unique-indexed), `occurrences_count` bumped
+silently on repeats, `newly_created` as the sole alerting gate — the
+explicit `is_a?(ClientError)` type check instead of `respond_to?(:name)` and
+why (`NoMethodError#name` is the *missing method's* name, not the exception's),
+frontend `ErrorBoundary`/`unhandledrejection` reporting to the same
+`POST /client_errors` pipeline with the one hardcoded exclusion so the
+reporter can't report on itself, `ApplicationJob`'s capture-then-re-raise and
+why a non-re-raising `rescue_from` would silently disable Sidekiq retries,
+`ErrorAlertJob`'s `Rails.env.production?` guard against a stray local
+`RESEND_API_KEY` paging a real inbox, the Rack::Attack rule table (auth
+10/min, verifications/password-resets 5/min because codes cost money,
+early_access 5/min, shop discovery 120/min) and the 429 sharing the standard
+error envelope with `Retry-After`, the four admin-surface guards
+(conditional routes on `ADMIN_ENABLED` → 404 not 403 when off, per-admin
+tokens re-checked every request, a blanket audit `around_action`, and
+Sidekiq's own separate Basic Auth pair unmounted unless set), admin-mcp as
+an ordinary audited HTTP client of the admin API with `confirm: true`
+enforced as a code branch rather than description text, the CI-covers-API-
+specs-only gap (Vitest and Playwright both run locally, neither in CI), and
+the neighbor-reports-a-broken-app walkthrough (error id → admin Error logs
+or admin-mcp → check `occurrences_count` → check `source` → reproduce → fix
+→ `railway up` → resolve the row, `reopen!` if the fingerprint recurs).
+Spot-checked `error_handling.rb`, `application_job.rb`, and `error_log.rb`
+against the lesson text before teaching — all three matched exactly, no
+drift; noted one detail the lesson doesn't mention as a bonus in the
+session — `ErrorLog.record!`'s `rescue ActiveRecord::RecordNotUnique`
+handles two processes racing to record the same brand-new fingerprint
+simultaneously, re-reading the winner and counting the loser as a repeat so
+no duplicate alert fires.
 
 ### 2026-08-20 — No quiz (blocked, unchanged) · Taught: lesson 9
 
@@ -302,26 +357,29 @@ the three misconceptions.
 
 ## Next up
 
-**Structural blocker, not just a scheduling gap:** five scheduled sessions
-in a row now (2026-08-14, -17, -18, -19, -20) have been unable to grade a
-quiz, because there is no interactive tool in automated runs and separate
-scheduled sessions don't share transcripts with each other. **Grade the
-combined lessons 4+5+6 review** posted in the 2026-08-18 session (6
-questions, still open) the next time this runs as a *live* session with
-Alain actually present to answer — and backfill all three mastery rows
-then. Do not keep appending new unanswerable question sets; re-post the
-same 2026-08-18 six or ask live instead.
+**Structural blocker, not just a scheduling gap:** six scheduled sessions
+in a row now (2026-08-14, -17, -18, -19, -20, -21) have been unable to
+grade a quiz, because there is no interactive tool in automated runs and
+separate scheduled sessions don't share transcripts with each other.
+**Grade the combined lessons 4+5+6 review** posted in the 2026-08-18
+session (6 questions, still open) the next time this runs as a *live*
+session with Alain actually present to answer — and backfill all three
+mastery rows then. Do not keep appending new unanswerable question sets;
+re-post the same 2026-08-18 six or ask live instead.
 
 The two options from the 2026-08-18 entry — (a) only run Part 1 when this
 skill is triggered live, letting the schedule handle lesson delivery only,
 or (b) drop Part 1 from the scheduled version entirely — are still both on
 the table. This was flagged via notification after the 08-18 and 08-19
-sessions; not re-flagged this session since nothing about the blocker has
-changed and a third identical ping would just be noise. Still worth Alain
-actually deciding between (a)/(b) next time he's here live, so this stops
-needing a fresh diagnosis every session.
+sessions; not re-flagged on 08-20 or this session since nothing about the
+blocker has changed and a repeat identical ping would just be noise. Still
+worth Alain actually deciding between (a)/(b) next time he's here live, so
+this stops needing a fresh diagnosis every session.
 
-Lesson 9 was taught 2026-08-20. **Lesson 10 — the operations surface**
-is next in the teaching sequence regardless of quiz status, per this log's
-own cadence rule (teach happens every session; quiz grading is what's
-stuck).
+Lesson 10 was taught 2026-08-21. **Lesson 11 — the pre-beta review** is
+next and last in the teaching sequence regardless of quiz status, per this
+log's own cadence rule (teach happens every session; quiz grading is what's
+stuck). Once lesson 11 is taught, Part 2 of this routine switches to mixed
+review / going deeper on the pre-beta checklist per the routine's own
+instructions — worth Alain knowing the curriculum is one session from done
+on the teaching side, independent of the quiz backlog.
