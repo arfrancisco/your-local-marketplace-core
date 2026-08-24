@@ -33,11 +33,56 @@ Nothing here needs hand-editing, but feel free.
 | 8 | Order lifecycle | 2026-08-19 | - | - | - |
 | 9 | Chat, payment, ratings | 2026-08-20 | - | - | - |
 | 10 | Operations surface | 2026-08-21 | - | - | - |
-| 11 | Pre-beta review | - | - | - | - |
+| 11 | Pre-beta review | 2026-08-24 | - | - | - |
 
 ## Session log
 
 Newest first.
+
+### 2026-08-24 — No quiz (blocked, unchanged) · Taught: lesson 11 (curriculum complete)
+
+Seventh consecutive automated session with no live user and no interactive
+question tool (`select:AskUserQuestion` and a broader keyword search both
+came back empty again this session). Per this log's own standing
+instruction, did not write an eighth unanswerable question set — the
+combined lessons 4+5+6 review posted 2026-08-18 is still the one to grade
+whenever Alain is live in this routine. Not re-flagging the blocker itself
+via notification, same reasoning as 2026-08-20/-21: nothing about it has
+changed since it was last surfaced.
+
+Delivered lesson 11 in full — the pre-beta review, and the last lesson in
+the sequence, so **the curriculum's teaching side is now complete** (all 11
+lessons taught; the log's mastery table only has lessons 1-3 actually
+graded, four sit ungraded pending the same blocker as above). Covered all
+four parts: documentation drift (the "reasoning aged well, mechanics did
+not" pattern — `README.md` and `docs/erd.md` frozen at the pre-cart build,
+ADRs 0003/0009 with superseded mechanics, the `routes.rb` "Authenticated"
+comment on a public route and the `static_controller.rb` stale HTTP-Basic
+admin-auth comment); the four non-default flags (`SKIP_VERIFICATION` and
+`VITE_SKIP_VERIFICATION` — the first gate `Carts::Checkout` checks is
+`email_verified?`, so an unverified/nonexistent email can place a real
+order while this is on, and the frontend flag needs a rebuild to reverse
+since it's baked in at Docker build time; `ADMIN_ENABLED`,
+`RACK_ATTACK_ENABLED`, the Sidekiq Basic Auth pair, and the Resend trio as
+the other invisible-behavior-change vars); the three open product decisions
+with teeth (cancellation policy #3 as the sharpest — nobody can cancel once
+`preparing` starts, an artifact of the transition table rather than a
+ratified choice; vendor verification #5 — nothing gates shop creation on
+`verification_status`; notification channels #7 — in-app chat plus the
+unread badge is the only channel with SMS off and no push); and the five
+operational risks (manual `railway up` deploys with no pipeline and a
+known days-stale-production failure mode already experienced, CI filtered
+to `apps/api/**` so frontend PRs get zero automated checks, no payment
+reconciliation beyond the chat log by design, one-shop-per-vendor as a
+racy soft constraint, `ILIKE` search not scaling past dozens of shops).
+Walked the full pre-beta checklist at the end. Spot-checked three of the
+lesson's sharper claims against live code before teaching — `item.rb`'s
+`has_images :photos, max_count: 3` matches the "docs say 6, code says 3"
+drift claim, the `routes.rb` shops route still carries the stale
+"Authenticated" comment on `ShopsController#index` (which is actually
+public), and `static_controller.rb` still says admin-web logs in via HTTP
+Basic — all three matched the lesson text exactly, no further drift since
+it was written.
 
 ### 2026-08-21 — No quiz (blocked, unchanged) · Taught: lesson 10
 
@@ -357,8 +402,8 @@ the three misconceptions.
 
 ## Next up
 
-**Structural blocker, not just a scheduling gap:** six scheduled sessions
-in a row now (2026-08-14, -17, -18, -19, -20, -21) have been unable to
+**Structural blocker, not just a scheduling gap:** seven scheduled sessions
+in a row now (2026-08-14, -17, -18, -19, -20, -21, -24) have been unable to
 grade a quiz, because there is no interactive tool in automated runs and
 separate scheduled sessions don't share transcripts with each other.
 **Grade the combined lessons 4+5+6 review** posted in the 2026-08-18
@@ -371,15 +416,19 @@ The two options from the 2026-08-18 entry — (a) only run Part 1 when this
 skill is triggered live, letting the schedule handle lesson delivery only,
 or (b) drop Part 1 from the scheduled version entirely — are still both on
 the table. This was flagged via notification after the 08-18 and 08-19
-sessions; not re-flagged on 08-20 or this session since nothing about the
-blocker has changed and a repeat identical ping would just be noise. Still
-worth Alain actually deciding between (a)/(b) next time he's here live, so
-this stops needing a fresh diagnosis every session.
+sessions; not re-flagged since, including this session, since nothing about
+the blocker has changed and a repeat identical ping would just be noise.
+Still worth Alain actually deciding between (a)/(b) next time he's here
+live, so this stops needing a fresh diagnosis every session.
 
-Lesson 10 was taught 2026-08-21. **Lesson 11 — the pre-beta review** is
-next and last in the teaching sequence regardless of quiz status, per this
-log's own cadence rule (teach happens every session; quiz grading is what's
-stuck). Once lesson 11 is taught, Part 2 of this routine switches to mixed
-review / going deeper on the pre-beta checklist per the routine's own
-instructions — worth Alain knowing the curriculum is one session from done
-on the teaching side, independent of the quiz backlog.
+**The curriculum is now fully taught** (lesson 11 delivered 2026-08-24, the
+last in the sequence). Per this routine's own instructions, Part 2 now
+switches to mixed review across all 11 lessons, weighted toward whatever is
+marked `shaky`/`ok` in the Mastery table above, or to going deeper on one
+pre-beta checklist item from lesson 11 (docs drift fixes, the cancellation
+policy decision, CI-for-frontends, etc.) — either is fair game for the next
+session regardless of the quiz backlog. Note the Mastery table itself is
+only trustworthy through lesson 3 (solid/ok/ok); lessons 4-11 are taught but
+sit ungraded behind the same blocker, so "weighted toward shaky" currently
+has nothing concrete to weight toward beyond lessons 2 and 3 until the
+backlog clears.
