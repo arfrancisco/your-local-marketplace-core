@@ -39,6 +39,56 @@ Nothing here needs hand-editing, but feel free.
 
 Newest first.
 
+### 2026-08-25 — No quiz (blocked, unchanged) · Deep dive: CI-for-frontends (checklist item 2)
+
+Eighth consecutive automated session with no live user and no interactive
+question tool (`select:AskUserQuestion` came back with no match again this
+session). Per this log's own standing instruction, did not write a ninth
+unanswerable question set and did not re-post the 2026-08-18 six either —
+nothing about the blocker has changed since it was last surfaced, so
+another repost would be noise, not new information. It stays the one to
+grade whenever Alain is live in this routine. Not re-flagged via
+notification, same reasoning as every session since 08-19.
+
+Curriculum is fully taught (all 11 lessons, since 2026-08-24), so per the
+routine's own instructions this session skipped Part 2's normal lesson
+delivery and went deeper on one item from lesson 11's pre-beta checklist
+instead of repeating the full-checklist walkthrough already done on 08-24.
+Picked **"add frontend tests and e2e to CI"** — the item the lesson itself
+flags as "probably the highest value-per-minute item on this list" — and
+did the concrete design work rather than restating the lesson's summary of
+it:
+
+- Read the actual (and only) workflow file, `.github/workflows/api-ci.yml`.
+  Confirmed the lesson's claim exactly: `pull_request.paths` is filtered to
+  `apps/api/**` and the workflow file itself, so a PR touching only
+  `apps/customer-web`, `apps/vendor-web`, or `apps/admin-web` triggers zero
+  jobs — not a skipped job, no job at all.
+- Read all three frontend `package.json` files. All three already have a
+  `"test": "vitest run"` script and matching `@testing-library/*`
+  devDependencies — the tooling is already in place, this is purely a CI
+  wiring gap, not a missing-test-infra problem.
+- Drafted (not committed — Part 3 of this routine only pushes this log)
+  the shape of the fix: either (a) one new `frontend-ci.yml` workflow with
+  a matrix over the three apps running `npm ci && npm run test`, triggered
+  on `pull_request.paths: ["apps/customer-web/**", "apps/vendor-web/**",
+  "apps/admin-web/**", ".github/workflows/frontend-ci.yml"]`, mirroring
+  `api-ci.yml`'s structure, or (b) folding a frontend job into the existing
+  workflow and widening its path filter to `apps/**`. (a) is cleaner given
+  the three apps have independent dependency trees and independent
+  failure domains — a customer-web test failure shouldn't block a
+  vendor-web-only PR's CI from being legible pass/fail. Did not scope in
+  the Playwright e2e suite for the same workflow — it needs the full local
+  dev stack (Postgres, Redis, Rails API, both web servers) running
+  simultaneously per `local-dev-setup`'s own description, which is a
+  meaningfully bigger CI job (service containers plus multi-app boot
+  sequencing) than three independent `vitest run` jobs. Recommend landing
+  the Vitest matrix first as the fast win, and treating Playwright-in-CI
+  as its own follow-up decision given the infra cost.
+- Left as an open call for Alain: whether to implement (a) as an actual
+  PR next session, since this is a small, well-scoped, low-risk workflow
+  change that fits `ship-a-quick-fix` territory once he's live to say go.
+
 ### 2026-08-24 — No quiz (blocked, unchanged) · Taught: lesson 11 (curriculum complete)
 
 Seventh consecutive automated session with no live user and no interactive
@@ -402,11 +452,11 @@ the three misconceptions.
 
 ## Next up
 
-**Structural blocker, not just a scheduling gap:** seven scheduled sessions
-in a row now (2026-08-14, -17, -18, -19, -20, -21, -24) have been unable to
-grade a quiz, because there is no interactive tool in automated runs and
-separate scheduled sessions don't share transcripts with each other.
-**Grade the combined lessons 4+5+6 review** posted in the 2026-08-18
+**Structural blocker, not just a scheduling gap:** eight scheduled sessions
+in a row now (2026-08-14, -17, -18, -19, -20, -21, -24, -25) have been
+unable to grade a quiz, because there is no interactive tool in automated
+runs and separate scheduled sessions don't share transcripts with each
+other. **Grade the combined lessons 4+5+6 review** posted in the 2026-08-18
 session (6 questions, still open) the next time this runs as a *live*
 session with Alain actually present to answer — and backfill all three
 mastery rows then. Do not keep appending new unanswerable question sets;
@@ -421,14 +471,17 @@ the blocker has changed and a repeat identical ping would just be noise.
 Still worth Alain actually deciding between (a)/(b) next time he's here
 live, so this stops needing a fresh diagnosis every session.
 
-**The curriculum is now fully taught** (lesson 11 delivered 2026-08-24, the
-last in the sequence). Per this routine's own instructions, Part 2 now
-switches to mixed review across all 11 lessons, weighted toward whatever is
-marked `shaky`/`ok` in the Mastery table above, or to going deeper on one
-pre-beta checklist item from lesson 11 (docs drift fixes, the cancellation
-policy decision, CI-for-frontends, etc.) — either is fair game for the next
-session regardless of the quiz backlog. Note the Mastery table itself is
-only trustworthy through lesson 3 (solid/ok/ok); lessons 4-11 are taught but
-sit ungraded behind the same blocker, so "weighted toward shaky" currently
-has nothing concrete to weight toward beyond lessons 2 and 3 until the
-backlog clears.
+**The curriculum is fully taught** (lesson 11 delivered 2026-08-24, the
+last in the sequence). Part 2 now runs as either mixed review across all 11
+lessons (weighted toward `shaky`/`ok` in the Mastery table above) or a
+deeper dive on one pre-beta checklist item — 2026-08-25 did the latter,
+designing the CI-for-frontends fix concretely (see that session's entry for
+the two workflow options drafted; nothing was committed, per this routine's
+push restriction). Remaining checklist items not yet gone deep on: the
+cancellation-policy decision (#3, "the sharpest one"), bootstrapping the
+first `AdminUser` in production, verifying error alerting end to end, and
+the docs-drift fixes themselves (README/ERD/ADR mechanics notes). Note the
+Mastery table itself is only trustworthy through lesson 3 (solid/ok/ok);
+lessons 4-11 are taught but sit ungraded behind the same blocker, so
+"weighted toward shaky" currently has nothing concrete to weight toward
+beyond lessons 2 and 3 until the backlog clears.
