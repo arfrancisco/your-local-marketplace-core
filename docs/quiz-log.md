@@ -39,6 +39,56 @@ Nothing here needs hand-editing, but feel free.
 
 Newest first.
 
+### 2026-08-26 — No quiz (blocked, unchanged) · Deep dive: cancellation policy (checklist item, open decision #3)
+
+Ninth consecutive automated session with no live user and no interactive
+question tool (`select:AskUserQuestion` came back with no match again, a
+broader "ask user question interactive" keyword search also found nothing
+usable in this session's toolset). Per this log's own standing instruction,
+did not write a tenth unanswerable question set and did not repost the
+2026-08-18 six — nothing about the blocker has changed since it was last
+surfaced, so a third notification would be noise, not new information. That
+combined review is still the one to grade whenever Alain is live in this
+routine.
+
+Curriculum is fully taught (all 11 lessons, since 2026-08-24), so per the
+routine's own instructions this session again skipped Part 2's normal
+lesson delivery and went deeper on a pre-beta checklist item — this time
+**"decide the cancellation policy" (open decision #3)**, the item lesson 11
+itself calls "the sharpest one." Did the concrete design work rather than
+restating the lesson's summary:
+
+- Read all three files that cooperate to produce the current behavior:
+  `Order::TRANSITIONS` (`app/models/order.rb`) — no `"cancelled"` edge out
+  of `preparing` or either fulfillment state; `Orders::TransitionStatus#call`
+  (`app/services/orders/transition_status.rb`) — the actual 422 comes from
+  `can_transition_to?` here, purely state-based; and
+  `OrdersController#transition` (`app/controllers/api/v1/orders_controller.rb`)
+  — the actor-level gate that lets a customer request `cancelled` from *any*
+  state, meaning it's the TRANSITIONS table, not the controller, that
+  actually blocks a `preparing` cancel today. Confirmed the lesson's framing
+  exactly: this is a side effect of the state machine, not a ratified policy.
+- Cross-checked against `docs/open-decisions.md`'s own framing of decision
+  #3 ("which order states allow customer self-cancel vs. require vendor
+  agreement?") — the vendor-approved-cancel option the lesson named answers
+  that question directly.
+- Drafted (not implemented — Part 3 of this routine only pushes this log)
+  a concrete, minimal design: add `"cancelled"` to
+  `TRANSITIONS["preparing"]`; tighten the controller so customer-initiated
+  cancel only works from `placed`/`accepted`, and once `preparing` the same
+  transition becomes vendor-only (same shape as every other vendor-only
+  move); add one new code to `Order::VENDOR_CANCELLATION_REASONS` (e.g.
+  `customer_requested_after_prep_started`) so the existing
+  `validate_cancellation_reason!` and `order_status_events.reason_code`
+  audit trail cover it for free — no new mechanism needed. Explicitly
+  scoped out a new pending/approval state or a time-window field as
+  unnecessary complexity for a first beta; the human-approval step is
+  meant to happen in chat, consistent with ADR 0009's existing
+  humans-resolve-it-not-automation philosophy for money/disputes. Flagged
+  it as small enough for `ship-a-quick-fix` (model change + controller
+  guard + one string + two specs) once Alain ratifies the policy — left
+  as his call to make, not implemented unilaterally.
+
 ### 2026-08-25 — No quiz (blocked, unchanged) · Deep dive: CI-for-frontends (checklist item 2)
 
 Eighth consecutive automated session with no live user and no interactive
@@ -452,8 +502,8 @@ the three misconceptions.
 
 ## Next up
 
-**Structural blocker, not just a scheduling gap:** eight scheduled sessions
-in a row now (2026-08-14, -17, -18, -19, -20, -21, -24, -25) have been
+**Structural blocker, not just a scheduling gap:** nine scheduled sessions
+in a row now (2026-08-14, -17, -18, -19, -20, -21, -24, -25, -26) have been
 unable to grade a quiz, because there is no interactive tool in automated
 runs and separate scheduled sessions don't share transcripts with each
 other. **Grade the combined lessons 4+5+6 review** posted in the 2026-08-18
@@ -474,14 +524,16 @@ live, so this stops needing a fresh diagnosis every session.
 **The curriculum is fully taught** (lesson 11 delivered 2026-08-24, the
 last in the sequence). Part 2 now runs as either mixed review across all 11
 lessons (weighted toward `shaky`/`ok` in the Mastery table above) or a
-deeper dive on one pre-beta checklist item — 2026-08-25 did the latter,
-designing the CI-for-frontends fix concretely (see that session's entry for
-the two workflow options drafted; nothing was committed, per this routine's
-push restriction). Remaining checklist items not yet gone deep on: the
-cancellation-policy decision (#3, "the sharpest one"), bootstrapping the
-first `AdminUser` in production, verifying error alerting end to end, and
-the docs-drift fixes themselves (README/ERD/ADR mechanics notes). Note the
-Mastery table itself is only trustworthy through lesson 3 (solid/ok/ok);
-lessons 4-11 are taught but sit ungraded behind the same blocker, so
-"weighted toward shaky" currently has nothing concrete to weight toward
-beyond lessons 2 and 3 until the backlog clears.
+deeper dive on one pre-beta checklist item. 2026-08-25 designed the
+CI-for-frontends fix concretely; 2026-08-26 designed the cancellation-policy
+fix concretely (add `preparing → cancelled` to `Order::TRANSITIONS`,
+make it vendor-only past `accepted`, reuse the existing vendor
+cancellation-reason mechanism — see that session's entry for the full
+design and the file-level citations; nothing was committed, per this
+routine's push restriction). Remaining checklist items not yet gone deep
+on: bootstrapping the first `AdminUser` in production, verifying error
+alerting end to end, and the docs-drift fixes themselves (README/ERD/ADR
+mechanics notes). Note the Mastery table itself is only trustworthy
+through lesson 3 (solid/ok/ok); lessons 4-11 are taught but sit ungraded
+behind the same blocker, so "weighted toward shaky" currently has nothing
+concrete to weight toward beyond lessons 2 and 3 until the backlog clears.
