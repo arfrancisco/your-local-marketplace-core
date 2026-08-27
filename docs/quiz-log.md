@@ -39,6 +39,66 @@ Nothing here needs hand-editing, but feel free.
 
 Newest first.
 
+### 2026-08-27 — No quiz (blocked, unchanged) · Deep dive: verify error alerting end-to-end (checklist item)
+
+Tenth consecutive automated session with no live user and no interactive
+question tool (`select:AskUserQuestion` came back with no match again). Per
+this log's own standing instruction, did not write an eleventh unanswerable
+question set and did not repost the 2026-08-18 six — nothing about the
+blocker has changed since it was last surfaced, so another notification
+would be noise, not new information. That combined review is still the one
+to grade whenever Alain is live in this routine.
+
+Curriculum is fully taught (all 11 lessons, since 2026-08-24), so per the
+routine's own instructions this session again skipped Part 2's normal
+lesson delivery and went deeper on the next unaddressed pre-beta checklist
+item: **"verify error alerting end to end — trigger a new fingerprint in
+production and confirm the email lands."** Did concrete investigation
+rather than restating lesson 10's summary of the mechanism:
+
+- Re-read `ErrorAlertJob#perform` and `ErrorLog.record!`/`.fingerprint_for`
+  to confirm the exact mechanics that make this checklist item non-trivial:
+  the fingerprint is content-addressed (exception class + message + top
+  backtrace line), so **the same test trigger only alerts once** — a second
+  identical run just bumps `occurrences_count` on the existing row rather
+  than re-sending the email. Any verification attempt has to either use a
+  distinctly-named synthetic exception per attempt, or accept it's a
+  one-shot test.
+- Checked `spec/requests/api/v1/internal_errors_spec.rb`: the only existing
+  coverage asserts `ErrorAlertJob` gets *enqueued* on a first occurrence and
+  *not* re-enqueued on a repeat. **Nothing in the suite ever executes
+  `ErrorAlertJob#perform` itself** — the `Rails.env.production?` guard, the
+  three blank-config early-returns, and the actual Resend HTTP call are all
+  untested. That's exactly why this checklist item has to be a manual
+  production check: there is no automated safety net for this specific path.
+- Checked `config/routes.rb`'s admin namespace: `error_logs#index/show/
+  resolve/reopen` exist, but there is no route or action anywhere that lets
+  the app itself confirm `RESEND_API_KEY`/`EMAIL_FROM_ADDRESS`/
+  `FEEDBACK_NOTIFICATION_EMAIL` are actually set, and no built-in "trigger a
+  test error" endpoint. Config has to be confirmed against Railway directly
+  (dashboard or CLI), not through the app; this session has neither Railway
+  CLI nor credentials available, so no production request was made.
+- Also confirmed the "which requests actually reach `ErrorLog.record!`"
+  subtlety from `error_handling.rb`'s `rescue_from` ordering (lesson 10): a
+  plain 404 or a validation failure never gets recorded at all, since those
+  have their own specific handlers above the `StandardError` catch-all. A
+  verification attempt has to genuinely raise an unrescued `StandardError`
+  to exercise this path — hitting a wrong URL or a bad param proves nothing.
+- Drafted (not executed — no Railway access in this session, and this is a
+  live-production action better done with Alain present or run by him) the
+  concrete five-step check: (1) confirm the three env vars via the Railway
+  dashboard/CLI directly, not the app; (2) `rails runner` a one-off (via
+  `railway run --service api`) calling `ErrorLog.record!` with a distinctly
+  named synthetic exception class so the fingerprint is guaranteed new, then
+  `ErrorAlertJob.perform_later(log.id)` — this exercises the identical code
+  path a real 500 would without needing to actually break a real endpoint;
+  (3) check the `FEEDBACK_NOTIFICATION_EMAIL` inbox for the email; (4)
+  confirm the new row in `admin/error_logs` (or admin-mcp) and `resolve!` it
+  afterward so it doesn't sit in the unresolved queue looking like a live
+  bug; (5) if the email doesn't land, work down lesson 11's own answer-key
+  order (fingerprint not new → not-production → blank config → Sidekiq not
+  processing → never reached `ErrorLog.record!` at all).
+
 ### 2026-08-26 — No quiz (blocked, unchanged) · Deep dive: cancellation policy (checklist item, open decision #3)
 
 Ninth consecutive automated session with no live user and no interactive
@@ -502,15 +562,15 @@ the three misconceptions.
 
 ## Next up
 
-**Structural blocker, not just a scheduling gap:** nine scheduled sessions
-in a row now (2026-08-14, -17, -18, -19, -20, -21, -24, -25, -26) have been
-unable to grade a quiz, because there is no interactive tool in automated
-runs and separate scheduled sessions don't share transcripts with each
-other. **Grade the combined lessons 4+5+6 review** posted in the 2026-08-18
-session (6 questions, still open) the next time this runs as a *live*
-session with Alain actually present to answer — and backfill all three
-mastery rows then. Do not keep appending new unanswerable question sets;
-re-post the same 2026-08-18 six or ask live instead.
+**Structural blocker, not just a scheduling gap:** ten scheduled sessions
+in a row now (2026-08-14, -17, -18, -19, -20, -21, -24, -25, -26, -27) have
+been unable to grade a quiz, because there is no interactive tool in
+automated runs and separate scheduled sessions don't share transcripts with
+each other. **Grade the combined lessons 4+5+6 review** posted in the
+2026-08-18 session (6 questions, still open) the next time this runs as a
+*live* session with Alain actually present to answer — and backfill all
+three mastery rows then. Do not keep appending new unanswerable question
+sets; re-post the same 2026-08-18 six or ask live instead.
 
 The two options from the 2026-08-18 entry — (a) only run Part 1 when this
 skill is triggered live, letting the schedule handle lesson delivery only,
@@ -528,12 +588,16 @@ deeper dive on one pre-beta checklist item. 2026-08-25 designed the
 CI-for-frontends fix concretely; 2026-08-26 designed the cancellation-policy
 fix concretely (add `preparing → cancelled` to `Order::TRANSITIONS`,
 make it vendor-only past `accepted`, reuse the existing vendor
-cancellation-reason mechanism — see that session's entry for the full
-design and the file-level citations; nothing was committed, per this
-routine's push restriction). Remaining checklist items not yet gone deep
-on: bootstrapping the first `AdminUser` in production, verifying error
-alerting end to end, and the docs-drift fixes themselves (README/ERD/ADR
-mechanics notes). Note the Mastery table itself is only trustworthy
-through lesson 3 (solid/ok/ok); lessons 4-11 are taught but sit ungraded
-behind the same blocker, so "weighted toward shaky" currently has nothing
-concrete to weight toward beyond lessons 2 and 3 until the backlog clears.
+cancellation-reason mechanism); 2026-08-27 worked out the concrete
+error-alerting verification steps (a synthetic-fingerprint `rails runner`
+trigger, since a repeat test never re-alerts, plus the Railway-side config
+check this session had no credentials to run itself) — see each session's
+entry for the full design and file-level citations; nothing was committed
+or run against production, per this routine's push restriction and its lack
+of Railway access. Remaining checklist items not yet gone deep on:
+bootstrapping the first `AdminUser` in production, and the docs-drift fixes
+themselves (README/ERD/ADR mechanics notes). Note the Mastery table itself
+is only trustworthy through lesson 3 (solid/ok/ok); lessons 4-11 are taught
+but sit ungraded behind the same blocker, so "weighted toward shaky"
+currently has nothing concrete to weight toward beyond lessons 2 and 3
+until the backlog clears.
