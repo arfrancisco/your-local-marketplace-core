@@ -39,6 +39,76 @@ Nothing here needs hand-editing, but feel free.
 
 Newest first.
 
+### 2026-08-28 — No quiz (blocked, unchanged) · Deep dive: bootstrap the first AdminUser (checklist item)
+
+Eleventh consecutive automated session with no live user and no interactive
+question tool (`select:AskUserQuestion` came back with no match again, and a
+broader "ask user question interactive" keyword search returned nothing
+usable either). Per this log's own standing instruction, did not write a
+twelfth unanswerable question set and did not repost the 2026-08-18 six —
+nothing about the blocker has changed since it was last surfaced, so another
+notification would be noise. That combined review is still the one to grade
+whenever Alain is live in this routine.
+
+Curriculum is fully taught (all 11 lessons, since 2026-08-24), so per the
+routine's own instructions this session again skipped Part 2's normal
+lesson delivery and went deeper on the next unaddressed pre-beta checklist
+item: **"bootstrap the first `AdminUser` (`admin_users:create`) and verify
+admin-web login works in production."** Read the actual mechanics rather
+than restating lesson 10/11's summary:
+
+- Read `lib/tasks/admin_users.rake`: `admin_users:create` aborts if
+  `AdminUser.exists?` — it only ever works once, and the task's own header
+  comment says every subsequent admin account goes through the self-service
+  Admin Users page (`Api::V1::Admin::AdminUsersController`) instead. So this
+  is genuinely a one-shot bootstrap, not a repeatable ops command.
+- Found a real ordering trap by reading `config/routes.rb`:130-151 next to
+  the task. The entire `/api/v1/admin/*` namespace, **including
+  `auth/login` itself**, is only drawn when
+  `Rails.env.local? || ENV["ADMIN_ENABLED"] == "true"` — and that check
+  runs once at Rails boot / route-drawing time, not per-request. So setting
+  `ADMIN_ENABLED=true` on the Railway service does nothing for an
+  already-running process; the API has to actually restart/redeploy before
+  `/admin/auth/login` exists at all. Hit that endpoint before the restart
+  and you get a 404, which reads exactly like "wrong URL" rather than
+  "route was never drawn" — an easy misdiagnosis mid-launch.
+- Checked `db/migrate/20260804010000_create_admin_users.rb`: `status`
+  defaults to `"active"` at the DB level, so the bootstrapped account needs
+  no separate activation step — confirmed against `AdminUser#active?` and
+  `Auth::AuthenticateAdminUser#call`'s `status == "suspended"` check, which
+  is the only thing that would block it.
+- Read `Auth::AuthenticateAdminUser` and `AdminApiToken`: login mints a
+  30-day bearer token (`AdminApiToken::TTL = 30.days`, distinct from the
+  180-day default the separate `mint_token` rake task uses for admin-mcp),
+  shown once as plaintext and stored server-side only as a SHA-256 digest —
+  the same shape as the customer/vendor `ApiToken` from lesson 3.
+- The sharpest find: read `Admin::BaseController#record_audit_log` and its
+  comment. **The bootstrap login itself never appears in
+  `admin_audit_logs`** — `SessionsController#create` skips
+  `authenticate_admin!`, so `current_admin_user` is nil at the point the
+  audit hook fires, and `write_audit_log` silently no-ops on a nil admin.
+  So "check the audit log to confirm the login worked" is not a valid
+  verification step for the login itself — the 201 response with the token
+  is the only signal for that. The *next* authenticated action (e.g.
+  loading the Admin Users list) does show up as the audit log's first row,
+  since `current_admin_user` is set by then.
+- Drafted (not run — no Railway credentials in this session, and this is a
+  live-production action better done with Alain present) the concrete
+  order: (1) confirm `ADMIN_ENABLED=true` on the Railway API service and
+  redeploy if it was just set, since the route only gets drawn on boot; (2)
+  `railway run --service api` the bootstrap task with `ADMIN_EMAIL`/
+  `ADMIN_PASSWORD` passed only to that one command, not saved into
+  Railway's persistent env vars, since the task's own guard means it can
+  only ever run once and there's no reason for the bootstrap password to
+  live in the service's stored config afterward; (3) log in through
+  admin-web at `/admin` and confirm the 201 + token, not the audit log; (4)
+  load the Admin Users page and confirm it lists exactly the one bootstrapped
+  account and that this action is the audit log's first entry; (5) create a
+  second, personally-named admin account through the self-service page as
+  the actual day-to-day login, since the bootstrap credential's password
+  passed through a shell/CI command and is worth retiring rather than
+  reusing long-term.
+
 ### 2026-08-27 — No quiz (blocked, unchanged) · Deep dive: verify error alerting end-to-end (checklist item)
 
 Tenth consecutive automated session with no live user and no interactive
@@ -562,9 +632,9 @@ the three misconceptions.
 
 ## Next up
 
-**Structural blocker, not just a scheduling gap:** ten scheduled sessions
-in a row now (2026-08-14, -17, -18, -19, -20, -21, -24, -25, -26, -27) have
-been unable to grade a quiz, because there is no interactive tool in
+**Structural blocker, not just a scheduling gap:** eleven scheduled sessions
+in a row now (2026-08-14, -17, -18, -19, -20, -21, -24, -25, -26, -27, -28)
+have been unable to grade a quiz, because there is no interactive tool in
 automated runs and separate scheduled sessions don't share transcripts with
 each other. **Grade the combined lessons 4+5+6 review** posted in the
 2026-08-18 session (6 questions, still open) the next time this runs as a
@@ -591,13 +661,18 @@ make it vendor-only past `accepted`, reuse the existing vendor
 cancellation-reason mechanism); 2026-08-27 worked out the concrete
 error-alerting verification steps (a synthetic-fingerprint `rails runner`
 trigger, since a repeat test never re-alerts, plus the Railway-side config
-check this session had no credentials to run itself) — see each session's
-entry for the full design and file-level citations; nothing was committed
-or run against production, per this routine's push restriction and its lack
-of Railway access. Remaining checklist items not yet gone deep on:
-bootstrapping the first `AdminUser` in production, and the docs-drift fixes
-themselves (README/ERD/ADR mechanics notes). Note the Mastery table itself
-is only trustworthy through lesson 3 (solid/ok/ok); lessons 4-11 are taught
-but sit ungraded behind the same blocker, so "weighted toward shaky"
-currently has nothing concrete to weight toward beyond lessons 2 and 3
-until the backlog clears.
+check this session had no credentials to run itself); 2026-08-28 worked out
+the concrete AdminUser bootstrap order, including the `ADMIN_ENABLED`
+boot-time route-drawing trap (setting the env var doesn't take effect until
+the API restarts, so a login attempt before that reads as a 404, not an
+auth failure) and the fact that the bootstrap login itself never appears in
+`admin_audit_logs` (the audit hook needs `current_admin_user`, which isn't
+set until *after* login succeeds) — see each session's entry for the full
+design and file-level citations; nothing was committed or run against
+production, per this routine's push restriction and its lack of Railway
+access. Remaining checklist item not yet gone deep on: the docs-drift fixes
+themselves (README/ERD/ADR mechanics notes) — the last one on the list.
+Note the Mastery table itself is only trustworthy through lesson 3
+(solid/ok/ok); lessons 4-11 are taught but sit ungraded behind the same
+blocker, so "weighted toward shaky" currently has nothing concrete to
+weight toward beyond lessons 2 and 3 until the backlog clears.
