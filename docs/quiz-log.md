@@ -39,6 +39,100 @@ Nothing here needs hand-editing, but feel free.
 
 Newest first.
 
+### 2026-08-31 — No quiz (blocked, unchanged) · Deep dive: fix the stale docs (checklist item, last one)
+
+Twelfth consecutive automated session with no live user and no interactive
+question tool (`select:AskUserQuestion` came back with no match again, and a
+broader "ask user question interactive" keyword search returned nothing
+usable either). Per this log's own standing instruction, did not write a
+thirteenth unanswerable question set and did not repost the 2026-08-18 six —
+nothing about the blocker has changed since it was last surfaced, so another
+notification would be noise. That combined review is still the one to grade
+whenever Alain is live in this routine.
+
+Curriculum is fully taught (all 11 lessons, since 2026-08-24), so per the
+routine's own instructions this session again skipped Part 2's normal lesson
+delivery and went deeper on the last unaddressed pre-beta checklist item:
+**"fix or stamp the stale docs (Part A), at minimum `README.md` and the two
+ADR mechanics notes."** Re-verified every drift claim in lesson 11 against
+the actual files rather than trusting the lesson's own summary, then drafted
+exact fixes:
+
+- `README.md`:53-59 confirmed word-for-word stale — "Deliberately not built
+  yet" still lists shopping cart, order edits, inventory counts, and admin
+  interface, all four of which ship (ADR 0008's cart, vendor-only
+  `EditItems`, `stock_count`, admin-web+admin-mcp), and line 50 still says
+  orders are "placed directly against a single item rather than assembled in
+  a cart." Draft fix: replace the M0-M4 table and the "not built yet" line
+  with a pointer to CLAUDE.md's own milestone table (already current, per
+  the scoreboard), rather than maintaining two competing scope tables.
+- Found one drift the lesson itself doesn't list: README.md:27-35 ("One Ruby
+  on Rails API backend serves two React web clients") and the directory tree
+  right below it name only `apps/api`, `apps/customer-web`,
+  `apps/vendor-web` — `apps/admin-web` exists (confirmed via `ls apps/`) and
+  is absent from both the prose and the tree. Same drift pattern as the rest
+  of the file, just not one the lesson happened to catch.
+- `docs/adr/0003-order-lifecycle-and-direct-placement.md`:9 confirmed still
+  reads `POST /orders` takes `shop_id`, `item_id`, `quantity` with no
+  superseded-mechanics note anywhere in the file. Draft fix: a one-line
+  callout under Decision — "Superseded: `POST /orders` does not exist;
+  orders are created by `POST /cart/checkout` (ADR 0008). The state machine
+  and per-transition rules below are still current."
+- `docs/adr/0009-vendor-managed-payment-via-chat.md`:26-28 confirmed still
+  says the payment message and QR "auto-post as the **first message** in
+  that order's conversation" at checkout. Cross-checked
+  `app/services/carts/checkout.rb` and `app/serializers/order_serializer.rb`
+  — checkout creates an empty conversation, no system message; the payment
+  panel is a live read gated on `ShopSerializer`, with a comment there
+  literally reading "ADR 0009, revised." Draft fix: a one-line callout —
+  "Superseded: no auto-posted first message. The payment panel is read live
+  from the shop's payment fields (see `OrderSerializer`), tagged in code as
+  'ADR 0009, revised.' This is the better design; only this ADR's text
+  wasn't updated to match."
+- `apps/api/config/routes.rb`:45 confirmed the comment still reads
+  "Authenticated; lists only open shops" over the customer discovery route,
+  while `ShopsController` calls `skip_before_action :authenticate!` — the
+  route is public. Draft fix: one-word change, "Authenticated" →
+  "Public/unauthenticated on purpose (guest browsing and the guest cart
+  depend on this)."
+- `apps/api/app/controllers/static_controller.rb`:5 confirmed the comment
+  still says admin-web's login is "HTTP Basic against the Api::V1::Admin
+  API." Read `docs/adr/0010-per-admin-accounts.md` — bearer sessions via
+  `AdminApiToken` replaced Basic Auth entirely, per-admin, 30-day TTL,
+  revocable per account. Draft fix: swap the clause to "admin-web's login is
+  a bearer-token POST against the Api::V1::Admin API (ADR 0010), not this
+  shell."
+- `docs/erd.md` confirmed all four drifts from the lesson still present
+  verbatim: line 156 still lists `carts`/`cart_items` under "not created
+  yet"; line 84 still says item photos max 6 against
+  `has_images :photos, max_count: 3` in `item.rb`; the shop-photos section
+  still describes one generic multi-photo bucket instead of the actual
+  `profile_photo`/`cover_photo`/`opening_message_photos` split; line 93
+  still headers the orders section "cart-free direct placement." Per the
+  lesson's own framing, did not draft a half-fix — the two real options
+  remain (a) regenerate from `db/schema.rb`, or (b) stamp it historical like
+  `docs/milestones.md`, and picking between them is a judgment call worth
+  leaving to Alain rather than guessing.
+- Did not apply any of the above — this routine's Part 3 only pushes
+  `docs/quiz-log.md`, and these are root-level/API-level files that belong
+  on `main`, not this curriculum branch. All six fixes above are small
+  enough (four are one-line comment/callout edits, README is a short
+  rewrite, `erd.md` is the one real decision) to be a single
+  `ship-a-quick-fix` pass once Alain picks (a) or (b) for the ERD file.
+
+This closes out the last item on lesson 11's pre-beta checklist that a
+code-reading deep dive can actually do something with. What's left on the
+checklist all needs Alain present or live infrastructure access this
+session doesn't have: confirming which env vars are actually set on
+Railway, confirming the deployed commit matches `main`, writing down the
+human process for a disputed payment (a business decision, not a code
+question), deciding how vendors learn a new order arrived (open decision
+#7), and the legal-drafts lawyer review. None of those are one more session
+of reading code away from being "designed" the way the last five checklist
+items were (CI, cancellation policy, error alerting, AdminUser bootstrap,
+now docs) — they're waiting on Alain or on people/services outside this
+repo.
+
 ### 2026-08-28 — No quiz (blocked, unchanged) · Deep dive: bootstrap the first AdminUser (checklist item)
 
 Eleventh consecutive automated session with no live user and no interactive
@@ -632,9 +726,9 @@ the three misconceptions.
 
 ## Next up
 
-**Structural blocker, not just a scheduling gap:** eleven scheduled sessions
-in a row now (2026-08-14, -17, -18, -19, -20, -21, -24, -25, -26, -27, -28)
-have been unable to grade a quiz, because there is no interactive tool in
+**Structural blocker, not just a scheduling gap:** twelve scheduled sessions
+in a row now (2026-08-14, -17, -18, -19, -20, -21, -24, -25, -26, -27, -28,
+-31) have been unable to grade a quiz, because there is no interactive tool in
 automated runs and separate scheduled sessions don't share transcripts with
 each other. **Grade the combined lessons 4+5+6 review** posted in the
 2026-08-18 session (6 questions, still open) the next time this runs as a
@@ -668,10 +762,27 @@ the API restarts, so a login attempt before that reads as a 404, not an
 auth failure) and the fact that the bootstrap login itself never appears in
 `admin_audit_logs` (the audit hook needs `current_admin_user`, which isn't
 set until *after* login succeeds) — see each session's entry for the full
-design and file-level citations; nothing was committed or run against
-production, per this routine's push restriction and its lack of Railway
-access. Remaining checklist item not yet gone deep on: the docs-drift fixes
-themselves (README/ERD/ADR mechanics notes) — the last one on the list.
+design and file-level citations; 2026-08-31 drafted the exact fixes for
+every drift item in lesson 11 Part A (README's stale "not built yet" list
+and its missing `admin-web` mention, one-line superseded-mechanics callouts
+for ADR 0003 and 0009, the two stale code comments in `routes.rb` and
+`static_controller.rb`, and the `docs/erd.md` regenerate-vs-stamp-historical
+choice left as Alain's call) — nothing was committed or run against
+production in any of these five sessions, per this routine's push
+restriction and its lack of Railway access.
+
+**That closes out every pre-beta checklist item a code-reading deep dive can
+actually do something with.** What's left on lesson 11's checklist all needs
+Alain present or live infrastructure this routine doesn't have: confirming
+which env vars are set on Railway, confirming the deployed commit matches
+`main`, writing down the human process for a disputed payment, deciding how
+vendors learn a new order arrived (open decision #7), and the legal-drafts
+lawyer review. Future automated sessions should say so plainly rather than
+re-diagning already-drafted items — the five designs above (CI, cancellation
+policy, error alerting, AdminUser bootstrap, docs drift) are ready for Alain
+to greenlight, most of them small enough for a single `ship-a-quick-fix`
+pass each.
+
 Note the Mastery table itself is only trustworthy through lesson 3
 (solid/ok/ok); lessons 4-11 are taught but sit ungraded behind the same
 blocker, so "weighted toward shaky" currently has nothing concrete to
