@@ -39,6 +39,90 @@ Nothing here needs hand-editing, but feel free.
 
 Newest first.
 
+### 2026-09-01 — No quiz (blocked, unchanged) · Deep dive: notification channels (checklist item, open decision #7)
+
+Thirteenth consecutive automated session with no live user and no
+interactive question tool (`select:AskUserQuestion` came back with no
+match, and a broader "ask user interactive question choice" keyword search
+turned up other tools but nothing that blocks a turn for an answer). Per
+this log's own standing instruction, did not write a fourteenth
+unanswerable question set and did not repost the 2026-08-18 six — nothing
+about the blocker has changed since it was last surfaced, so another
+notification would be noise. That combined review is still the one to
+grade whenever Alain is live in this routine.
+
+Curriculum is fully taught (all 11 lessons, since 2026-08-24), so per the
+routine's own instructions this session again skipped Part 2's normal
+lesson delivery and went deeper on the next unaddressed pre-beta checklist
+item: **"decide how vendors learn a new order arrived" (open decision
+#7)**. The 2026-08-31 session had filed this under "needs Alain present,"
+alongside the disputed-payment process and the Railway/legal items — but
+unlike those, this one turned out to have a concrete code angle, the same
+shape as the 08-26 cancellation-policy deep dive: investigate what the
+system actually does today, then draft options rather than just restate
+lesson 11's summary of the gap.
+
+- Read `Carts::Checkout#call` (`app/services/carts/checkout.rb`) in full:
+  checkout's transaction creates the order, the order items, the status
+  event, and an **empty** `Conversation` — no message of any kind is
+  posted. No job is enqueued afterward either.
+- Read `Messaging::UnreadOrders` (`app/services/messaging/unread_orders.rb`):
+  "unread" is defined entirely in terms of `Message` rows — it takes the
+  max message id from the *other* party per conversation and compares it to
+  the viewer's `ConversationRead` cursor. A conversation with zero messages
+  contributes nothing to either query, so it can never appear unread.
+- Read `Vendor::OrdersController#index`: it computes `unread` via that same
+  service and has no other new-order signal — no separate "new" flag, no
+  count of orders in `placed` status, nothing.
+- Put those three together and the finding is sharper than lesson 11's own
+  framing ("the only channel is in-app chat plus the unread badge"): **the
+  badge does not fire for a brand-new order at all.** Checkout posts zero
+  messages, so a freshly placed order shows no unread indicator until
+  *someone* sends a chat message — usually the vendor, when they notice the
+  order some other way, which defeats the point. Today a vendor's only way
+  to learn of a new order is to open the app and look at the order list,
+  unprompted, with nothing telling them to look. This is worse than "no
+  push, only in-app" — it's "no push, and even the in-app signal is silent
+  for the specific event that matters most."
+- Checked how the existing email pipeline works, since email is the
+  cheapest lever already in the system: `FeedbackNotificationJob` and
+  `ErrorAlertJob` are near-identical ~40-line jobs, both gated on
+  `Rails.env.production?` and on the same three blank-config early-returns
+  (`RESEND_API_KEY`, `EMAIL_FROM_ADDRESS`, plus their own destination var),
+  both best-effort (`rescue StandardError`, log and move on, never raise
+  into the caller). Confirmed via `db/schema.rb` that `vendor_profiles`
+  belongs to `users`, and `users.email` is always present (`null: false`) —
+  a vendor's notification address already exists, no new field needed.
+- Drafted (not implemented — Part 3 of this routine only pushes this log,
+  and this is Alain's call to make, same restriction as every prior deep
+  dive) two options, not mutually exclusive:
+  - **(a) Fix the mechanism, not just the message.** Have `Carts::Checkout`
+    post one `system` message into the new conversation right after
+    creating it (e.g. "New order placed") — the exact same mechanism
+    `Orders::TransitionStatus` already uses for status-change messages
+    (lesson 8/9). This is the cheapest fix and arguably a bug fix rather
+    than a policy call: it makes the in-app badge actually work for the
+    event lesson 11 already assumes it covers. No new infrastructure, no
+    new env vars, reuses code that exists.
+  - **(b) Add an out-of-app nudge via email.** A new
+    `OrderPlacedNotificationJob`, copy-shaped from `FeedbackNotificationJob`:
+    enqueued at the end of `Carts::Checkout#call` (outside the
+    transaction, same reasoning lesson 9 gives for why the chat broadcast
+    happens after commit — a provider outage must not roll back a real
+    order), emails the vendor's `user.email` with the shop name, item
+    summary, and a link into vendor-web's order view. This is the actual
+    policy decision: (a) alone still requires the vendor to have the app
+    open or check it regularly; (b) reaches them even when it's closed,
+    at the cost of one more Resend send per order (negligible at pilot
+    volume, unlike the rate-limited SMS codes lesson 10 covered, which
+    cost money per send — this doesn't need Semaphore at all).
+  - Recommend (a) unconditionally regardless of what Alain decides on
+    (b) — it costs nothing and closes a real gap in a mechanism the docs
+    already claim exists. (b) is the one worth a deliberate yes/no, sized
+    at roughly the same scope as `ship-a-quick-fix` once he's live to say
+    go (one new job file, one job-header comment explaining the
+    post-transaction placement, one call site, no schema change).
+
 ### 2026-08-31 — No quiz (blocked, unchanged) · Deep dive: fix the stale docs (checklist item, last one)
 
 Twelfth consecutive automated session with no live user and no interactive
@@ -726,15 +810,16 @@ the three misconceptions.
 
 ## Next up
 
-**Structural blocker, not just a scheduling gap:** twelve scheduled sessions
-in a row now (2026-08-14, -17, -18, -19, -20, -21, -24, -25, -26, -27, -28,
--31) have been unable to grade a quiz, because there is no interactive tool in
-automated runs and separate scheduled sessions don't share transcripts with
-each other. **Grade the combined lessons 4+5+6 review** posted in the
-2026-08-18 session (6 questions, still open) the next time this runs as a
-*live* session with Alain actually present to answer — and backfill all
-three mastery rows then. Do not keep appending new unanswerable question
-sets; re-post the same 2026-08-18 six or ask live instead.
+**Structural blocker, not just a scheduling gap:** thirteen scheduled
+sessions in a row now (2026-08-14, -17, -18, -19, -20, -21, -24, -25, -26,
+-27, -28, -31, 2026-09-01) have been unable to grade a quiz, because there
+is no interactive tool in automated runs and separate scheduled sessions
+don't share transcripts with each other. **Grade the combined lessons 4+5+6
+review** posted in the 2026-08-18 session (6 questions, still open) the next
+time this runs as a *live* session with Alain actually present to answer —
+and backfill all three mastery rows then. Do not keep appending new
+unanswerable question sets; re-post the same 2026-08-18 six or ask live
+instead.
 
 The two options from the 2026-08-18 entry — (a) only run Part 1 when this
 skill is triggered live, letting the schedule handle lesson delivery only,
@@ -767,21 +852,32 @@ every drift item in lesson 11 Part A (README's stale "not built yet" list
 and its missing `admin-web` mention, one-line superseded-mechanics callouts
 for ADR 0003 and 0009, the two stale code comments in `routes.rb` and
 `static_controller.rb`, and the `docs/erd.md` regenerate-vs-stamp-historical
-choice left as Alain's call) — nothing was committed or run against
-production in any of these five sessions, per this routine's push
-restriction and its lack of Railway access.
+choice left as Alain's call); 2026-09-01 found that the 08-31 session had
+over-filed open decision #7 as "needs Alain present" — it actually had a
+concrete code angle like the cancellation-policy item — and drafted two
+options: (a) a free bug-fix-shaped change (`Carts::Checkout` posts a
+`system` chat message on order creation, the same mechanism
+`Orders::TransitionStatus` already uses, so the existing unread badge
+actually fires for a new order instead of staying silent until someone
+sends a message) and (b) an optional `OrderPlacedNotificationJob` emailing
+the vendor via the same Resend pattern `FeedbackNotificationJob` already
+uses. Nothing was committed or run against production in any of these six
+sessions, per this routine's push restriction and its lack of Railway
+access.
 
 **That closes out every pre-beta checklist item a code-reading deep dive can
-actually do something with.** What's left on lesson 11's checklist all needs
-Alain present or live infrastructure this routine doesn't have: confirming
-which env vars are set on Railway, confirming the deployed commit matches
-`main`, writing down the human process for a disputed payment, deciding how
-vendors learn a new order arrived (open decision #7), and the legal-drafts
-lawyer review. Future automated sessions should say so plainly rather than
-re-diagning already-drafted items — the five designs above (CI, cancellation
-policy, error alerting, AdminUser bootstrap, docs drift) are ready for Alain
-to greenlight, most of them small enough for a single `ship-a-quick-fix`
-pass each.
+actually do something with.** What's left on lesson 11's checklist genuinely
+needs Alain present or live infrastructure this routine doesn't have:
+confirming which env vars are set on Railway, confirming the deployed commit
+matches `main`, writing down the human process for a disputed payment (still
+filed as a business-process call, not a code question — nothing in
+`app/services/orders/` or `app/models/order.rb` gives it a code angle the
+way #7 turned out to have one), and the legal-drafts lawyer review. Future
+automated sessions should say so plainly rather than re-diagnosing
+already-drafted items — the six designs above (CI, cancellation policy,
+error alerting, AdminUser bootstrap, docs drift, notification channels) are
+ready for Alain to greenlight, most of them small enough for a single
+`ship-a-quick-fix` pass each.
 
 Note the Mastery table itself is only trustworthy through lesson 3
 (solid/ok/ok); lessons 4-11 are taught but sit ungraded behind the same
