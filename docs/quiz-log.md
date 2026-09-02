@@ -39,6 +39,90 @@ Nothing here needs hand-editing, but feel free.
 
 Newest first.
 
+### 2026-09-02 — No quiz (blocked, unchanged) · Deep dive: the disputed-payment process (checklist item)
+
+Fourteenth consecutive automated session with no live user and no
+interactive question tool (`select:AskUserQuestion` came back with no
+match, and a broader "ask user interactive question choice blocking"
+keyword search turned up only unrelated task/Notion/GitHub tools). Per this
+log's own standing instruction, did not write a fifteenth unanswerable
+question set and did not repost the 2026-08-18 six — nothing about the
+blocker has changed since it was last surfaced, so another notification
+would be noise. That combined review is still the one to grade whenever
+Alain is live in this routine.
+
+Curriculum is fully taught (all 11 lessons, since 2026-08-24), so per the
+routine's own instructions this session again skipped Part 2's normal
+lesson delivery and went deeper on the next unaddressed pre-beta checklist
+item: **"write down the human process for a disputed payment."** This one
+had been filed since lesson 11 (and reconfirmed 08-31/09-01) as a pure
+business-process call with no code angle — but like open decision #7
+turned out to be on 09-01, that framing didn't survive actually reading the
+admin surface end to end.
+
+- Read `Order::PAYMENT_STATUSES` (`app/models/order.rb`): exactly two
+  values, `unpaid` and `marked_paid`. No `disputed`, no `refunded`, nothing
+  else.
+- Read `Orders::MarkPaid` (`app/services/orders/mark_paid.rb`): one-way and
+  idempotent by design (`update! if payment_status == "unpaid"` — its own
+  comment says so). There is no service, method, or route anywhere that
+  moves an order back from `marked_paid` to `unpaid`. Confirmed via
+  `grep` across `app/controllers` and `config/routes.rb` — the only route
+  touching it is the vendor's own `POST /orders/:id/mark_paid`
+  (`Api::V1::OrdersController#mark_paid`). A vendor who mis-taps the button,
+  or a customer who disputes having paid, has no path back — not even an
+  admin one.
+- Read `Api::V1::Admin::OrdersController#transition`: admin *can* override
+  order **status** (attributed to the shop's vendor user, `"[admin
+  override]"` reason prefix, still gated by the real state machine) — but
+  this endpoint only calls `Orders::TransitionStatus`, which never touches
+  `payment_status`. The existing admin override mechanism simply doesn't
+  reach the field a payment dispute is actually about.
+- Read `Api::V1::Admin::ConversationsController` and
+  `Api::V1::Admin::VendorCustomerNotesController` — both explicitly
+  comment-labeled for dispute use (`"a full transcript for dispute
+  resolution/support"`, `"exactly the evidence an operator needs when
+  investigating a dispute"`). So the **evidence-gathering** half of dispute
+  handling is real and was deliberately built: admin can pull the full chat
+  transcript for an order and cross-vendor customer notes. The
+  **resolution** half — actually correcting the disputed field once the
+  evidence is read — does not exist anywhere in the codebase.
+- Confirmed `Admin::BaseController`'s `around_action :record_audit_log`
+  (lesson 10) would cover any new admin action here automatically, the same
+  way it already covers the order-status override — so closing this gap is
+  not a new-mechanism problem, it's reusing a pattern that already exists
+  twice (order status override, audit logging) and hasn't been extended to
+  payment status.
+- Net finding, sharper than the checklist line: this isn't only "decide the
+  human process," it's **"the admin tool an operator would reach for
+  mid-dispute (read the chat, read cross-vendor notes, then fix the
+  record) is two-thirds built and stops one field short."** Writing down a
+  process that ends in "and then the admin corrects payment_status" is
+  currently writing down a process the app cannot perform.
+- Drafted (not implemented — Part 3 of this routine only pushes this log,
+  and this is Alain's call same as every prior deep dive) two options, not
+  mutually exclusive:
+  - **(a) Let admin reset `payment_status` back to `unpaid`.** One new
+    route (`POST /admin/orders/:id/payment_status`, or fold it into the
+    existing `orders#transition` action as a sibling), one new tiny service
+    mirroring `Orders::MarkPaid`'s shape but admin-attributed, covered for
+    free by the existing audit `around_action`. Minimal and reversible —
+    doesn't add a new status, just un-does the vendor's assertion when an
+    operator determines it was wrong.
+  - **(b) Add a third status, `disputed`.** Bigger decision: needs to say
+    whether `disputed` blocks anything (a new order action? a hold on
+    `completed`?) or is purely a marker for ops to track pattern/frequency
+    across vendors. This is the one worth deciding deliberately rather than
+    defaulting into, since unlike (a) it changes the state machine's shape,
+    not just who can call an existing move.
+  - Recommend (a) as the minimum viable fix regardless of (b) — it closes
+    the "admin literally cannot act on what they just read" gap with the
+    smallest possible change, reusing the exact override-attribution and
+    audit pattern the order-status endpoint already established. (b) is
+    the actual policy question worth Alain's time, sized like the
+    cancellation-policy (08-26) and notification-channel (09-01) decisions
+    before it.
+
 ### 2026-09-01 — No quiz (blocked, unchanged) · Deep dive: notification channels (checklist item, open decision #7)
 
 Thirteenth consecutive automated session with no live user and no
@@ -810,11 +894,12 @@ the three misconceptions.
 
 ## Next up
 
-**Structural blocker, not just a scheduling gap:** thirteen scheduled
+**Structural blocker, not just a scheduling gap:** fourteen scheduled
 sessions in a row now (2026-08-14, -17, -18, -19, -20, -21, -24, -25, -26,
--27, -28, -31, 2026-09-01) have been unable to grade a quiz, because there
-is no interactive tool in automated runs and separate scheduled sessions
-don't share transcripts with each other. **Grade the combined lessons 4+5+6
+-27, -28, -31, 2026-09-01, -09-02) have been unable to grade a quiz, because
+there is no interactive tool in automated runs and separate scheduled
+sessions don't share transcripts with each other. **Grade the combined
+lessons 4+5+6
 review** posted in the 2026-08-18 session (6 questions, still open) the next
 time this runs as a *live* session with Alain actually present to answer —
 and backfill all three mastery rows then. Do not keep appending new
@@ -861,23 +946,33 @@ options: (a) a free bug-fix-shaped change (`Carts::Checkout` posts a
 actually fires for a new order instead of staying silent until someone
 sends a message) and (b) an optional `OrderPlacedNotificationJob` emailing
 the vendor via the same Resend pattern `FeedbackNotificationJob` already
-uses. Nothing was committed or run against production in any of these six
-sessions, per this routine's push restriction and its lack of Railway
-access.
+uses. 2026-09-02 found the same pattern a second time on the
+disputed-payment item, previously (through 09-01) filed as pure
+business-process with no code angle: `Order::PAYMENT_STATUSES` has only
+`unpaid`/`marked_paid`, `Orders::MarkPaid` is one-directional and vendor-only
+(no route or service anywhere moves an order back to `unpaid`), the admin
+order-status override (`Admin::OrdersController#transition`) never touches
+`payment_status`, and the admin conversation/customer-notes read endpoints
+are explicitly built for dispute evidence-gathering but nothing lets an
+admin act on that evidence afterward. Drafted (a) a minimal admin
+payment-status-reset endpoint mirroring `Orders::MarkPaid`'s shape,
+audit-logged for free by the existing `around_action`, and (b) a bigger
+`disputed` third status as the actual policy call. Nothing was committed or
+run against production in any of these seven sessions, per this routine's
+push restriction and its lack of Railway access.
 
 **That closes out every pre-beta checklist item a code-reading deep dive can
 actually do something with.** What's left on lesson 11's checklist genuinely
 needs Alain present or live infrastructure this routine doesn't have:
 confirming which env vars are set on Railway, confirming the deployed commit
-matches `main`, writing down the human process for a disputed payment (still
-filed as a business-process call, not a code question — nothing in
-`app/services/orders/` or `app/models/order.rb` gives it a code angle the
-way #7 turned out to have one), and the legal-drafts lawyer review. Future
+matches `main`, and the legal-drafts lawyer review — three items, down from
+five, now that both open decision #7 and the disputed-payment item turned
+out to have concrete code angles a deep dive could actually draft. Future
 automated sessions should say so plainly rather than re-diagnosing
-already-drafted items — the six designs above (CI, cancellation policy,
-error alerting, AdminUser bootstrap, docs drift, notification channels) are
-ready for Alain to greenlight, most of them small enough for a single
-`ship-a-quick-fix` pass each.
+already-drafted items — the seven designs above (CI, cancellation policy,
+error alerting, AdminUser bootstrap, docs drift, notification channels,
+payment-dispute admin tooling) are ready for Alain to greenlight, most of
+them small enough for a single `ship-a-quick-fix` pass each.
 
 Note the Mastery table itself is only trustworthy through lesson 3
 (solid/ok/ok); lessons 4-11 are taught but sit ungraded behind the same
