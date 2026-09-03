@@ -39,6 +39,85 @@ Nothing here needs hand-editing, but feel free.
 
 Newest first.
 
+### 2026-09-03 — No quiz (blocked, unchanged) · Deep dive: making the last two Railway-only checklist items self-checkable
+
+Fifteenth consecutive automated session with no live user and no interactive
+question tool (`select:AskUserQuestion` came back with no match, and a
+broader "ask user interactive question choice blocking" keyword search again
+turned up only unrelated task/Notion/GitHub tools). Per this log's own
+standing instruction, did not write a sixteenth unanswerable question set and
+did not repost the 2026-08-18 six — nothing about the blocker has changed
+since it was last surfaced, so another notification would be noise. That
+combined review is still the one to grade whenever Alain is live in this
+routine.
+
+Curriculum is fully taught (all 11 lessons, since 2026-08-24). The last three
+checklist items had been filed (through 09-02) as needing Alain present or
+live Railway access, with no code angle — but two prior sessions (09-01,
+09-02) each found that framing didn't survive actually reading the code for
+similar items. Checked whether the same was true here, for **"confirm which
+env vars are actually set on Railway"** and **"confirm the deployed commit
+matches `main`."**
+
+- Read `Api::V1::HealthController` (`app/controllers/api/v1/health_controller.rb`):
+  the only existing health/status endpoint, public (`config/routes.rb:15`,
+  no admin gating), and it only proves the DB is reachable — it says nothing
+  about which env vars are set or what commit is running. Confirmed via
+  `ls app/controllers/api/v1/admin/` that no admin controller does either;
+  this echoes 08-27's finding that the app has no way to confirm its own
+  Resend config short of a Railway-side check, just generalized to the full
+  flag list from lesson 11 Part B.
+- **Env vars**: nothing stops a small admin-only endpoint from reporting
+  *presence* (booleans, never values) of `RACK_ATTACK_ENABLED`,
+  `SIDEKIQ_WEB_USERNAME`/`PASSWORD`, and the Resend trio
+  (`RESEND_API_KEY`/`EMAIL_FROM_ADDRESS`/`FEEDBACK_NOTIFICATION_EMAIL`) —
+  confirmed the exact `ENV[...]` call sites via grep across
+  `error_alert_job.rb`, `feedback_notification_job.rb`,
+  `verification_delivery_job.rb`, `vendors/eligibility_check.rb`, and
+  `routes.rb`. `SKIP_VERIFICATION` is readable the same way
+  (`vendors/eligibility_check.rb`). `ADMIN_ENABLED` is the one flag this
+  approach can't usefully report on itself — if it's false the whole
+  `/admin` namespace 404s (`routes.rb`:130), so reaching this endpoint at
+  all already proves it's true; worth noting as a small irony rather than a
+  gap. `VITE_SKIP_VERIFICATION` is frontend-build-time only and genuinely
+  invisible to any API endpoint — that one stays a real Railway-side/build
+  check, no way around it.
+- **Deployed commit**: checked whether the git SHA could be baked into the
+  image at all, since the API currently has zero mechanism for this. Read
+  the root of the repo — there is no root-level `.dockerignore`, only
+  `apps/api/.dockerignore` (which excludes `/.git/` but only applies if the
+  build context root were `apps/api`). The `Dockerfile`'s own header comment
+  confirms the real build context is the **repo root** (`--path-as-root .`),
+  and Docker resolves `.dockerignore` against the context root, not the
+  Dockerfile's directory — so `apps/api/.dockerignore`'s git exclusion
+  doesn't apply to this build at all, and `.git/` is actually present in the
+  build context today. That means a one-line `RUN git rev-parse HEAD >
+  REVISION` in the `build` stage of `apps/api/Dockerfile` (copied forward
+  into the final stage) is enough to stamp every deployed image with the
+  exact commit it was built from — no new plumbing, no build-arg wiring
+  through `railway up`.
+- Net finding, same shape as 09-01/09-02: **two of the three remaining
+  "needs Alain" items are actually a small, code-only fix away from being
+  self-checkable through the app itself**, closing the gap that made a
+  Railway CLI/dashboard visit necessary in the first place. Only the third
+  (legal-drafts lawyer review) has no code angle at all — that one is
+  correctly filed as pure people-and-time, not investigation debt.
+- Drafted (not implemented — Part 3 of this routine only pushes this log,
+  and this is root-level/API-level code that belongs on `main`, not this
+  curriculum branch, same restriction 08-31 noted for the docs fixes) one
+  combined design: a new `Api::V1::Admin::SystemStatusController#show`
+  (admin-gated like every other `Admin::BaseController` subclass, a plain
+  `GET` so it's outside `MUTATING_METHODS` and won't spam the audit log on
+  every check) returning `{ commit: ENV["RAILWAY_GIT_COMMIT_SHA"] ||
+  File.read("REVISION").strip, env: { rack_attack_enabled: ...,
+  resend_configured: ENV["RESEND_API_KEY"].present?, ... } }` — booleans and
+  the SHA only, never a raw secret value, on the same reasoning
+  `error_alert_job.rb`'s guards already apply. Pairs with the one-line
+  Dockerfile `REVISION` stamp above. Small enough for a single
+  `ship-a-quick-fix` pass (one controller, one route, one Dockerfile line,
+  a couple of request specs) once Alain wants it — his call, not applied
+  here.
+
 ### 2026-09-02 — No quiz (blocked, unchanged) · Deep dive: the disputed-payment process (checklist item)
 
 Fourteenth consecutive automated session with no live user and no
@@ -894,9 +973,9 @@ the three misconceptions.
 
 ## Next up
 
-**Structural blocker, not just a scheduling gap:** fourteen scheduled
+**Structural blocker, not just a scheduling gap:** fifteen scheduled
 sessions in a row now (2026-08-14, -17, -18, -19, -20, -21, -24, -25, -26,
--27, -28, -31, 2026-09-01, -09-02) have been unable to grade a quiz, because
+-27, -28, -31, 2026-09-01, -09-02, -09-03) have been unable to grade a quiz, because
 there is no interactive tool in automated runs and separate scheduled
 sessions don't share transcripts with each other. **Grade the combined
 lessons 4+5+6
@@ -962,17 +1041,24 @@ run against production in any of these seven sessions, per this routine's
 push restriction and its lack of Railway access.
 
 **That closes out every pre-beta checklist item a code-reading deep dive can
-actually do something with.** What's left on lesson 11's checklist genuinely
-needs Alain present or live infrastructure this routine doesn't have:
-confirming which env vars are set on Railway, confirming the deployed commit
-matches `main`, and the legal-drafts lawyer review — three items, down from
-five, now that both open decision #7 and the disputed-payment item turned
-out to have concrete code angles a deep dive could actually draft. Future
-automated sessions should say so plainly rather than re-diagnosing
-already-drafted items — the seven designs above (CI, cancellation policy,
-error alerting, AdminUser bootstrap, docs drift, notification channels,
-payment-dispute admin tooling) are ready for Alain to greenlight, most of
-them small enough for a single `ship-a-quick-fix` pass each.
+actually do something with.** 2026-09-03 found that two of the three
+remaining "needs Alain/Railway" items were the same over-filed pattern as
+09-01 and 09-02: the app currently has no way to report its own env-var
+config or deployed commit, but nothing structural stops it from gaining one
+— an admin-gated `SystemStatusController` (booleans only, never raw secret
+values, reusing the existing `Admin::BaseController` gating) plus a one-line
+`RUN git rev-parse HEAD > REVISION` in `apps/api/Dockerfile`'s build stage
+(confirmed feasible: the repo has no root `.dockerignore`, so `.git/` is
+already present in the real build context, which is the repo root per the
+Dockerfile's own header comment, not `apps/api/`). Only `VITE_SKIP_VERIFICATION`
+(frontend-build-time-only) and the legal-drafts lawyer review remain
+genuinely code-blind — the legal review because a lawyer has to read prose,
+not code. Future automated sessions should say so plainly rather than
+re-diagnosing already-drafted items — the eight designs above (CI,
+cancellation policy, error alerting, AdminUser bootstrap, docs drift,
+notification channels, payment-dispute admin tooling, self-checkable
+config/commit status) are ready for Alain to greenlight, most of them small
+enough for a single `ship-a-quick-fix` pass each.
 
 Note the Mastery table itself is only trustworthy through lesson 3
 (solid/ok/ok); lessons 4-11 are taught but sit ungraded behind the same
